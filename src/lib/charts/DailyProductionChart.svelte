@@ -1,0 +1,169 @@
+<script lang="ts">
+	/**
+	 * DailyProductionChart Component
+	 *
+	 * Time series line chart showing daily oil and water production.
+	 * Includes brush selection for date range filtering.
+	 * Uses Unovis Svelte components.
+	 */
+
+	import { VisXYContainer, VisLine, VisAxis, VisBrush, VisCrosshair, VisTooltip } from '@unovis/svelte';
+	import type { DailyProductionRecord, DateRange } from '$lib/types';
+	import { formatDate, formatNumber, formatVolumeAxis } from '$lib/utils/formatters';
+
+	interface Props {
+		data: DailyProductionRecord[];
+		height?: number;
+		onDateRangeChange?: (range: DateRange | null) => void;
+	}
+
+	let { data, height = 400, onDateRangeChange }: Props = $props();
+
+	// Color constants matching design spec
+	const OIL_COLOR = '#2ecc71';
+	const WATER_COLOR = '#3498db';
+
+	// Data accessors
+	const x = (d: DailyProductionRecord) => d.date.getTime();
+	const yOil = (d: DailyProductionRecord) => d.oil;
+	const yWater = (d: DailyProductionRecord) => d.water;
+
+	// Tooltip template
+	function tooltipTemplate(d: DailyProductionRecord): string {
+		const dateStr = formatDate(d.date, 'medium');
+		const oilFormatted = formatNumber(d.oil, { decimals: 0 });
+		const waterFormatted = formatNumber(d.water, { decimals: 0 });
+
+		return `
+			<div style="padding: 8px; font-size: 12px;">
+				<div style="font-weight: bold; margin-bottom: 4px;">${dateStr}</div>
+				<div style="color: ${OIL_COLOR};">Oil: ${oilFormatted} sm3</div>
+				<div style="color: ${WATER_COLOR};">Water: ${waterFormatted} sm3</div>
+			</div>
+		`;
+	}
+
+	// X-axis tick formatter
+	function xTickFormat(timestamp: number): string {
+		return formatDate(new Date(timestamp), 'axis');
+	}
+
+	// Y-axis tick formatter
+	function yTickFormat(value: number): string {
+		return formatVolumeAxis(value);
+	}
+
+	// Handle brush selection end
+	function handleBrushEnd(selection: [number, number] | null, event: MouseEvent, userDriven: boolean) {
+		if (!userDriven) return;
+
+		if (selection && selection[0] !== selection[1]) {
+			const range: DateRange = {
+				start: new Date(selection[0]),
+				end: new Date(selection[1])
+			};
+			onDateRangeChange?.(range);
+		} else {
+			// Clear selection
+			onDateRangeChange?.(null);
+		}
+	}
+
+	// Chart has data check
+	const hasData = $derived(data && data.length > 0);
+</script>
+
+<div class="chart-container">
+	<div class="chart-header">
+		<h3>Daily Production Over Time</h3>
+		<div class="legend">
+			<span class="legend-item">
+				<span class="legend-color" style="background-color: {OIL_COLOR};"></span>
+				Oil
+			</span>
+			<span class="legend-item">
+				<span class="legend-color" style="background-color: {WATER_COLOR};"></span>
+				Water
+			</span>
+		</div>
+	</div>
+
+	{#if hasData}
+		<VisXYContainer {data} {height} yDomain={[0, undefined]}>
+			<VisLine {x} y={yOil} color={OIL_COLOR} curveType="linear" />
+			<VisLine {x} y={yWater} color={WATER_COLOR} curveType="linear" />
+			<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
+			<VisAxis type="y" label="Daily Production (sm3)" tickFormat={yTickFormat} />
+			<VisCrosshair template={tooltipTemplate} />
+			<VisBrush
+				draggable={true}
+				onBrushEnd={handleBrushEnd}
+			/>
+		</VisXYContainer>
+	{:else}
+		<div class="no-data">
+			<p>No production data available</p>
+		</div>
+	{/if}
+
+	<p class="brush-hint">Drag on the chart to select a date range</p>
+</div>
+
+<style>
+	.chart-container {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.chart-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: var(--spacing-md);
+	}
+
+	.chart-header h3 {
+		margin: 0;
+		font-size: var(--font-size-lg);
+	}
+
+	.legend {
+		display: flex;
+		gap: var(--spacing-md);
+	}
+
+	.legend-item {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		font-size: var(--font-size-sm);
+	}
+
+	.legend-color {
+		width: 12px;
+		height: 12px;
+		border-radius: 2px;
+	}
+
+	.no-data {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 300px;
+		color: var(--color-text-secondary);
+	}
+
+	.brush-hint {
+		text-align: center;
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+		margin-top: var(--spacing-sm);
+		margin-bottom: 0;
+	}
+
+	/* Unovis chart styling */
+	:global(.unovis-xy-container) {
+		flex: 1;
+	}
+</style>

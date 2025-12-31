@@ -1,0 +1,129 @@
+:root {
+	--color-oil: #2ecc71;
+	--color-water: #3498db;
+	--color-gas: #f39c12;
+	--color-background: #ffffff;
+	--color-surface: #f8f9fa;
+	--color-text: #2c3e50;
+	--color-text-secondary: #7f8c8d;
+	--color-border: #e0e0e0;
+	--color-error: #e74c3c;
+	--spacing-xs: 0.25rem;
+	--spacing-sm: 0.5rem;
+	--spacing-md: 1rem;
+	--spacing-lg: 1.5rem;
+	--spacing-xl: 2rem;
+	--font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--font-size-sm: 0.875rem;
+	--font-size-base: 1rem;
+	--font-size-lg: 1.25rem;
+	--font-size-xl: 1.5rem;
+	--font-size-2xl: 2rem;
+	--border-radius: 0.5rem;
+	--shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html, body {
+	font-family: var(--font-family);
+	font-size: var(--font-size-base);
+	color: var(--color-text);
+	background-color: var(--color-background);
+	line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+h1 {
+	font-size: var(--font-size-2xl);
+}
+
+h2 {
+	font-size: var(--font-size-xl);
+}
+
+h3 {
+	font-size: var(--font-size-lg);
+}
+
+button {
+	cursor: pointer;
+	font-family: inherit;
+	font-size: inherit;
+	transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.1s ease;
+}
+
+button:focus-visible {
+	outline: 2px solid var(--color-water);
+	outline-offset: 2px;
+}
+
+button:active {
+	transform: scale(0.98);
+}
+
+a {
+	color: var(--color-water);
+	text-decoration: none;
+	transition: color 0.2s ease;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus-visible {
+	outline: 2px solid var(--color-water);
+	outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+input[type="checkbox"] {
+	cursor: pointer;
+	accent-color: var(--color-water);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+	:root {
+		--font-size-2xl: 1.5rem;
+		--font-size-xl: 1.25rem;
+		--font-size-lg: 1.125rem;
+		--spacing-lg: 1rem;
+		--spacing-xl: 1.5rem;
+	}
+}
+
+@media (max-width: 480px) {
+	:root {
+		--font-size-2xl: 1.25rem;
+		--font-size-xl: 1.125rem;
+		--spacing-lg: 0.75rem;
+		--spacing-xl: 1rem;
+	}
+}
+
+/* Ensure smooth scrolling */
+html {
+	scroll-behavior: smooth;
+}
+
+/* Better text rendering */
+body {
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection styling */
+::selection {
+	background-color: var(--color-water);
+	color: white;
+}

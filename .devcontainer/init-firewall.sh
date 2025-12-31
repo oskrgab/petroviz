@@ -76,7 +76,10 @@ for domain in \
     "accounts.google.com" \
     "oauth2.googleapis.com" \
     "codeassist.google.com" \
-    "generativelanguage.googleapis.com"; do
+    "generativelanguage.googleapis.com" \
+    "unovis.dev" \
+    "svelte.dev" \
+    "duckdb.org"; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then

@@ -11,10 +11,7 @@
     }
   },
 
-  "runArgs": [
-    "--cap-add=NET_ADMIN",
-    "--cap-add=NET_RAW"
-  ],
+  "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
 
   "customizations": {
     "vscode": {
@@ -28,7 +25,9 @@
         "ms-playwright.playwright",
         "GitHub.copilot",
         "GitHub.copilot-chat",
-        "eamodio.gitlens"
+        "eamodio.gitlens",
+        "pimzino.spec-workflow-mcp",
+        "bierner.markdown-mermaid"
       ],
       "settings": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -64,8 +63,8 @@
   },
 
   "postCreateCommand": "test -f package.json && npm install || echo 'No package.json found - skipping npm install'",
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
-  "waitFor": "postStartCommand",
+  // "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  // "waitFor": "postStartCommand",
 
   "forwardPorts": [5173, 4173],
   "portsAttributes": {
