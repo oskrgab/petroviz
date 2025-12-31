@@ -23,10 +23,23 @@
 	const OIL_COLOR = '#2ecc71';
 	const WATER_COLOR = '#3498db';
 
-	// Data accessors
+	// Filter out any records with invalid dates or NaN values
+	const validData = $derived(
+		data.filter((d) => {
+			// Ensure date exists and is a valid Date object
+			if (!d.date || !(d.date instanceof Date)) return false;
+			const timestamp = d.date.getTime();
+			if (!Number.isFinite(timestamp)) return false;
+			// Ensure numeric values are finite
+			if (!Number.isFinite(d.oil) || !Number.isFinite(d.water)) return false;
+			return true;
+		})
+	);
+
+	// Data accessors - safe because validData is pre-filtered
 	const x = (d: DailyProductionRecord) => d.date.getTime();
-	const yOil = (d: DailyProductionRecord) => d.oil;
-	const yWater = (d: DailyProductionRecord) => d.water;
+	const yOil = (d: DailyProductionRecord) => d.oil ?? 0;
+	const yWater = (d: DailyProductionRecord) => d.water ?? 0;
 
 	// Tooltip template
 	function tooltipTemplate(d: DailyProductionRecord): string {
@@ -70,7 +83,15 @@
 	}
 
 	// Chart has data check
-	const hasData = $derived(data && data.length > 0);
+	const hasData = $derived(validData && validData.length > 0);
+
+	// Create a unique key for the chart that changes when data content changes
+	// Using length + sum of oil values to detect different data sets
+	const dataKey = $derived(
+		validData.length === 0
+			? 'empty'
+			: `${validData.length}-${validData.reduce((acc, d) => acc + d.oil, 0).toFixed(0)}`
+	);
 </script>
 
 <div class="chart-container">
@@ -89,17 +110,20 @@
 	</div>
 
 	{#if hasData}
-		<VisXYContainer {data} {height} yDomain={[0, undefined]}>
-			<VisLine {x} y={yOil} color={OIL_COLOR} curveType="linear" />
-			<VisLine {x} y={yWater} color={WATER_COLOR} curveType="linear" />
-			<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
-			<VisAxis type="y" label="Daily Production (sm3)" tickFormat={yTickFormat} />
-			<VisCrosshair template={tooltipTemplate} />
-			<VisBrush
-				draggable={true}
-				onBrushEnd={handleBrushEnd}
-			/>
-		</VisXYContainer>
+		<!-- Key block forces re-render when data changes (Unovis doesn't react to data prop changes) -->
+		{#key dataKey}
+			<VisXYContainer data={validData} {height}>
+				<VisLine {x} y={yOil} color={OIL_COLOR} curveType="linear" />
+				<VisLine {x} y={yWater} color={WATER_COLOR} curveType="linear" />
+				<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
+				<VisAxis type="y" label="Daily Production (sm3)" tickFormat={yTickFormat} />
+				<VisCrosshair {x} y={[yOil, yWater]} template={tooltipTemplate} />
+				<VisBrush
+					draggable={true}
+					onBrushEnd={handleBrushEnd}
+				/>
+			</VisXYContainer>
+		{/key}
 	{:else}
 		<div class="no-data">
 			<p>No production data available</p>

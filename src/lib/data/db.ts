@@ -6,11 +6,6 @@
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm';
-// Import bundles with Vite's URL import syntax for proper bundling
-import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
-import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
-import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
-import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 
 /**
  * Base URL for remote data files
@@ -57,31 +52,29 @@ export async function initializeDatabase(): Promise<void> {
 
 	initPromise = (async () => {
 		try {
-			// Use local bundles (imported with Vite ?url syntax)
-			const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
-				mvp: {
-					mainModule: duckdb_wasm,
-					mainWorker: mvp_worker
-				},
-				eh: {
-					mainModule: duckdb_wasm_eh,
-					mainWorker: eh_worker
-				}
-			};
+			// Use CDN bundles for DuckDB-WASM
+			const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
 
 			// Select the best bundle for this browser
-			const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
+			const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
 
 			if (!bundle.mainWorker) {
 				throw new Error('No suitable DuckDB-WASM bundle found for this browser');
 			}
 
-			// Create worker and database instance
-			const worker = new Worker(bundle.mainWorker);
+			// Create worker using importScripts wrapper (required for cross-origin CDN)
+			const workerUrl = URL.createObjectURL(
+				new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+			);
+
+			const worker = new Worker(workerUrl);
 			const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
 
 			db = new duckdb.AsyncDuckDB(logger, worker);
-			await db.instantiate(bundle.mainModule);
+			await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+
+			// Clean up the blob URL
+			URL.revokeObjectURL(workerUrl);
 
 			// Create connection
 			conn = await db.connect();

@@ -37,11 +37,13 @@ export function setSelectedWells(wellIds: number[]): void {
  */
 export function toggleWellSelection(wellId: number): void {
 	const index = dashboardState.selectedWellIds.indexOf(wellId);
+	const prevLength = dashboardState.selectedWellIds.length;
 	if (index === -1) {
 		dashboardState.selectedWellIds = [...dashboardState.selectedWellIds, wellId];
 	} else {
 		dashboardState.selectedWellIds = dashboardState.selectedWellIds.filter((id) => id !== wellId);
 	}
+	console.log('[toggleWellSelection] wellId:', wellId, 'prev:', prevLength, 'now:', dashboardState.selectedWellIds.length);
 }
 
 /**

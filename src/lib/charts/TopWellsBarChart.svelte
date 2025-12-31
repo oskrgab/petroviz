@@ -21,22 +21,36 @@
 	// Color constant matching design spec
 	const BAR_COLOR = '#2ecc71';
 
-	// Compute top wells sorted by cumulative oil
+	// Compute top wells sorted by cumulative oil (filter out invalid values)
 	const topWells = $derived(
 		[...data]
+			.filter((d) => {
+				// Ensure wellName exists and is a non-empty string
+				if (!d.wellName || typeof d.wellName !== 'string') return false;
+				// Ensure cumulativeOil is a finite positive number
+				if (!Number.isFinite(d.cumulativeOil) || d.cumulativeOil <= 0) return false;
+				return true;
+			})
 			.sort((a, b) => b.cumulativeOil - a.cumulativeOil)
 			.slice(0, maxWells)
 	);
 
-	// For horizontal bar chart, we need to invert x and y
-	// x = value (cumulativeOil), y = category (wellName)
-	const x = (d: WellCumulativeRecord) => d.cumulativeOil;
-	const y = (d: WellCumulativeRecord) => d.wellName;
+	// For horizontal bar chart:
+	// x = value (cumulativeOil) - the length of the bar
+	// y = index - the position of the bar (we'll use tickFormat to show well names)
+	const x = (d: WellCumulativeRecord) => d.cumulativeOil ?? 0;
+	const y = (_d: WellCumulativeRecord, i: number) => i;
 
-	// Format large numbers for axis
+	// Format large numbers for x-axis
 	function xTickFormat(value: number): string {
 		return formatVolumeAxis(value);
 	}
+
+	// Format y-axis to show well names instead of indices
+	const yTickFormat = $derived((index: number) => {
+		const well = topWells[Math.round(index)];
+		return well?.wellName ?? '';
+	});
 
 	// Format value for bar labels
 	function formatBarValue(value: number): string {
@@ -48,6 +62,13 @@
 
 	// Calculate dynamic height based on number of wells
 	const dynamicHeight = $derived(Math.max(height, topWells.length * 35 + 60));
+
+	// Create a unique key for the chart that changes when data content changes
+	const dataKey = $derived(
+		topWells.length === 0
+			? 'empty'
+			: `${topWells.length}-${topWells.reduce((acc, d) => acc + d.cumulativeOil, 0).toFixed(0)}`
+	);
 </script>
 
 <div class="chart-container">
@@ -57,18 +78,21 @@
 
 	{#if hasData}
 		<div class="chart-wrapper">
-			<VisXYContainer data={topWells} height={dynamicHeight} xDomain={[0, undefined]}>
-				<VisGroupedBar
-					{x}
-					{y}
-					orientation="horizontal"
-					color={BAR_COLOR}
-					roundedCorners={4}
-					barPadding={0.2}
-				/>
-				<VisAxis type="x" label="Cumulative Oil Production (sm3)" tickFormat={xTickFormat} />
-				<VisAxis type="y" />
-			</VisXYContainer>
+			<!-- Key block forces re-render when data changes (Unovis doesn't react to data prop changes) -->
+			{#key dataKey}
+				<VisXYContainer data={topWells} height={dynamicHeight}>
+					<VisGroupedBar
+						{x}
+						{y}
+						orientation="horizontal"
+						color={BAR_COLOR}
+						roundedCorners={4}
+						barPadding={0.2}
+					/>
+					<VisAxis type="x" label="Cumulative Oil Production (sm3)" tickFormat={xTickFormat} />
+					<VisAxis type="y" tickFormat={yTickFormat} numTicks={topWells.length} />
+				</VisXYContainer>
+			{/key}
 		</div>
 
 		<div class="values-overlay">

@@ -24,37 +24,30 @@
 	} from '$lib/stores/data.svelte';
 	import type { DateRange } from '$lib/types';
 
-	// Track if we need to refresh data
-	let previousWellIds: number[] = [];
-	let previousDateRange: DateRange | null = null;
-
 	// Handle date range change from brush selection
 	function handleDateRangeChange(range: DateRange | null) {
 		setDateRange(range);
-	}
-
-	// Handle well selection change
-	function handleWellSelectionChange() {
-		// Data will be refreshed in the effect
-	}
-
-	// Watch for filter changes and refresh data
-	$effect(() => {
-		const wellIdsChanged =
-			JSON.stringify(dashboardState.selectedWellIds) !== JSON.stringify(previousWellIds);
-		const dateRangeChanged =
-			JSON.stringify(dashboardState.dateRange) !== JSON.stringify(previousDateRange);
-
-		if (dataState.initialized && (wellIdsChanged || dateRangeChanged)) {
-			previousWellIds = [...dashboardState.selectedWellIds];
-			previousDateRange = dashboardState.dateRange ? { ...dashboardState.dateRange } : null;
-
-			// Refresh data with new filters
+		// Trigger data refresh when date range changes
+		if (dataState.initialized) {
 			refreshProductionData().catch((err) => {
 				console.error('Failed to refresh data:', err);
 			});
 		}
-	});
+	}
+
+	// Handle well selection change - trigger data refresh
+	function handleWellSelectionChange(selectedIds?: number[]) {
+		// Use passed IDs or read from state
+		const wellIds = selectedIds ?? dashboardState.selectedWellIds;
+		console.log('[handleWellSelectionChange] called, initialized:', dataState.initialized, 'selectedWells:', wellIds.length);
+		if (dataState.initialized) {
+			console.log('[handleWellSelectionChange] triggering refreshProductionData with', wellIds.length, 'wells');
+			// Pass wellIds explicitly to avoid stale state
+			refreshProductionData([...wellIds]).catch((err) => {
+				console.error('Failed to refresh data:', err);
+			});
+		}
+	}
 
 	// Initialize on mount
 	onMount(() => {

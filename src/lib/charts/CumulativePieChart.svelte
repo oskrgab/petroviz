@@ -21,6 +21,10 @@
 	const OIL_COLOR = '#2ecc71';
 	const WATER_COLOR = '#3498db';
 
+	// Sanitize input values - ensure they're finite non-negative numbers
+	const safeOil = $derived(Number.isFinite(oilTotal) && oilTotal >= 0 ? oilTotal : 0);
+	const safeWater = $derived(Number.isFinite(waterTotal) && waterTotal >= 0 ? waterTotal : 0);
+
 	// Data record type
 	interface PieDataRecord {
 		label: string;
@@ -30,16 +34,16 @@
 
 	// Compute chart data
 	const data = $derived<PieDataRecord[]>([
-		{ label: 'Oil', value: oilTotal, color: OIL_COLOR },
-		{ label: 'Water', value: waterTotal, color: WATER_COLOR }
+		{ label: 'Oil', value: safeOil, color: OIL_COLOR },
+		{ label: 'Water', value: safeWater, color: WATER_COLOR }
 	]);
 
 	// Compute total
-	const total = $derived(oilTotal + waterTotal);
+	const total = $derived(safeOil + safeWater);
 
 	// Compute percentages
-	const oilPercent = $derived(total > 0 ? formatPercent(oilTotal / total, true) : '0%');
-	const waterPercent = $derived(total > 0 ? formatPercent(waterTotal / total, true) : '0%');
+	const oilPercent = $derived(total > 0 ? formatPercent(safeOil / total, true) : '0%');
+	const waterPercent = $derived(total > 0 ? formatPercent(safeWater / total, true) : '0%');
 
 	// Data accessors
 	const value = (d: PieDataRecord) => d.value;
@@ -78,13 +82,13 @@
 				<span class="legend-color" style="background-color: {OIL_COLOR};"></span>
 				<span class="legend-label">Oil</span>
 				<span class="legend-value">{oilPercent}</span>
-				<span class="legend-absolute">({formatVolume(oilTotal)})</span>
+				<span class="legend-absolute">({formatVolume(safeOil)})</span>
 			</div>
 			<div class="legend-item">
 				<span class="legend-color" style="background-color: {WATER_COLOR};"></span>
 				<span class="legend-label">Water</span>
 				<span class="legend-value">{waterPercent}</span>
-				<span class="legend-absolute">({formatVolume(waterTotal)})</span>
+				<span class="legend-absolute">({formatVolume(safeWater)})</span>
 			</div>
 		</div>
 	{:else}

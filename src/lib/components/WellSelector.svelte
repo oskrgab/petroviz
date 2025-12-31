@@ -35,17 +35,19 @@
 
 	function handleToggle(wellId: number) {
 		toggleWellSelection(wellId);
-		onSelectionChange?.(dashboardState.selectedWellIds);
+		// Use setTimeout to ensure state has updated before callback
+		setTimeout(() => onSelectionChange?.(dashboardState.selectedWellIds), 0);
 	}
 
 	function handleSelectAll() {
-		selectAllWells(wells.map((w) => w.id));
-		onSelectionChange?.(dashboardState.selectedWellIds);
+		const allIds = wells.map((w) => w.id);
+		selectAllWells(allIds);
+		setTimeout(() => onSelectionChange?.(allIds), 0);
 	}
 
 	function handleClearAll() {
 		clearWellSelection();
-		onSelectionChange?.(dashboardState.selectedWellIds);
+		setTimeout(() => onSelectionChange?.([]), 0);
 	}
 </script>
 

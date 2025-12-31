@@ -11,7 +11,6 @@ import type {
 	TableSchema,
 	ColumnSchema,
 	ForeignKey,
-	RawSchemaResponse,
 	ColumnType
 } from '$lib/types';
 
@@ -28,27 +27,64 @@ let cachedSchema: SchemaDefinition | null = null;
 let loadingPromise: Promise<void> | null = null;
 
 /**
+ * Raw schema format from volve-db.oscarcortez.me/schema.json
+ * Tables is an object keyed by table name, not an array
+ */
+interface RawColumn {
+	name: string;
+	type: string;
+	not_null?: boolean;
+	primary_key?: boolean;
+	default_value?: unknown;
+	comment?: string | null;
+}
+
+interface RawTable {
+	columns: RawColumn[];
+	foreign_keys?: Array<{
+		columns: string[];
+		references_table: string;
+		references_columns: string[];
+	}>;
+}
+
+interface RawSchema {
+	database?: string;
+	description?: string;
+	tables: Record<string, RawTable>;
+}
+
+/**
  * Parse raw schema response into typed SchemaDefinition
  */
-function parseSchema(raw: RawSchemaResponse): SchemaDefinition {
+function parseSchema(raw: RawSchema): SchemaDefinition {
+	const tableEntries = Object.entries(raw.tables);
+
 	return {
-		tables: raw.tables.map((table) => ({
-			name: table.name,
-			columns: table.columns.map((col) => ({
-				name: col.name,
-				type: col.type as ColumnType,
-				nullable: col.nullable ?? true,
-				description: col.description
-			})),
-			primaryKey: table.primaryKey ?? [],
-			foreignKeys: table.foreignKeys?.map((fk) => ({
-				columns: fk.columns,
-				references: {
-					table: fk.references.table,
-					columns: fk.references.columns
-				}
-			}))
-		}))
+		tables: tableEntries.map(([tableName, table]) => {
+			// Extract primary key columns
+			const primaryKey = table.columns
+				.filter((col) => col.primary_key)
+				.map((col) => col.name);
+
+			return {
+				name: tableName,
+				columns: table.columns.map((col) => ({
+					name: col.name,
+					type: col.type.toLowerCase() as ColumnType,
+					nullable: !col.not_null,
+					description: col.comment ?? undefined
+				})),
+				primaryKey,
+				foreignKeys: table.foreign_keys?.map((fk) => ({
+					columns: fk.columns,
+					references: {
+						table: fk.references_table,
+						columns: fk.references_columns
+					}
+				}))
+			};
+		})
 	};
 }
 
@@ -75,10 +111,10 @@ export async function loadSchema(): Promise<void> {
 				throw new Error(`Failed to fetch schema: ${response.status} ${response.statusText}`);
 			}
 
-			const raw: RawSchemaResponse = await response.json();
+			const raw: RawSchema = await response.json();
 
-			if (!raw.tables || !Array.isArray(raw.tables)) {
-				throw new Error('Invalid schema format: missing tables array');
+			if (!raw.tables || typeof raw.tables !== 'object') {
+				throw new Error('Invalid schema format: missing tables object');
 			}
 
 			cachedSchema = parseSchema(raw);

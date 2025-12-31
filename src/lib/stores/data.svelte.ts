@@ -15,7 +15,7 @@ import type {
 import { initializeDatabase, query } from '$lib/data/db';
 import { loadSchema } from '$lib/data/schema';
 import * as queries from '$lib/data/queries';
-import { dashboardState, setLoading, setError, clearError } from './dashboard.svelte';
+import { dashboardState, setLoading, setError, clearError, selectAllWells } from './dashboard.svelte';
 
 /**
  * Data state using Svelte 5 $state rune
@@ -67,11 +67,48 @@ interface RawDateRange {
 }
 
 /**
- * Convert date string/Date to Date object
+ * Convert date value to Date object
+ * Handles: Date objects, ISO strings, timestamps, and DuckDB date numbers (days since epoch)
+ * Returns null for invalid/null/undefined values
  */
-function toDate(value: string | Date): Date {
-	if (value instanceof Date) return value;
-	return new Date(value);
+function toDate(value: unknown): Date | null {
+	// Handle null/undefined explicitly
+	if (value === null || value === undefined) return null;
+
+	let result: Date;
+
+	if (value instanceof Date) {
+		result = value;
+	} else if (typeof value === 'string') {
+		// Empty strings produce Invalid Date
+		if (value.trim() === '') return null;
+		result = new Date(value);
+	} else if (typeof value === 'number') {
+		// DuckDB returns dates as days since epoch (1970-01-01)
+		// If the number is small (< 100000), it's likely days, not milliseconds
+		if (value < 100000) {
+			result = new Date(value * 24 * 60 * 60 * 1000);
+		} else {
+			result = new Date(value);
+		}
+	} else {
+		// Unknown type - return null instead of trying to convert
+		return null;
+	}
+
+	// Validate the resulting date
+	if (isNaN(result.getTime())) return null;
+
+	return result;
+}
+
+/**
+ * Safely convert a value to a number, defaulting to 0 for null/undefined/NaN
+ */
+function safeNumber(value: unknown): number {
+	if (value === null || value === undefined) return 0;
+	const num = Number(value);
+	return Number.isNaN(num) ? 0 : num;
 }
 
 /**
@@ -91,7 +128,12 @@ export async function initializeApp(): Promise<void> {
 		await loadWells();
 		await loadAvailableDateRange();
 
-		// Load production data with current filters
+		// Select all wells by default
+		if (dataState.wells.length > 0) {
+			selectAllWells(dataState.wells.map((w) => w.id));
+		}
+
+		// Load production data with current filters (all wells selected)
 		await refreshProductionData();
 
 		dataState.initialized = true;
@@ -127,10 +169,11 @@ export async function loadAvailableDateRange(): Promise<void> {
 		const sql = queries.dateRange();
 		const results = await query<RawDateRange>(sql);
 		if (results.length > 0) {
-			dataState.availableDateRange = {
-				start: toDate(results[0].start),
-				end: toDate(results[0].end)
-			};
+			const start = toDate(results[0].start);
+			const end = toDate(results[0].end);
+			if (start && end) {
+				dataState.availableDateRange = { start, end };
+			}
 		}
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Failed to load date range';
@@ -141,29 +184,49 @@ export async function loadAvailableDateRange(): Promise<void> {
 
 /**
  * Get current filter values for queries
+ * Reads fresh values from dashboardState each time
  */
 function getFilterParams(): { wellIds: number[] | undefined; dateRange: DateRange | undefined } {
+	// Read the current state values
+	const selectedWellIds = dashboardState.selectedWellIds;
+	const dateRange = dashboardState.dateRange;
+
+	console.log('[getFilterParams] Reading state - selectedWellIds:', selectedWellIds.length, 'ids');
+
 	return {
-		wellIds:
-			dashboardState.selectedWellIds.length > 0 ? dashboardState.selectedWellIds : undefined,
-		dateRange: dashboardState.dateRange ?? undefined
+		wellIds: selectedWellIds.length > 0 ? [...selectedWellIds] : undefined,
+		dateRange: dateRange ?? undefined
 	};
 }
 
 /**
  * Load daily production data with current filters
+ * @param forceWellIds - Optional: explicitly pass wellIds to override state
  */
-export async function loadDailyProduction(): Promise<void> {
+export async function loadDailyProduction(forceWellIds?: number[]): Promise<void> {
 	try {
-		const { wellIds, dateRange } = getFilterParams();
+		const { wellIds: stateWellIds, dateRange } = getFilterParams();
+		const wellIds = forceWellIds !== undefined
+			? (forceWellIds.length > 0 ? forceWellIds : undefined)
+			: stateWellIds;
+		console.log('[loadDailyProduction] wellIds:', wellIds?.length ?? 'all', 'dateRange:', dateRange ? 'set' : 'none');
 		const sql = queries.dailyFieldTotals(wellIds, dateRange);
+		console.log('[loadDailyProduction] SQL:', sql.substring(0, 200));
 		const results = await query<RawDailyRecord>(sql);
+		console.log('[loadDailyProduction] Results:', results.length, 'rows');
 
-		dataState.dailyProduction = results.map((row) => ({
-			date: toDate(row.date),
-			oil: row.oil ?? 0,
-			water: row.water ?? 0
-		}));
+		dataState.dailyProduction = results
+			.map((row) => {
+				const date = toDate(row.date);
+				return date
+					? {
+							date,
+							oil: safeNumber(row.oil),
+							water: safeNumber(row.water)
+						}
+					: null;
+			})
+			.filter((row): row is DailyProductionRecord => row !== null);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Failed to load daily production';
 		setError(message);
@@ -173,17 +236,21 @@ export async function loadDailyProduction(): Promise<void> {
 
 /**
  * Load cumulative production by well with current filters
+ * @param forceWellIds - Optional: explicitly pass wellIds to override state
  */
-export async function loadWellCumulatives(): Promise<void> {
+export async function loadWellCumulatives(forceWellIds?: number[]): Promise<void> {
 	try {
-		const { wellIds, dateRange } = getFilterParams();
+		const { wellIds: stateWellIds, dateRange } = getFilterParams();
+		const wellIds = forceWellIds !== undefined
+			? (forceWellIds.length > 0 ? forceWellIds : undefined)
+			: stateWellIds;
 		const sql = queries.cumulativeByWell(wellIds, dateRange);
 		const results = await query<RawWellCumulative>(sql);
 
 		dataState.wellCumulatives = results.map((row) => ({
 			wellId: row.wellId,
-			wellName: row.wellName,
-			cumulativeOil: row.cumulativeOil ?? 0
+			wellName: row.wellName || 'Unknown',
+			cumulativeOil: safeNumber(row.cumulativeOil)
 		}));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Failed to load well cumulatives';
@@ -194,18 +261,22 @@ export async function loadWellCumulatives(): Promise<void> {
 
 /**
  * Load field cumulative totals with current filters
+ * @param forceWellIds - Optional: explicitly pass wellIds to override state
  */
-export async function loadFieldTotals(): Promise<void> {
+export async function loadFieldTotals(forceWellIds?: number[]): Promise<void> {
 	try {
-		const { wellIds, dateRange } = getFilterParams();
+		const { wellIds: stateWellIds, dateRange } = getFilterParams();
+		const wellIds = forceWellIds !== undefined
+			? (forceWellIds.length > 0 ? forceWellIds : undefined)
+			: stateWellIds;
 		const sql = queries.fieldCumulativeTotals(wellIds, dateRange);
 		const results = await query<RawFieldTotals>(sql);
 
 		if (results.length > 0) {
 			dataState.fieldTotals = {
-				oil: results[0].oil ?? 0,
-				gas: results[0].gas ?? 0,
-				water: results[0].water ?? 0
+				oil: safeNumber(results[0].oil),
+				gas: safeNumber(results[0].gas),
+				water: safeNumber(results[0].water)
 			};
 		} else {
 			dataState.fieldTotals = { oil: 0, gas: 0, water: 0 };
@@ -220,14 +291,24 @@ export async function loadFieldTotals(): Promise<void> {
 /**
  * Refresh all production data with current filters
  * Call this when filters change
+ * @param forceWellIds - Optional: explicitly pass wellIds to avoid stale state reads
  */
-export async function refreshProductionData(): Promise<void> {
+export async function refreshProductionData(forceWellIds?: number[]): Promise<void> {
 	setLoading(true);
 	clearError();
 
+	// Log what we're refreshing with
+	const currentWellIds = forceWellIds ?? dashboardState.selectedWellIds;
+	console.log('[refreshProductionData] Starting refresh with', currentWellIds.length, 'wells');
+
 	try {
 		// Load all production data in parallel
-		await Promise.all([loadDailyProduction(), loadWellCumulatives(), loadFieldTotals()]);
+		await Promise.all([
+			loadDailyProduction(forceWellIds),
+			loadWellCumulatives(forceWellIds),
+			loadFieldTotals(forceWellIds)
+		]);
+		console.log('[refreshProductionData] Refresh complete');
 	} catch (error) {
 		// Error already set by individual loaders
 		throw error;
