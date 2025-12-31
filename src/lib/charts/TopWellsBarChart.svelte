@@ -3,7 +3,6 @@
 	 * TopWellsBarChart Component
 	 *
 	 * Horizontal bar chart showing wells ranked by cumulative oil production.
-	 * Renders all wells passed in via data prop (filtering/limiting should be done by parent).
 	 * Uses Unovis Svelte components.
 	 */
 
@@ -18,80 +17,74 @@
 
 	let { data, height = 350 }: Props = $props();
 
-	// Color constant matching design spec
-	const BAR_COLOR = '#2ecc71';
+	// Color constant
+	const BAR_COLOR = '#16a34a';
 
 	// Filter invalid values and sort by cumulative oil (highest first)
 	const validWells = $derived(
 		[...data]
 			.filter((d) => {
-				// Ensure wellName exists and is a non-empty string
 				if (!d.wellName || typeof d.wellName !== 'string') return false;
-				// Ensure cumulativeOil is a finite positive number
 				if (!Number.isFinite(d.cumulativeOil) || d.cumulativeOil <= 0) return false;
 				return true;
 			})
 			.sort((a, b) => b.cumulativeOil - a.cumulativeOil)
 	);
 
-	// For horizontal bar chart with orientation="horizontal":
-	// x = index (category position on y-axis) - reversed so highest is at top
-	// y = value (cumulativeOil - the bar length on x-axis)
+	// For horizontal bar chart
 	const x = (_d: WellCumulativeRecord, i: number) => validWells.length - 1 - i;
 	const y = (d: WellCumulativeRecord) => d.cumulativeOil ?? 0;
 
-	// Format x-axis (horizontal - shows values) with volume formatting
 	function valueTickFormat(value: number): string {
 		return formatVolumeAxis(value);
 	}
 
-	// Format y-axis (vertical - shows well names) using reversed indices
 	const categoryTickFormat = $derived((index: number) => {
-		// Reverse the index to match the reversed x accessor
 		const reversedIndex = validWells.length - 1 - Math.round(index);
 		const well = validWells[reversedIndex];
 		return well?.wellName ?? '';
 	});
 
-	// Format value for bar labels
 	function formatBarValue(value: number): string {
 		return formatNumber(value, { decimals: 0 });
 	}
 
-	// Has data check
 	const hasData = $derived(validWells.length > 0);
-
-	// Calculate dynamic height based on number of wells
 	const dynamicHeight = $derived(Math.max(height, validWells.length * 35 + 60));
 
-	// Create a unique key for the chart that changes when data content changes
 	const dataKey = $derived(
 		validWells.length === 0
 			? 'empty'
 			: `${validWells.length}-${validWells.reduce((acc, d) => acc + d.cumulativeOil, 0).toFixed(0)}`
 	);
 
-	// Explicit tick values for y-axis to prevent label duplication
 	const yTickValues = $derived(
 		Array.from({ length: validWells.length }, (_, i) => i)
 	);
 
-	// Dynamic title based on well count
 	const chartTitle = $derived(
 		validWells.length === 1
 			? 'Well Oil Production'
-			: `Top ${validWells.length} Wells by Oil Production`
+			: `Top ${validWells.length} Wells`
 	);
 </script>
 
 <div class="chart-container">
 	<div class="chart-header">
-		<h3>{chartTitle}</h3>
+		<div class="header-left">
+			<h3>{chartTitle}</h3>
+			<span class="subtitle">By Oil Production</span>
+		</div>
+		<div class="unit-badge">
+			<svg viewBox="0 0 24 24" fill="currentColor">
+				<path d="M12 2C12 2 5 10 5 15C5 18.866 8.134 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2Z"/>
+			</svg>
+			sm³
+		</div>
 	</div>
 
 	{#if hasData}
 		<div class="chart-wrapper">
-			<!-- Key block forces re-render when data changes (Unovis doesn't react to data prop changes) -->
 			{#key dataKey}
 				<VisXYContainer data={validWells} height={dynamicHeight}>
 					<VisGroupedBar
@@ -102,21 +95,18 @@
 						roundedCorners={4}
 						barPadding={0.2}
 					/>
-					<VisAxis type="x" label="Cumulative Oil Production (sm3)" tickFormat={valueTickFormat} />
+					<VisAxis type="x" label="Cumulative Oil Production (sm³)" tickFormat={valueTickFormat} />
 					<VisAxis type="y" tickFormat={categoryTickFormat} tickValues={yTickValues} />
 				</VisXYContainer>
 			{/key}
 		</div>
-
-		<div class="values-overlay">
-			{#each validWells as well, i (well.wellId)}
-				<div class="value-label" style="top: {(i + 0.5) * (dynamicHeight - 60) / validWells.length + 30}px">
-					{formatBarValue(well.cumulativeOil)}
-				</div>
-			{/each}
-		</div>
 	{:else}
 		<div class="no-data">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+				<rect x="3" y="8" width="4" height="13" rx="1" />
+				<rect x="10" y="5" width="4" height="16" rx="1" />
+				<rect x="17" y="11" width="4" height="10" rx="1" />
+			</svg>
 			<p>No well production data available</p>
 		</div>
 	{/if}
@@ -131,12 +121,46 @@
 	}
 
 	.chart-header {
-		margin-bottom: var(--spacing-sm);
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		margin-bottom: var(--spacing-md);
+	}
+
+	.header-left {
+		display: flex;
+		flex-direction: column;
+		gap: 0;
 	}
 
 	.chart-header h3 {
 		margin: 0;
 		font-size: var(--font-size-lg);
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+
+	.subtitle {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-muted);
+	}
+
+	.unit-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background: var(--color-oil-soft);
+		color: var(--color-oil);
+		border-radius: var(--radius-full);
+		font-size: var(--font-size-xs);
+		font-family: var(--font-mono);
+		font-weight: 500;
+	}
+
+	.unit-badge svg {
+		width: 12px;
+		height: 12px;
 	}
 
 	.chart-wrapper {
@@ -144,31 +168,27 @@
 		overflow-y: auto;
 	}
 
-	.values-overlay {
-		position: absolute;
-		top: 0;
-		right: var(--spacing-md);
-		bottom: 0;
-		display: none; /* Hidden by default - values shown via tooltip */
-	}
-
-	.value-label {
-		position: absolute;
-		right: 0;
-		font-size: var(--font-size-sm);
-		font-weight: 500;
-		color: var(--color-text);
-	}
-
 	.no-data {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		height: 200px;
-		color: var(--color-text-secondary);
+		gap: var(--spacing-md);
+		color: var(--color-text-muted);
 	}
 
-	/* Ensure bar chart has proper styling */
+	.no-data svg {
+		width: 48px;
+		height: 48px;
+		opacity: 0.5;
+	}
+
+	.no-data p {
+		margin: 0;
+		font-size: var(--font-size-sm);
+	}
+
 	:global(.unovis-xy-container) {
 		width: 100%;
 	}

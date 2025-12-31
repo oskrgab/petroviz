@@ -74,9 +74,19 @@
 {:else if !dataState.initialized}
 	<!-- Loading state -->
 	<div class="loading-page">
+		<div class="loading-brand">
+			<div class="loading-logo">
+				<svg viewBox="0 0 24 24" fill="currentColor">
+					<path d="M12 2C12 2 5 10 5 15C5 18.866 8.134 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2ZM12 20C9.239 20 7 17.761 7 15C7 11.512 11 5.695 12 4.357C13 5.695 17 11.512 17 15C17 17.761 14.761 20 12 20Z"/>
+					<ellipse cx="12" cy="15" rx="4" ry="5" fill="currentColor" opacity="0.3"/>
+				</svg>
+			</div>
+			<h1 class="loading-title">Volve Field</h1>
+			<span class="loading-subtitle">Production Analysis</span>
+		</div>
 		<LoadingSpinner
-			size="large"
-			message="Loading dashboard..."
+			size="medium"
+			message="Initializing dashboard..."
 			detail="Connecting to data source..."
 		/>
 	</div>
@@ -135,9 +145,79 @@
 	/* Loading page wrapper */
 	.loading-page {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		min-height: 100vh;
+		gap: var(--spacing-2xl);
+		background: var(--color-background);
+	}
+
+	.loading-brand {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-sm);
+		animation: fadeIn 0.5s ease-out;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.loading-logo {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 72px;
+		height: 72px;
+		background: linear-gradient(135deg, var(--color-oil) 0%, var(--color-oil-soft) 100%);
+		border-radius: var(--radius-xl);
+		color: white;
+		box-shadow: var(--shadow-lg);
+		animation: pulse 2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			transform: scale(1);
+			box-shadow: var(--shadow-lg);
+		}
+		50% {
+			transform: scale(1.02);
+			box-shadow: var(--shadow-glow);
+		}
+	}
+
+	.loading-logo svg {
+		width: 40px;
+		height: 40px;
+	}
+
+	.loading-title {
+		font-size: var(--font-size-2xl);
+		font-weight: 700;
+		letter-spacing: -0.03em;
+		margin: 0;
+		background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-secondary) 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.loading-subtitle {
+		font-size: var(--font-size-sm);
+		font-weight: 500;
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
 	}
 
 	/* Chart loading overlay */
@@ -149,10 +229,13 @@
 		align-items: center;
 		gap: var(--spacing-xs);
 		padding: var(--spacing-xs) var(--spacing-sm);
-		background: rgba(255, 255, 255, 0.9);
-		border-radius: calc(var(--border-radius) / 2);
+		background: var(--glass-bg);
+		backdrop-filter: var(--backdrop-blur);
+		border: 1px solid var(--glass-border);
+		border-radius: var(--radius-md);
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
 		z-index: 10;
+		box-shadow: var(--shadow-sm);
 	}
 </style>
