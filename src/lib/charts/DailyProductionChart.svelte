@@ -41,23 +41,24 @@
 	const yWater = (d: DailyProductionRecord) => d.water ?? 0;
 
 	// Tooltip template with colored indicators
+	// Unovis handles text color via --vis-tooltip-text-color CSS variable
 	function tooltipTemplate(d: DailyProductionRecord): string {
 		const dateStr = formatDate(d.date, 'medium');
 		const oilFormatted = formatNumber(d.oil, { decimals: 0 });
 		const waterFormatted = formatNumber(d.water, { decimals: 0 });
 
 		return `
-			<div class="chart-tooltip">
-				<div class="tooltip-date">${dateStr}</div>
-				<div class="tooltip-row">
-					<span class="tooltip-dot" style="background: ${OIL_HEX};"></span>
-					<span class="tooltip-label">Oil</span>
-					<span class="tooltip-value">${oilFormatted} sm³/d</span>
+			<div style="padding: 10px; font-size: 12px; min-width: 160px;">
+				<div style="font-weight: 600; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(128,128,128,0.3);">${dateStr}</div>
+				<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+					<span style="width: 10px; height: 10px; border-radius: 50%; background: ${OIL_HEX}; flex-shrink: 0;"></span>
+					<span style="opacity: 0.7;">Oil</span>
+					<span style="font-weight: 600; font-family: 'IBM Plex Mono', monospace; margin-left: auto;">${oilFormatted} sm³/d</span>
 				</div>
-				<div class="tooltip-row">
-					<span class="tooltip-dot" style="background: ${WATER_HEX};"></span>
-					<span class="tooltip-label">Water</span>
-					<span class="tooltip-value">${waterFormatted} sm³/d</span>
+				<div style="display: flex; align-items: center; gap: 8px;">
+					<span style="width: 10px; height: 10px; border-radius: 50%; background: ${WATER_HEX}; flex-shrink: 0;"></span>
+					<span style="opacity: 0.7;">Water</span>
+					<span style="font-weight: 600; font-family: 'IBM Plex Mono', monospace; margin-left: auto;">${waterFormatted} sm³/d</span>
 				</div>
 			</div>
 		`;

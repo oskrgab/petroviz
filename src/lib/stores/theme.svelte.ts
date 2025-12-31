@@ -43,10 +43,18 @@ function initializeTheme(): void {
 
 /**
  * Apply theme to document element
+ * Also applies 'theme-dark' class to body for Unovis compatibility
  */
 function applyTheme(theme: Theme): void {
 	if (!isBrowser) return;
 	document.documentElement.setAttribute('data-theme', theme);
+
+	// Unovis looks for 'theme-dark' class on body for dark mode styling
+	if (theme === 'dark') {
+		document.body.classList.add('theme-dark');
+	} else {
+		document.body.classList.remove('theme-dark');
+	}
 }
 
 /**

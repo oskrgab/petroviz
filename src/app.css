@@ -390,12 +390,19 @@ input[type='checkbox'] {
 	stroke: var(--chart-grid) !important;
 }
 
-/* Tooltip styling */
-:global(.unovis-tooltip) {
-	font-family: var(--font-sans) !important;
-	background: var(--color-surface-elevated) !important;
-	border: 1px solid var(--color-border) !important;
-	border-radius: var(--radius-md) !important;
-	box-shadow: var(--shadow-lg) !important;
-	color: var(--color-text) !important;
+/* Unovis Tooltip CSS Variables - Light Theme */
+:root {
+	--vis-tooltip-background-color: rgba(255, 255, 255, 0.98);
+	--vis-tooltip-border-color: #e2e8f0;
+	--vis-tooltip-text-color: #0f172a;
+	--vis-tooltip-shadow-color: rgba(15, 23, 42, 0.1);
+	--vis-tooltip-padding: 0;
+}
+
+/* Unovis Tooltip CSS Variables - Dark Theme */
+:root {
+	--vis-dark-tooltip-background-color: rgba(51, 65, 85, 0.98);
+	--vis-dark-tooltip-border-color: #475569;
+	--vis-dark-tooltip-text-color: #f1f5f9;
+	--vis-dark-tooltip-shadow-color: rgba(0, 0, 0, 0.4);
 }
