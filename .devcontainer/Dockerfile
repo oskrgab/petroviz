@@ -88,6 +88,9 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
+# Install Gemini CLI
+RUN npm install -g @google/gemini-cli
+
 # Copy and set up firewall script
 USER root
 COPY .devcontainer/init-firewall.sh /usr/local/bin/
