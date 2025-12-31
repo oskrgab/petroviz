@@ -12,9 +12,9 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import DailyProductionChart from '$lib/charts/DailyProductionChart.svelte';
+	import DateRangeSelector from '$lib/charts/DateRangeSelector.svelte';
 	import CumulativePieChart from '$lib/charts/CumulativePieChart.svelte';
 	import TopWellsBarChart from '$lib/charts/TopWellsBarChart.svelte';
-	import { formatDateRange } from '$lib/utils/formatters';
 	import { dashboardState, setDateRange } from '$lib/stores/dashboard.svelte';
 	import {
 		dataState,
@@ -90,18 +90,6 @@
 				onSelectionChange={handleWellSelectionChange}
 			/>
 
-			{#if dashboardState.dateRange}
-				<div class="date-filter-info">
-					<span class="filter-label">Date Filter:</span>
-					<span class="filter-value">
-						{formatDateRange(dashboardState.dateRange.start, dashboardState.dateRange.end)}
-					</span>
-					<button class="clear-btn" onclick={() => setDateRange(null)}>
-						Clear
-					</button>
-				</div>
-			{/if}
-
 			{#if dashboardState.error}
 				<ErrorMessage
 					variant="banner"
@@ -118,8 +106,13 @@
 					<span>Updating...</span>
 				</div>
 			{/if}
-			<DailyProductionChart
+			<DailyProductionChart data={dataState.dailyProduction} />
+		{/snippet}
+
+		{#snippet rangeSelector()}
+			<DateRangeSelector
 				data={dataState.dailyProduction}
+				selectedRange={dashboardState.dateRange}
 				onDateRangeChange={handleDateRangeChange}
 			/>
 		{/snippet}
@@ -162,40 +155,5 @@
 		font-size: var(--font-size-sm);
 		color: var(--color-text-secondary);
 		z-index: 10;
-	}
-
-	/* Date filter info */
-	.date-filter-info {
-		margin-top: var(--spacing-md);
-		padding: var(--spacing-sm);
-		background: rgba(52, 152, 219, 0.1);
-		border-radius: calc(var(--border-radius) / 2);
-		font-size: var(--font-size-sm);
-	}
-
-	.filter-label {
-		display: block;
-		font-weight: 500;
-		color: var(--color-text-secondary);
-		margin-bottom: var(--spacing-xs);
-	}
-
-	.filter-value {
-		display: block;
-		margin-bottom: var(--spacing-xs);
-	}
-
-	.clear-btn {
-		padding: var(--spacing-xs) var(--spacing-sm);
-		background: transparent;
-		border: 1px solid var(--color-water);
-		color: var(--color-water);
-		border-radius: calc(var(--border-radius) / 2);
-		font-size: var(--font-size-sm);
-	}
-
-	.clear-btn:hover {
-		background: var(--color-water);
-		color: white;
 	}
 </style>

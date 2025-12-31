@@ -3,21 +3,19 @@
 	 * DailyProductionChart Component
 	 *
 	 * Time series line chart showing daily oil and water production.
-	 * Includes brush selection for date range filtering.
 	 * Uses Unovis Svelte components.
 	 */
 
-	import { VisXYContainer, VisLine, VisAxis, VisBrush, VisCrosshair, VisTooltip } from '@unovis/svelte';
-	import type { DailyProductionRecord, DateRange } from '$lib/types';
+	import { VisXYContainer, VisLine, VisAxis, VisCrosshair } from '@unovis/svelte';
+	import type { DailyProductionRecord } from '$lib/types';
 	import { formatDate, formatNumber, formatVolumeAxis } from '$lib/utils/formatters';
 
 	interface Props {
 		data: DailyProductionRecord[];
 		height?: number;
-		onDateRangeChange?: (range: DateRange | null) => void;
 	}
 
-	let { data, height = 400, onDateRangeChange }: Props = $props();
+	let { data, height = 400 }: Props = $props();
 
 	// Color constants matching design spec
 	const OIL_COLOR = '#2ecc71';
@@ -66,22 +64,6 @@
 		return formatVolumeAxis(value);
 	}
 
-	// Handle brush selection end
-	function handleBrushEnd(selection: [number, number] | null, event: MouseEvent, userDriven: boolean) {
-		if (!userDriven) return;
-
-		if (selection && selection[0] !== selection[1]) {
-			const range: DateRange = {
-				start: new Date(selection[0]),
-				end: new Date(selection[1])
-			};
-			onDateRangeChange?.(range);
-		} else {
-			// Clear selection
-			onDateRangeChange?.(null);
-		}
-	}
-
 	// Chart has data check
 	const hasData = $derived(validData && validData.length > 0);
 
@@ -118,10 +100,6 @@
 				<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
 				<VisAxis type="y" label="Daily Production (sm3)" tickFormat={yTickFormat} />
 				<VisCrosshair {x} y={[yOil, yWater]} template={tooltipTemplate} />
-				<VisBrush
-					draggable={true}
-					onBrushEnd={handleBrushEnd}
-				/>
 			</VisXYContainer>
 		{/key}
 	{:else}
@@ -129,8 +107,6 @@
 			<p>No production data available</p>
 		</div>
 	{/if}
-
-	<p class="brush-hint">Drag on the chart to select a date range</p>
 </div>
 
 <style>
@@ -176,14 +152,6 @@
 		justify-content: center;
 		height: 300px;
 		color: var(--color-text-secondary);
-	}
-
-	.brush-hint {
-		text-align: center;
-		font-size: var(--font-size-sm);
-		color: var(--color-text-secondary);
-		margin-top: var(--spacing-sm);
-		margin-bottom: 0;
 	}
 
 	/* Unovis chart styling */

@@ -35,20 +35,22 @@
 			.slice(0, maxWells)
 	);
 
-	// For horizontal bar chart:
-	// x = value (cumulativeOil) - the length of the bar
-	// y = index - the position of the bar (we'll use tickFormat to show well names)
-	const x = (d: WellCumulativeRecord) => d.cumulativeOil ?? 0;
-	const y = (_d: WellCumulativeRecord, i: number) => i;
+	// For horizontal bar chart with orientation="horizontal":
+	// x = index (category position on y-axis) - reversed so highest is at top
+	// y = value (cumulativeOil - the bar length on x-axis)
+	const x = (_d: WellCumulativeRecord, i: number) => topWells.length - 1 - i;
+	const y = (d: WellCumulativeRecord) => d.cumulativeOil ?? 0;
 
-	// Format large numbers for x-axis
-	function xTickFormat(value: number): string {
+	// Format x-axis (horizontal - shows values) with volume formatting
+	function valueTickFormat(value: number): string {
 		return formatVolumeAxis(value);
 	}
 
-	// Format y-axis to show well names instead of indices
-	const yTickFormat = $derived((index: number) => {
-		const well = topWells[Math.round(index)];
+	// Format y-axis (vertical - shows well names) using reversed indices
+	const categoryTickFormat = $derived((index: number) => {
+		// Reverse the index to match the reversed x accessor
+		const reversedIndex = topWells.length - 1 - Math.round(index);
+		const well = topWells[reversedIndex];
 		return well?.wellName ?? '';
 	});
 
@@ -68,6 +70,11 @@
 		topWells.length === 0
 			? 'empty'
 			: `${topWells.length}-${topWells.reduce((acc, d) => acc + d.cumulativeOil, 0).toFixed(0)}`
+	);
+
+	// Explicit tick values for y-axis to prevent label duplication
+	const yTickValues = $derived(
+		Array.from({ length: topWells.length }, (_, i) => i)
 	);
 </script>
 
@@ -89,8 +96,8 @@
 						roundedCorners={4}
 						barPadding={0.2}
 					/>
-					<VisAxis type="x" label="Cumulative Oil Production (sm3)" tickFormat={xTickFormat} />
-					<VisAxis type="y" tickFormat={yTickFormat} numTicks={topWells.length} />
+					<VisAxis type="x" label="Cumulative Oil Production (sm3)" tickFormat={valueTickFormat} />
+					<VisAxis type="y" tickFormat={categoryTickFormat} tickValues={yTickValues} />
 				</VisXYContainer>
 			{/key}
 		</div>

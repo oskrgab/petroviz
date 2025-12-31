@@ -12,6 +12,7 @@
 		title?: string;
 		sidebar?: Snippet;
 		mainChart?: Snippet;
+		rangeSelector?: Snippet;
 		pieChart?: Snippet;
 		barChart?: Snippet;
 	}
@@ -20,6 +21,7 @@
 		title = 'Volve Field Production Analysis',
 		sidebar,
 		mainChart,
+		rangeSelector,
 		pieChart,
 		barChart
 	}: Props = $props();
@@ -41,6 +43,12 @@
 			{#if mainChart}
 				<section class="chart-section main-chart" aria-label="Daily Production Chart">
 					{@render mainChart()}
+				</section>
+			{/if}
+
+			{#if rangeSelector}
+				<section class="chart-section range-selector" aria-label="Date Range Selector">
+					{@render rangeSelector()}
 				</section>
 			{/if}
 
@@ -119,6 +127,11 @@
 
 	.main-chart {
 		min-height: 400px;
+	}
+
+	.range-selector {
+		min-height: auto;
+		padding: var(--spacing-sm) var(--spacing-md);
 	}
 
 	.bottom-charts {
