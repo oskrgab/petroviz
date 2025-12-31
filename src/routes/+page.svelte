@@ -19,8 +19,7 @@
 	import {
 		dataState,
 		initializeApp,
-		refreshProductionData,
-		getTopWells
+		refreshProductionData
 	} from '$lib/stores/data.svelte';
 	import type { DateRange } from '$lib/types';
 
@@ -56,8 +55,8 @@
 		});
 	});
 
-	// Derived state for charts
-	const topWells = $derived(getTopWells(15));
+	// Derived state for bar chart - use all well cumulatives (already sorted by production)
+	const wellCumulatives = $derived(dataState.wellCumulatives);
 </script>
 
 <svelte:head>
@@ -127,7 +126,7 @@
 		{/snippet}
 
 		{#snippet barChart()}
-			<TopWellsBarChart data={topWells} />
+			<TopWellsBarChart data={wellCumulatives} />
 		{/snippet}
 	</DashboardLayout>
 {/if}

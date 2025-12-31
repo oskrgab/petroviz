@@ -6,7 +6,7 @@
 	 * Uses Unovis Svelte components.
 	 */
 
-	import { VisXYContainer, VisLine, VisAxis, VisCrosshair } from '@unovis/svelte';
+	import { VisXYContainer, VisLine, VisAxis, VisCrosshair, VisTooltip } from '@unovis/svelte';
 	import type { DailyProductionRecord } from '$lib/types';
 	import { formatDate, formatNumber, formatVolumeAxis } from '$lib/utils/formatters';
 
@@ -39,19 +39,33 @@
 	const yOil = (d: DailyProductionRecord) => d.oil ?? 0;
 	const yWater = (d: DailyProductionRecord) => d.water ?? 0;
 
-	// Tooltip template
+	// Tooltip template with colored indicators
 	function tooltipTemplate(d: DailyProductionRecord): string {
 		const dateStr = formatDate(d.date, 'medium');
 		const oilFormatted = formatNumber(d.oil, { decimals: 0 });
 		const waterFormatted = formatNumber(d.water, { decimals: 0 });
 
 		return `
-			<div style="padding: 8px; font-size: 12px;">
-				<div style="font-weight: bold; margin-bottom: 4px;">${dateStr}</div>
-				<div style="color: ${OIL_COLOR};">Oil: ${oilFormatted} sm3</div>
-				<div style="color: ${WATER_COLOR};">Water: ${waterFormatted} sm3</div>
+			<div style="padding: 8px; font-size: 12px; min-width: 150px;">
+				<div style="font-weight: 600; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px;">${dateStr}</div>
+				<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+					<span style="width: 10px; height: 10px; border-radius: 50%; background: ${OIL_COLOR}; flex-shrink: 0;"></span>
+					<span style="color: #666;">Oil:</span>
+					<span style="font-weight: 500; margin-left: auto;">${oilFormatted} sm³/d</span>
+				</div>
+				<div style="display: flex; align-items: center; gap: 6px;">
+					<span style="width: 10px; height: 10px; border-radius: 50%; background: ${WATER_COLOR}; flex-shrink: 0;"></span>
+					<span style="color: #666;">Water:</span>
+					<span style="font-weight: 500; margin-left: auto;">${waterFormatted} sm³/d</span>
+				</div>
 			</div>
 		`;
+	}
+
+	// Crosshair circle colors matching series
+	const crosshairColors = [OIL_COLOR, WATER_COLOR];
+	function crosshairColor(_d: DailyProductionRecord, i: number): string {
+		return crosshairColors[i] ?? OIL_COLOR;
 	}
 
 	// X-axis tick formatter
@@ -98,8 +112,9 @@
 				<VisLine {x} y={yOil} color={OIL_COLOR} curveType="linear" />
 				<VisLine {x} y={yWater} color={WATER_COLOR} curveType="linear" />
 				<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
-				<VisAxis type="y" label="Daily Production (sm3)" tickFormat={yTickFormat} />
-				<VisCrosshair {x} y={[yOil, yWater]} template={tooltipTemplate} />
+				<VisAxis type="y" label="Daily Production (sm3/d)" tickFormat={yTickFormat} />
+				<VisCrosshair {x} y={[yOil, yWater]} color={crosshairColor} template={tooltipTemplate} />
+				<VisTooltip />
 			</VisXYContainer>
 		{/key}
 	{:else}

@@ -326,9 +326,20 @@ export function getSortedWells(): Well[] {
 
 /**
  * Get top N wells by cumulative oil production
+ * @param count - Number of wells to return. If undefined, returns all wells.
  */
-export function getTopWells(count: number = 15): WellCumulativeRecord[] {
+export function getTopWells(count?: number): WellCumulativeRecord[] {
+	if (count === undefined) {
+		return dataState.wellCumulatives;
+	}
 	return dataState.wellCumulatives.slice(0, count);
+}
+
+/**
+ * Get total number of wells in the database
+ */
+export function getTotalWellCount(): number {
+	return dataState.wells.length;
 }
 
 /**

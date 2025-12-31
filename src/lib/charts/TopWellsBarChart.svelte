@@ -2,7 +2,8 @@
 	/**
 	 * TopWellsBarChart Component
 	 *
-	 * Horizontal bar chart showing top wells ranked by cumulative oil production.
+	 * Horizontal bar chart showing wells ranked by cumulative oil production.
+	 * Renders all wells passed in via data prop (filtering/limiting should be done by parent).
 	 * Uses Unovis Svelte components.
 	 */
 
@@ -12,17 +13,16 @@
 
 	interface Props {
 		data: WellCumulativeRecord[];
-		maxWells?: number;
 		height?: number;
 	}
 
-	let { data, maxWells = 15, height = 350 }: Props = $props();
+	let { data, height = 350 }: Props = $props();
 
 	// Color constant matching design spec
 	const BAR_COLOR = '#2ecc71';
 
-	// Compute top wells sorted by cumulative oil (filter out invalid values)
-	const topWells = $derived(
+	// Filter invalid values and sort by cumulative oil (highest first)
+	const validWells = $derived(
 		[...data]
 			.filter((d) => {
 				// Ensure wellName exists and is a non-empty string
@@ -32,13 +32,12 @@
 				return true;
 			})
 			.sort((a, b) => b.cumulativeOil - a.cumulativeOil)
-			.slice(0, maxWells)
 	);
 
 	// For horizontal bar chart with orientation="horizontal":
 	// x = index (category position on y-axis) - reversed so highest is at top
 	// y = value (cumulativeOil - the bar length on x-axis)
-	const x = (_d: WellCumulativeRecord, i: number) => topWells.length - 1 - i;
+	const x = (_d: WellCumulativeRecord, i: number) => validWells.length - 1 - i;
 	const y = (d: WellCumulativeRecord) => d.cumulativeOil ?? 0;
 
 	// Format x-axis (horizontal - shows values) with volume formatting
@@ -49,8 +48,8 @@
 	// Format y-axis (vertical - shows well names) using reversed indices
 	const categoryTickFormat = $derived((index: number) => {
 		// Reverse the index to match the reversed x accessor
-		const reversedIndex = topWells.length - 1 - Math.round(index);
-		const well = topWells[reversedIndex];
+		const reversedIndex = validWells.length - 1 - Math.round(index);
+		const well = validWells[reversedIndex];
 		return well?.wellName ?? '';
 	});
 
@@ -60,34 +59,41 @@
 	}
 
 	// Has data check
-	const hasData = $derived(topWells.length > 0);
+	const hasData = $derived(validWells.length > 0);
 
 	// Calculate dynamic height based on number of wells
-	const dynamicHeight = $derived(Math.max(height, topWells.length * 35 + 60));
+	const dynamicHeight = $derived(Math.max(height, validWells.length * 35 + 60));
 
 	// Create a unique key for the chart that changes when data content changes
 	const dataKey = $derived(
-		topWells.length === 0
+		validWells.length === 0
 			? 'empty'
-			: `${topWells.length}-${topWells.reduce((acc, d) => acc + d.cumulativeOil, 0).toFixed(0)}`
+			: `${validWells.length}-${validWells.reduce((acc, d) => acc + d.cumulativeOil, 0).toFixed(0)}`
 	);
 
 	// Explicit tick values for y-axis to prevent label duplication
 	const yTickValues = $derived(
-		Array.from({ length: topWells.length }, (_, i) => i)
+		Array.from({ length: validWells.length }, (_, i) => i)
+	);
+
+	// Dynamic title based on well count
+	const chartTitle = $derived(
+		validWells.length === 1
+			? 'Well Oil Production'
+			: `Top ${validWells.length} Wells by Oil Production`
 	);
 </script>
 
 <div class="chart-container">
 	<div class="chart-header">
-		<h3>Top {maxWells} Wells by Oil Production</h3>
+		<h3>{chartTitle}</h3>
 	</div>
 
 	{#if hasData}
 		<div class="chart-wrapper">
 			<!-- Key block forces re-render when data changes (Unovis doesn't react to data prop changes) -->
 			{#key dataKey}
-				<VisXYContainer data={topWells} height={dynamicHeight}>
+				<VisXYContainer data={validWells} height={dynamicHeight}>
 					<VisGroupedBar
 						{x}
 						{y}
@@ -103,8 +109,8 @@
 		</div>
 
 		<div class="values-overlay">
-			{#each topWells as well, i (well.wellId)}
-				<div class="value-label" style="top: {(i + 0.5) * (dynamicHeight - 60) / topWells.length + 30}px">
+			{#each validWells as well, i (well.wellId)}
+				<div class="value-label" style="top: {(i + 0.5) * (dynamicHeight - 60) / validWells.length + 30}px">
 					{formatBarValue(well.cumulativeOil)}
 				</div>
 			{/each}
