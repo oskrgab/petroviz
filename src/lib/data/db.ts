@@ -6,11 +6,7 @@
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm';
-
-/**
- * Base URL for remote data files
- */
-export const DATA_BASE_URL = 'https://volve-db.oscarcortez.me';
+import { getParquetUrlByTable } from '$lib/config/data-sources';
 
 /**
  * Singleton database instance
@@ -160,22 +156,14 @@ export async function queryScalar<T>(sql: string): Promise<T> {
 }
 
 /**
- * Build a URL for a remote Parquet file
- * @param filename - Name of the parquet file (e.g., 'daily_production.parquet')
- * @returns Full URL to the parquet file
- */
-export function getParquetUrl(filename: string): string {
-	return `${DATA_BASE_URL}/${filename}`;
-}
-
-/**
  * Build a read_parquet SQL expression for a table
- * @param tableName - Name of the table (will be converted to filename)
+ * Uses the centralized configuration to get the correct parquet file URL
+ * @param tableName - Name of the table (e.g., 'wells', 'daily_production')
  * @returns SQL expression like read_parquet('https://...')
  */
 export function readParquet(tableName: string): string {
-	const filename = `${tableName}.parquet`;
-	return `read_parquet('${getParquetUrl(filename)}')`;
+	const url = getParquetUrlByTable(tableName);
+	return `read_parquet('${url}')`;
 }
 
 /**

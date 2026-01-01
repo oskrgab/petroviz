@@ -40,6 +40,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
+        env:
+          PUBLIC_DATA_BASE_URL: ${{ vars.PUBLIC_DATA_BASE_URL }}
+          PUBLIC_WELLS_PARQUET: ${{ vars.PUBLIC_WELLS_PARQUET }}
+          PUBLIC_DAILY_PRODUCTION_PARQUET: ${{ vars.PUBLIC_DAILY_PRODUCTION_PARQUET }}
+          PUBLIC_MONTHLY_PRODUCTION_PARQUET: ${{ vars.PUBLIC_MONTHLY_PRODUCTION_PARQUET }}
+          PUBLIC_SCHEMA_JSON: ${{ vars.PUBLIC_SCHEMA_JSON }}
         run: pnpm run build
 
       - name: Upload artifact

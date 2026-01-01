@@ -191,8 +191,6 @@ function getFilterParams(): { wellIds: number[] | undefined; dateRange: DateRang
 	const selectedWellIds = dashboardState.selectedWellIds;
 	const dateRange = dashboardState.dateRange;
 
-	console.log('[getFilterParams] Reading state - selectedWellIds:', selectedWellIds.length, 'ids');
-
 	return {
 		wellIds: selectedWellIds.length > 0 ? [...selectedWellIds] : undefined,
 		dateRange: dateRange ?? undefined
@@ -209,11 +207,8 @@ export async function loadDailyProduction(forceWellIds?: number[]): Promise<void
 		const wellIds = forceWellIds !== undefined
 			? (forceWellIds.length > 0 ? forceWellIds : undefined)
 			: stateWellIds;
-		console.log('[loadDailyProduction] wellIds:', wellIds?.length ?? 'all', 'dateRange:', dateRange ? 'set' : 'none');
 		const sql = queries.dailyFieldTotals(wellIds, dateRange);
-		console.log('[loadDailyProduction] SQL:', sql.substring(0, 200));
 		const results = await query<RawDailyRecord>(sql);
-		console.log('[loadDailyProduction] Results:', results.length, 'rows');
 
 		dataState.dailyProduction = results
 			.map((row) => {
@@ -297,10 +292,6 @@ export async function refreshProductionData(forceWellIds?: number[]): Promise<vo
 	setLoading(true);
 	clearError();
 
-	// Log what we're refreshing with
-	const currentWellIds = forceWellIds ?? dashboardState.selectedWellIds;
-	console.log('[refreshProductionData] Starting refresh with', currentWellIds.length, 'wells');
-
 	try {
 		// Load all production data in parallel
 		await Promise.all([
@@ -308,7 +299,6 @@ export async function refreshProductionData(forceWellIds?: number[]): Promise<vo
 			loadWellCumulatives(forceWellIds),
 			loadFieldTotals(forceWellIds)
 		]);
-		console.log('[refreshProductionData] Refresh complete');
 	} catch (error) {
 		// Error already set by individual loaders
 		throw error;

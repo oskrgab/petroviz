@@ -13,8 +13,9 @@ import type {
 	ForeignKey,
 	ColumnType
 } from '$lib/types';
+import { getSchemaUrl } from '$lib/config/data-sources';
 
-const SCHEMA_URL = 'https://volve-db.oscarcortez.me/schema.json';
+const SCHEMA_URL = getSchemaUrl();
 
 /**
  * Cached schema instance
@@ -27,7 +28,7 @@ let cachedSchema: SchemaDefinition | null = null;
 let loadingPromise: Promise<void> | null = null;
 
 /**
- * Raw schema format from volve-db.oscarcortez.me/schema.json
+ * Raw schema format from volve-db.ocortez.com/schema.json
  * Tables is an object keyed by table name, not an array
  */
 interface RawColumn {
