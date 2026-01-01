@@ -116,9 +116,7 @@
 				</span>
 				<span class="well-info">
 					<span class="well-name">{well.name}</span>
-					{#if well.facility}
-						<span class="well-facility">{well.facility}</span>
-					{/if}
+					<span class="well-facility">{well.id}</span>
 				</span>
 			</label>
 		{/each}

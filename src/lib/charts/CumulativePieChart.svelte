@@ -167,6 +167,7 @@
 		padding: var(--spacing-md);
 		background: var(--color-surface-sunken);
 		border-radius: var(--radius-md);
+		margin-top: var(--spacing-md);
 	}
 
 	.legend-item {

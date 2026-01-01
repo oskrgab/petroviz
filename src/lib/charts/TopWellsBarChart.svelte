@@ -95,7 +95,7 @@
 						roundedCorners={4}
 						barPadding={0.2}
 					/>
-					<VisAxis type="x" label="Cumulative Oil Production (sm³)" tickFormat={valueTickFormat} />
+					<VisAxis type="x" label="Cumulative Oil Production (sm³)" tickFormat={valueTickFormat} numTicks={5} />
 					<VisAxis type="y" tickFormat={categoryTickFormat} tickValues={yTickValues} />
 				</VisXYContainer>
 			{/key}
