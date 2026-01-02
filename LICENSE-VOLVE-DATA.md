@@ -27,6 +27,7 @@ The original Volve dataset is released under the **Creative Commons Attribution-
 
 - **Source**: [Equinor Data Village - Volve Data](https://www.equinor.com/energy/volve-data-sharing)
 - **License**: [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+- **Full License Terms**: [Equinor Terms and Conditions for Licence to Data - Volve (PDF)](https://www.equinor.com/content/dam/statoil/documents/what-we-do/Equinor-HRS-Terms-and-conditions-for-licence-to-data-Volve.pdf)
 
 ## Attribution
 
@@ -61,3 +62,4 @@ Under the following terms:
 - Equinor Data Village: https://www.equinor.com/energy/volve-data-sharing
 - Volve Dataset Documentation: Available through the Equinor Data Portal
 - CC BY-NC-SA 4.0 License: https://creativecommons.org/licenses/by-nc-sa/4.0/
+- Full License Terms (PDF): https://www.equinor.com/content/dam/statoil/documents/what-we-do/Equinor-HRS-Terms-and-conditions-for-licence-to-data-Volve.pdf
