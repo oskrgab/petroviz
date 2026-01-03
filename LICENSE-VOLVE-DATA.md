@@ -63,3 +63,14 @@ Under the following terms:
 - Volve Dataset Documentation: Available through the Equinor Data Portal
 - CC BY-NC-SA 4.0 License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 - Full License Terms (PDF): https://www.equinor.com/content/dam/statoil/documents/what-we-do/Equinor-HRS-Terms-and-conditions-for-licence-to-data-Volve.pdf
+
+
+## Questions?
+
+For questions about the Volve dataset license, contact Equinor directly through their data portal or licensing team.
+
+---
+
+**Last Updated**: January 2026
+
+**Disclaimer**: This document summarizes the Volve dataset license for convenience. The official terms in the Equinor PDF document take precedence in case of any discrepancies.
