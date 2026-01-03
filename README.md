@@ -144,6 +144,3 @@ This helps catch configuration issues during development and deployment.
 2. Check browser console with `window.volveConfig()`
 3. Confirm URLs are accessible (check CORS settings)
 
-## License
-
-MIT
