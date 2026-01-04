@@ -12,15 +12,11 @@
 
 	interface Props {
 		data: DailyProductionRecord[];
-		height?: number;
 	}
 
-	let { data, height = 400 }: Props = $props();
+	let { data }: Props = $props();
 
-	// Color constants using CSS custom properties
-	const OIL_COLOR = 'var(--color-oil)';
-	const WATER_COLOR = 'var(--color-water)';
-	// Hard-coded for Unovis (doesn't support CSS vars in JS)
+	// Color constants - hard-coded for Unovis (doesn't support CSS vars in JS)
 	const OIL_HEX = '#16a34a';
 	const WATER_HEX = '#0ea5e9';
 
@@ -95,7 +91,6 @@
 	<div class="chart-header">
 		<div class="header-left">
 			<h3>Daily Production</h3>
-			<span class="subtitle">Over Time</span>
 		</div>
 		<div class="legend">
 			<span class="legend-item">
@@ -110,8 +105,9 @@
 	</div>
 
 	{#if hasData}
-		{#key dataKey}
-			<VisXYContainer data={validData} {height}>
+		<div class="chart-wrapper">
+			{#key dataKey}
+				<VisXYContainer data={validData}>
 				<VisLine {x} y={yOil} color={OIL_HEX} curveType="linear" lineWidth={2} />
 				<VisLine {x} y={yWater} color={WATER_HEX} curveType="linear" lineWidth={2} />
 				<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
@@ -119,7 +115,8 @@
 				<VisCrosshair {x} y={[yOil, yWater]} color={crosshairColor} template={tooltipTemplate} />
 				<VisTooltip />
 			</VisXYContainer>
-		{/key}
+			{/key}
+		</div>
 	{:else}
 		<div class="no-data">
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -158,9 +155,19 @@
 		letter-spacing: -0.01em;
 	}
 
-	.subtitle {
-		font-size: var(--font-size-sm);
-		color: var(--color-text-muted);
+	.chart-wrapper {
+		flex: 1;
+		position: relative;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.chart-wrapper :global(.unovis-xy-container) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
 	}
 
 	.legend {
@@ -209,12 +216,6 @@
 	.no-data p {
 		margin: 0;
 		font-size: var(--font-size-sm);
-	}
-
-	/* Unovis chart styling - container should respect explicit height and fill width */
-	:global(.unovis-xy-container) {
-		flex: 0 0 auto;
-		width: 100%;
 	}
 
 	/* Custom tooltip styling */
