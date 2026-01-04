@@ -142,6 +142,7 @@
 	.chart-wrapper {
 		flex: 1;
 		min-height: 200px;
+		overflow: hidden;
 	}
 
 	/* Override Unovis central label styles */
@@ -246,5 +247,14 @@
 	.no-data p {
 		margin: 0;
 		font-size: var(--font-size-sm);
+	}
+
+	:global(.unovis-single-container) {
+		width: 100%;
+		max-width: 100%;
+	}
+
+	:global(.unovis-single-container svg) {
+		max-width: 100%;
 	}
 </style>

@@ -211,9 +211,10 @@
 		font-size: var(--font-size-sm);
 	}
 
-	/* Unovis chart styling - container should respect explicit height */
+	/* Unovis chart styling - container should respect explicit height and fill width */
 	:global(.unovis-xy-container) {
 		flex: 0 0 auto;
+		width: 100%;
 	}
 
 	/* Custom tooltip styling */

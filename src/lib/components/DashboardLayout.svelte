@@ -311,6 +311,8 @@
 	.pie-chart,
 	.bar-chart {
 		min-height: 360px;
+		overflow: hidden;
+		contain: layout style;
 	}
 
 	/* Footer */

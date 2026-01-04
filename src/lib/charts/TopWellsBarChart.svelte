@@ -12,10 +12,9 @@
 
 	interface Props {
 		data: WellCumulativeRecord[];
-		height?: number;
 	}
 
-	let { data, height = 350 }: Props = $props();
+	let { data }: Props = $props();
 
 	// Color constant
 	const BAR_COLOR = '#16a34a';
@@ -50,7 +49,6 @@
 	}
 
 	const hasData = $derived(validWells.length > 0);
-	const dynamicHeight = $derived(Math.max(height, validWells.length * 35 + 60));
 
 	const dataKey = $derived(
 		validWells.length === 0
@@ -86,7 +84,7 @@
 	{#if hasData}
 		<div class="chart-wrapper">
 			{#key dataKey}
-				<VisXYContainer data={validWells} height={dynamicHeight}>
+				<VisXYContainer data={validWells}>
 					<VisGroupedBar
 						{x}
 						{y}
@@ -165,7 +163,17 @@
 
 	.chart-wrapper {
 		flex: 1;
-		overflow-y: auto;
+		overflow: hidden;
+		position: relative;
+		min-height: 0;
+	}
+
+	.chart-wrapper :global(.unovis-xy-container) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
 	}
 
 	.no-data {
@@ -187,9 +195,5 @@
 	.no-data p {
 		margin: 0;
 		font-size: var(--font-size-sm);
-	}
-
-	:global(.unovis-xy-container) {
-		width: 100%;
 	}
 </style>
