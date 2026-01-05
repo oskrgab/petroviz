@@ -107,7 +107,7 @@
 	{#if hasData}
 		<div class="chart-wrapper">
 			{#key dataKey}
-				<VisXYContainer data={validData}>
+				<VisXYContainer data={validData} yDomain={[0, undefined]}>
 				<VisLine {x} y={yOil} color={OIL_HEX} curveType="linear" lineWidth={2} />
 				<VisLine {x} y={yWater} color={WATER_HEX} curveType="linear" lineWidth={2} />
 				<VisAxis type="x" label="Date" tickFormat={xTickFormat} />
