@@ -27,7 +27,7 @@
 
 	let {
 		title = 'Volve Explorer',
-		activeSection = 'production',
+		activeSection = 'dashboards',
 		onSectionChange,
 		sidebar,
 		mainChart,
@@ -100,13 +100,11 @@
 		// { id: 'filter2' as const, label: 'Parameters', icon: 'settings', disabled: true },
 	];
 
-	// Dataset sections - future sections marked as disabled
+	// Dataset sections
 	const sections = [
-		{ id: 'production', label: 'Production' },
-		{ id: 'surveys', label: 'Surveys', disabled: true },
-		{ id: 'logs', label: 'Logs', disabled: true },
-		{ id: 'core', label: 'Core', disabled: true },
-		{ id: 'pvt', label: 'PVT', disabled: true }
+		{ id: 'dashboards', label: 'DASHBOARDS' },
+		{ id: 'analysis', label: 'ANALYSIS', disabled: true },
+		{ id: 'export', label: 'EXPORT', disabled: true }
 	];
 
 	function handleSectionChange(sectionId: string) {
@@ -353,18 +351,24 @@
 		border-bottom: 1px solid var(--color-border);
 		background: var(--color-background);
 		flex-shrink: 0;
+		gap: var(--spacing-sm);
+		min-height: 60px;
 	}
 
 	.header-left {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-lg);
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
 	}
 
 	.logo-section {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
+		flex-shrink: 0;
 	}
 
 	.logo-icon {
@@ -377,6 +381,7 @@
 		border-radius: var(--radius-lg);
 		color: white;
 		box-shadow: var(--shadow-md);
+		flex-shrink: 0;
 	}
 
 	.logo-icon svg {
@@ -402,12 +407,16 @@
 		align-items: center;
 		padding-left: var(--spacing-md);
 		border-left: 1px solid var(--color-border);
+		flex: 1;
+		min-width: 0;
+		overflow: visible;
 	}
 
 	.header-right {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
+		flex-shrink: 0;
 	}
 
 	.github-link {
@@ -419,6 +428,7 @@
 		color: var(--color-text-muted);
 		border-radius: var(--radius-md);
 		transition: all var(--transition-fast);
+		flex-shrink: 0;
 	}
 
 	.github-link:hover {
@@ -521,26 +531,33 @@
 		justify-content: space-between;
 		padding: var(--spacing-sm) 0;
 		border-top: 1px solid var(--color-border);
-		flex-wrap: wrap;
-		gap: var(--spacing-sm);
+		gap: var(--spacing-md);
 		flex-shrink: 0;
 		background: var(--color-background);
+		min-height: 48px;
 	}
 
 	.footer-left {
 		display: flex;
 		align-items: center;
+		flex-shrink: 1;
+		min-width: 0;
 	}
 
 	.footer-right {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
+		flex-shrink: 1;
+		min-width: 0;
 	}
 
 	.footer-text {
 		font-size: var(--font-size-sm);
 		color: var(--color-text-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.footer-text a {
@@ -558,8 +575,7 @@
 			padding-left: calc(var(--spacing-md) + 36px);
 		}
 
-		.dashboard-header {
-			flex-wrap: wrap;
+		.header-left {
 			gap: var(--spacing-md);
 		}
 
@@ -579,41 +595,12 @@
 			padding-left: calc(var(--spacing-sm) + 32px);
 		}
 
-		.dashboard-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--spacing-sm);
-		}
-
 		.header-left {
-			flex-direction: column;
-			align-items: flex-start;
 			gap: var(--spacing-sm);
-			width: 100%;
 		}
 
-		.nav-section {
-			padding-left: 0;
-			border-left: none;
-			width: 100%;
-			overflow-x: auto;
-			-webkit-overflow-scrolling: touch;
-		}
-
-		.header-right {
-			width: 100%;
-			justify-content: flex-end;
-		}
-
-		.dashboard-footer {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--spacing-md);
-		}
-
-		.footer-right {
-			width: 100%;
-			justify-content: space-between;
+		.logo-section {
+			gap: var(--spacing-sm);
 		}
 
 		.bottom-charts {
@@ -641,6 +628,11 @@
 
 		.title {
 			font-size: var(--font-size-lg);
+		}
+
+		.footer-text,
+		.author-credit {
+			font-size: var(--font-size-xs);
 		}
 
 		/* Smaller side tabs on mobile */
@@ -673,6 +665,43 @@
 
 		.range-selector {
 			padding: var(--spacing-sm) var(--spacing-md);
+		}
+
+		.title {
+			font-size: var(--font-size-md);
+		}
+
+		.header-left {
+			gap: var(--spacing-xs);
+		}
+
+		.nav-section {
+			padding-left: var(--spacing-xs);
+			border-left: none;
+		}
+
+		.logo-section {
+			gap: var(--spacing-xs);
+		}
+
+		.logo-icon {
+			width: 32px;
+			height: 32px;
+		}
+
+		.logo-icon svg {
+			width: 18px;
+			height: 18px;
+		}
+
+		.github-link {
+			width: 28px;
+			height: 28px;
+		}
+
+		.github-link svg {
+			width: 16px;
+			height: 16px;
 		}
 	}
 </style>
