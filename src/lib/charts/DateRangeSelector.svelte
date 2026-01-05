@@ -220,6 +220,11 @@
 		padding: var(--spacing-sm);
 	}
 
+	/* Unovis chart styling - container should fill available width */
+	:global(.unovis-xy-container) {
+		width: 100%;
+	}
+
 	/* Override brush styling */
 	:global(.unovis-brush-selection) {
 		fill: var(--color-accent) !important;
