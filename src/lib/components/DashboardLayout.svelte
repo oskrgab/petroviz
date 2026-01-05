@@ -3,10 +3,14 @@
 	 * DashboardLayout Component
 	 *
 	 * Responsive grid layout for the production dashboard.
-	 * Features a refined header with tab navigation, GitHub badge and theme toggle.
+	 * On desktop: traditional sidebar layout with WellSelector always visible.
+	 * On smaller screens: vertical side tabs with flyout panels.
 	 */
 
 	import type { Snippet } from 'svelte';
+	import { slide } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
+	import { MediaQuery } from 'svelte/reactivity';
 	import ThemeToggle from './ThemeToggle.svelte';
 	import TabNavigation from './TabNavigation.svelte';
 
@@ -23,7 +27,7 @@
 
 	let {
 		title = 'Volve Explorer',
-		activeSection = 'production',
+		activeSection = 'dashboards',
 		onSectionChange,
 		sidebar,
 		mainChart,
@@ -32,13 +36,75 @@
 		barChart
 	}: Props = $props();
 
-	// Dataset sections - future sections marked as disabled
+	// Responsive: detect when to show side tabs vs traditional sidebar
+	const isCompactMode = new MediaQuery('(max-width: 1023px)');
+
+	// Side panel state - which panel is open (null = none)
+	type PanelId = 'wells' | 'filter1' | 'filter2' | null;
+	let activePanel = $state<PanelId>(null);
+
+	function togglePanel(panelId: PanelId) {
+		if (activePanel === panelId) {
+			activePanel = null;
+		} else {
+			activePanel = panelId;
+		}
+	}
+
+	function closePanel() {
+		activePanel = null;
+	}
+
+	// Close panel when switching back to desktop mode
+	$effect(() => {
+		if (!isCompactMode.current) {
+			activePanel = null;
+		}
+	});
+
+	// Reference to the flyout panel for click-outside detection
+	let flyoutPanelRef: HTMLElement | null = $state(null);
+
+	// Click-outside detection - closes panel when clicking outside
+	$effect(() => {
+		if (activePanel === null || !flyoutPanelRef) return;
+
+		function handleClickOutside(event: MouseEvent) {
+			const target = event.target as Node;
+
+			// Check if click is outside the panel and not on a side tab
+			const isOutsidePanel = flyoutPanelRef && !flyoutPanelRef.contains(target);
+			const isOnSideTab = (target as Element).closest?.('.side-tab');
+
+			if (isOutsidePanel && !isOnSideTab) {
+				closePanel();
+			}
+		}
+
+		// Add listener with a small delay to avoid immediate close on the opening click
+		const timeoutId = setTimeout(() => {
+			document.addEventListener('click', handleClickOutside);
+		}, 10);
+
+		return () => {
+			clearTimeout(timeoutId);
+			document.removeEventListener('click', handleClickOutside);
+		};
+	});
+
+	// Side tabs configuration (only shown in compact mode)
+	const sideTabs = [
+		{ id: 'wells' as const, label: 'Wells', icon: 'wells' },
+		// Future filter tabs - currently disabled
+		// { id: 'filter1' as const, label: 'Date Filter', icon: 'calendar', disabled: true },
+		// { id: 'filter2' as const, label: 'Parameters', icon: 'settings', disabled: true },
+	];
+
+	// Dataset sections
 	const sections = [
-		{ id: 'production', label: 'Production' },
-		{ id: 'surveys', label: 'Surveys', disabled: true },
-		{ id: 'logs', label: 'Logs', disabled: true },
-		{ id: 'core', label: 'Core', disabled: true },
-		{ id: 'pvt', label: 'PVT', disabled: true }
+		{ id: 'dashboards', label: 'DASHBOARDS' },
+		{ id: 'analysis', label: 'ANALYSIS', disabled: true },
+		{ id: 'export', label: 'EXPORT', disabled: true }
 	];
 
 	function handleSectionChange(sectionId: string) {
@@ -46,7 +112,42 @@
 	}
 </script>
 
-<div class="dashboard">
+<div class="dashboard" class:compact-mode={isCompactMode.current}>
+	<!-- Vertical Side Tabs (compact mode only) -->
+	{#if isCompactMode.current}
+		<div class="side-tabs">
+			{#each sideTabs as tab (tab.id)}
+				<button
+					class="side-tab"
+					class:active={activePanel === tab.id}
+					onclick={() => togglePanel(tab.id)}
+					aria-label={`${activePanel === tab.id ? 'Close' : 'Open'} ${tab.label} panel`}
+					aria-expanded={activePanel === tab.id}
+				>
+					<span class="side-tab-label">{tab.label}</span>
+				</button>
+			{/each}
+		</div>
+
+		<!-- Flyout Panel (compact mode only) -->
+		{#if activePanel !== null}
+			<!-- Panel Container - minimal, just content -->
+			<aside
+				class="flyout-panel"
+				bind:this={flyoutPanelRef}
+				transition:slide={{ duration: 200, easing: cubicOut, axis: 'x' }}
+			>
+				{#if activePanel === 'wells' && sidebar}
+					{@render sidebar()}
+				{:else if activePanel === 'filter1'}
+					<p class="placeholder-text">Date filter coming soon...</p>
+				{:else if activePanel === 'filter2'}
+					<p class="placeholder-text">Parameters coming soon...</p>
+				{/if}
+			</aside>
+		{/if}
+	{/if}
+
 	<header class="dashboard-header">
 		<div class="header-left">
 			<div class="logo-section">
@@ -90,7 +191,8 @@
 	</header>
 
 	<div class="dashboard-content">
-		{#if sidebar}
+		<!-- Traditional sidebar (desktop only) -->
+		{#if sidebar && !isCompactMode.current}
 			<aside class="sidebar">
 				{@render sidebar()}
 			</aside>
@@ -150,7 +252,97 @@
 		overflow: hidden;
 	}
 
-	/* Header Styles */
+	/* Compact mode: add left padding for side tabs */
+	.dashboard.compact-mode {
+		padding-left: calc(var(--spacing-xl) + 36px);
+	}
+
+	/* ==================== SIDE TABS (compact mode only) ==================== */
+	.side-tabs {
+		position: fixed;
+		left: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		z-index: 50;
+	}
+
+	.side-tab {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 32px;
+		height: auto;
+		min-height: 75px;
+		padding: var(--spacing-sm) 0;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-left: none;
+		border-radius: 0 var(--radius-md) var(--radius-md) 0;
+		cursor: pointer;
+		transition: all var(--transition-base);
+		writing-mode: vertical-rl;
+		text-orientation: mixed;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+		box-shadow: var(--shadow-sm);
+		color: var(--color-text);
+	}
+
+	.side-tab:hover {
+		background: var(--color-surface-sunken);
+		border-color: var(--color-border-strong);
+		width: 36px;
+	}
+
+	.side-tab.active {
+		background: var(--color-surface-sunken);
+		border-color: var(--color-border-strong);
+		width: 36px;
+		box-shadow: var(--shadow-md);
+	}
+
+	.side-tab-label {
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		transform: rotate(180deg);
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: var(--spacing-sm) 4px;
+	}
+
+	/* ==================== FLYOUT PANEL ==================== */
+
+	.flyout-panel {
+		position: fixed;
+		top: var(--spacing-xl);
+		left: calc(36px + var(--spacing-sm));
+		max-height: calc(100vh - var(--spacing-xl) * 2);
+		width: min(300px, calc(100vw - 80px));
+		z-index: 70;
+		overflow-y: auto;
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border);
+	}
+
+	.placeholder-text {
+		color: var(--color-text-muted);
+		font-size: var(--font-size-sm);
+		text-align: center;
+		padding: var(--spacing-xl);
+		background: var(--color-surface);
+		border-radius: var(--radius-lg);
+	}
+
+	/* ==================== HEADER ==================== */
 	.dashboard-header {
 		display: flex;
 		align-items: center;
@@ -159,18 +351,24 @@
 		border-bottom: 1px solid var(--color-border);
 		background: var(--color-background);
 		flex-shrink: 0;
+		gap: var(--spacing-sm);
+		min-height: 60px;
 	}
 
 	.header-left {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-lg);
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
 	}
 
 	.logo-section {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
+		flex-shrink: 0;
 	}
 
 	.logo-icon {
@@ -183,6 +381,7 @@
 		border-radius: var(--radius-lg);
 		color: white;
 		box-shadow: var(--shadow-md);
+		flex-shrink: 0;
 	}
 
 	.logo-icon svg {
@@ -208,12 +407,16 @@
 		align-items: center;
 		padding-left: var(--spacing-md);
 		border-left: 1px solid var(--color-border);
+		flex: 1;
+		min-width: 0;
+		overflow: visible;
 	}
 
 	.header-right {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
+		flex-shrink: 0;
 	}
 
 	.github-link {
@@ -225,6 +428,7 @@
 		color: var(--color-text-muted);
 		border-radius: var(--radius-md);
 		transition: all var(--transition-fast);
+		flex-shrink: 0;
 	}
 
 	.github-link:hover {
@@ -253,7 +457,7 @@
 		color: var(--color-accent);
 	}
 
-	/* Content Layout */
+	/* ==================== CONTENT LAYOUT ==================== */
 	.dashboard-content {
 		display: grid;
 		grid-template-columns: 280px 1fr;
@@ -261,6 +465,11 @@
 		flex: 1;
 		overflow: hidden;
 		padding-top: var(--spacing-lg);
+	}
+
+	/* Compact mode: single column layout */
+	.compact-mode .dashboard-content {
+		grid-template-columns: 1fr;
 	}
 
 	.sidebar {
@@ -276,7 +485,7 @@
 		padding-right: var(--spacing-sm);
 	}
 
-	/* Chart Section Styles */
+	/* ==================== CHART SECTIONS ==================== */
 	.chart-section {
 		background: var(--color-surface);
 		border-radius: var(--radius-lg);
@@ -315,33 +524,40 @@
 		contain: layout style;
 	}
 
-	/* Footer */
+	/* ==================== FOOTER ==================== */
 	.dashboard-footer {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: var(--spacing-sm) 0;
 		border-top: 1px solid var(--color-border);
-		flex-wrap: wrap;
-		gap: var(--spacing-sm);
+		gap: var(--spacing-md);
 		flex-shrink: 0;
 		background: var(--color-background);
+		min-height: 48px;
 	}
 
 	.footer-left {
 		display: flex;
 		align-items: center;
+		flex-shrink: 1;
+		min-width: 0;
 	}
 
 	.footer-right {
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
+		flex-shrink: 1;
+		min-width: 0;
 	}
 
 	.footer-text {
 		font-size: var(--font-size-sm);
 		color: var(--color-text-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.footer-text a {
@@ -349,68 +565,42 @@
 		font-weight: 500;
 	}
 
-	/* Responsive: Tablet */
+	/* ==================== RESPONSIVE: TABLET ==================== */
 	@media (max-width: 1024px) {
 		.dashboard {
 			padding: 0 var(--spacing-md);
 		}
 
-		.dashboard-content {
-			grid-template-columns: 1fr;
+		.dashboard.compact-mode {
+			padding-left: calc(var(--spacing-md) + 36px);
 		}
 
-		.sidebar {
-			height: auto;
-			max-height: 200px;
-		}
-
-		.dashboard-header {
-			flex-wrap: wrap;
+		.header-left {
 			gap: var(--spacing-md);
+		}
+
+		.flyout-panel {
+			left: calc(36px + var(--spacing-xs));
+			width: min(300px, calc(100vw - 60px));
 		}
 	}
 
-	/* Responsive: Mobile */
+	/* ==================== RESPONSIVE: MOBILE ==================== */
 	@media (max-width: 768px) {
 		.dashboard {
 			padding: 0 var(--spacing-sm);
 		}
 
-		.dashboard-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--spacing-sm);
+		.dashboard.compact-mode {
+			padding-left: calc(var(--spacing-sm) + 32px);
 		}
 
 		.header-left {
-			flex-direction: column;
-			align-items: flex-start;
 			gap: var(--spacing-sm);
-			width: 100%;
 		}
 
-		.nav-section {
-			padding-left: 0;
-			border-left: none;
-			width: 100%;
-			overflow-x: auto;
-			-webkit-overflow-scrolling: touch;
-		}
-
-		.header-right {
-			width: 100%;
-			justify-content: flex-end;
-		}
-
-		.dashboard-footer {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--spacing-md);
-		}
-
-		.footer-right {
-			width: 100%;
-			justify-content: space-between;
+		.logo-section {
+			gap: var(--spacing-sm);
 		}
 
 		.bottom-charts {
@@ -439,9 +629,35 @@
 		.title {
 			font-size: var(--font-size-lg);
 		}
+
+		.footer-text,
+		.author-credit {
+			font-size: var(--font-size-xs);
+		}
+
+		/* Smaller side tabs on mobile */
+		.side-tab {
+			width: 28px;
+			min-height: 80px;
+			padding: var(--spacing-sm) var(--spacing-xs);
+		}
+
+		.side-tab:hover,
+		.side-tab.active {
+			width: 32px;
+		}
+
+		.side-tab-label {
+			font-size: 10px;
+		}
+
+		.flyout-panel {
+			left: calc(28px + var(--spacing-xs));
+			width: min(280px, calc(100vw - 50px));
+		}
 	}
 
-	/* Responsive: Small Mobile */
+	/* ==================== RESPONSIVE: SMALL MOBILE ==================== */
 	@media (max-width: 480px) {
 		.chart-section {
 			padding: var(--spacing-md);
@@ -449,6 +665,43 @@
 
 		.range-selector {
 			padding: var(--spacing-sm) var(--spacing-md);
+		}
+
+		.title {
+			font-size: var(--font-size-md);
+		}
+
+		.header-left {
+			gap: var(--spacing-xs);
+		}
+
+		.nav-section {
+			padding-left: var(--spacing-xs);
+			border-left: none;
+		}
+
+		.logo-section {
+			gap: var(--spacing-xs);
+		}
+
+		.logo-icon {
+			width: 32px;
+			height: 32px;
+		}
+
+		.logo-icon svg {
+			width: 18px;
+			height: 18px;
+		}
+
+		.github-link {
+			width: 28px;
+			height: 28px;
+		}
+
+		.github-link svg {
+			width: 16px;
+			height: 16px;
 		}
 	}
 </style>
