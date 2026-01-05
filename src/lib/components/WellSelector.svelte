@@ -2,8 +2,8 @@
 	/**
 	 * WellSelector Component
 	 *
-	 * Multi-select interface for filtering wells.
-	 * Includes Select All / Clear Selection buttons.
+	 * Multi-select interface for filtering wells with configurable identifiers.
+	 * Features a table-like layout with resizable columns.
 	 */
 
 	import type { Well } from '$lib/types';
@@ -22,8 +22,30 @@
 
 	let { wells, onSelectionChange }: Props = $props();
 
+	// Column options derived from Well interface keys
+	const columnOptions = [
+		{ value: 'name', label: 'Well Name' },
+		{ value: 'id', label: 'NPD Code' },
+		{ value: 'field', label: 'Field' },
+		{ value: 'facility', label: 'Facility' }
+	] as const;
+
+	type ColumnKey = (typeof columnOptions)[number]['value'];
+
+	// State for identifier columns
+	let primaryIdentifier = $state<ColumnKey>('name');
+	let secondaryIdentifier = $state<ColumnKey>('id');
+
+	// Resizable column widths (percentages)
+	let primaryColumnWidth = $state(60);
+	let isResizing = $state(false);
+
 	// Get sorted wells for display
-	const sortedWells = $derived([...wells].sort((a, b) => a.name.localeCompare(b.name)));
+	const sortedWells = $derived([...wells].sort((a, b) => {
+		const aVal = getWellValue(a, primaryIdentifier);
+		const bVal = getWellValue(b, primaryIdentifier);
+		return String(aVal).localeCompare(String(bVal));
+	}));
 
 	// Count of selected wells
 	const selectedCount = $derived(dashboardState.selectedWellIds.length);
@@ -33,20 +55,69 @@
 		wells.length > 0 && dashboardState.selectedWellIds.length === wells.length
 	);
 
+	// Check if some (but not all) wells are selected - for indeterminate state
+	const someSelected = $derived(
+		selectedCount > 0 && selectedCount < wells.length
+	);
+
+	// Reference to the select-all checkbox for indeterminate state
+	let selectAllCheckbox: HTMLInputElement | undefined = $state();
+
+	// Set indeterminate state when someSelected changes
+	$effect(() => {
+		if (selectAllCheckbox) {
+			selectAllCheckbox.indeterminate = someSelected;
+		}
+	});
+
+	function getWellValue(well: Well, key: ColumnKey): string | number {
+		const value = well[key];
+		return value ?? '—';
+	}
+
 	function handleToggle(wellId: number) {
 		toggleWellSelection(wellId);
 		setTimeout(() => onSelectionChange?.(dashboardState.selectedWellIds), 0);
 	}
 
-	function handleSelectAll() {
-		const allIds = wells.map((w) => w.id);
-		selectAllWells(allIds);
-		setTimeout(() => onSelectionChange?.(allIds), 0);
+	function handleSelectAllToggle() {
+		if (allSelected || someSelected) {
+			// If all or some selected, clear all
+			clearWellSelection();
+			setTimeout(() => onSelectionChange?.([]), 0);
+		} else {
+			// If none selected, select all
+			const allIds = wells.map((w) => w.id);
+			selectAllWells(allIds);
+			setTimeout(() => onSelectionChange?.(allIds), 0);
+		}
 	}
 
-	function handleClearAll() {
-		clearWellSelection();
-		setTimeout(() => onSelectionChange?.([]), 0);
+	// Column resize handling
+	function startResize(e: MouseEvent) {
+		e.preventDefault();
+		isResizing = true;
+
+		const startX = e.clientX;
+		const startWidth = primaryColumnWidth;
+		const container = (e.target as HTMLElement).closest('.well-table-header');
+		const containerWidth = container?.clientWidth ?? 300;
+
+		function onMouseMove(e: MouseEvent) {
+			const deltaX = e.clientX - startX;
+			const deltaPercent = (deltaX / containerWidth) * 100;
+			const newWidth = Math.min(Math.max(startWidth + deltaPercent, 25), 75);
+			primaryColumnWidth = newWidth;
+		}
+
+		function onMouseUp() {
+			isResizing = false;
+			document.removeEventListener('mousemove', onMouseMove);
+			document.removeEventListener('mouseup', onMouseUp);
+		}
+
+		document.addEventListener('mousemove', onMouseMove);
+		document.addEventListener('mouseup', onMouseUp);
 	}
 </script>
 
@@ -69,54 +140,85 @@
 		</span>
 	</div>
 
-	<div class="actions">
-		<button
-			type="button"
-			class="action-btn"
-			onclick={handleSelectAll}
-			disabled={allSelected}
-			aria-label="Select all wells"
-		>
-			<svg viewBox="0 0 16 16" fill="currentColor">
-				<path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.78 5.97a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 1 1 1.06-1.06l1.72 1.72 3.72-3.72a.75.75 0 0 1 1.06 0Z"/>
-			</svg>
-			Select All
-		</button>
-		<button
-			type="button"
-			class="action-btn secondary"
-			onclick={handleClearAll}
-			disabled={selectedCount === 0}
-			aria-label="Clear all selections"
-		>
-			<svg viewBox="0 0 16 16" fill="currentColor">
-				<path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.28 5.78a.75.75 0 0 1 0 1.06L9.06 9l2.22 2.22a.75.75 0 1 1-1.06 1.06L8 10.06l-2.22 2.22a.75.75 0 0 1-1.06-1.06L6.94 9 4.72 6.78a.75.75 0 0 1 1.06-1.06L8 7.94l2.22-2.22a.75.75 0 0 1 1.06 0Z"/>
-			</svg>
-			Clear
-		</button>
+	<!-- Consolidated table header with select-all and column dropdowns -->
+	<div class="well-table-header" class:resizing={isResizing}>
+		<div class="th-checkbox">
+			<span class="checkbox-container">
+				<input
+					type="checkbox"
+					bind:this={selectAllCheckbox}
+					checked={allSelected}
+					onchange={handleSelectAllToggle}
+					aria-label="Select all wells"
+				/>
+				<svg class="checkmark" viewBox="0 0 16 16" fill="currentColor">
+					<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/>
+				</svg>
+				<svg class="indeterminate-mark" viewBox="0 0 16 16" fill="currentColor">
+					<path d="M4 8a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 4 8Z"/>
+				</svg>
+			</span>
+		</div>
+		<div class="th-primary" style="width: {primaryColumnWidth}%">
+			<select
+				id="primary-identifier"
+				class="header-dropdown"
+				bind:value={primaryIdentifier}
+				aria-label="Primary column"
+			>
+				{#each columnOptions as option (option.value)}
+					<option value={option.value}>{option.label}</option>
+				{/each}
+			</select>
+			<button
+				type="button"
+				class="resize-handle"
+				onmousedown={startResize}
+				aria-label="Resize columns"
+			>
+				<span class="resize-grip"></span>
+			</button>
+		</div>
+		<div class="th-secondary" style="width: {100 - primaryColumnWidth}%">
+			<select
+				id="secondary-identifier"
+				class="header-dropdown"
+				bind:value={secondaryIdentifier}
+				aria-label="Secondary column"
+			>
+				{#each columnOptions as option (option.value)}
+					<option value={option.value}>{option.label}</option>
+				{/each}
+			</select>
+		</div>
 	</div>
 
+	<!-- Well list as table rows -->
 	<div class="well-list" role="group" aria-label="Wells list">
 		{#each sortedWells as well (well.id)}
 			{@const selected = isWellSelected(well.id)}
 			<label
-				class="well-item"
+				class="well-row"
 				class:selected
 			>
-				<span class="checkbox-wrapper">
-					<input
-						type="checkbox"
-						checked={selected}
-						onchange={() => handleToggle(well.id)}
-						aria-label={`Select well ${well.name}`}
-					/>
-					<svg class="checkmark" viewBox="0 0 16 16" fill="currentColor">
-						<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/>
-					</svg>
+				<span class="cell-checkbox">
+					<span class="checkbox-wrapper">
+						<input
+							type="checkbox"
+							checked={selected}
+							onchange={() => handleToggle(well.id)}
+							aria-label={`Select well ${well.name}`}
+						/>
+						<svg class="checkmark" viewBox="0 0 16 16" fill="currentColor">
+							<path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/>
+						</svg>
+					</span>
 				</span>
-				<span class="well-info">
-					<span class="well-name">{well.name}</span>
-					<span class="well-facility">{well.id}</span>
+				<span class="cell-primary" style="width: {primaryColumnWidth}%">
+					{getWellValue(well, primaryIdentifier)}
+				</span>
+				<span class="cell-secondary" style="width: {100 - primaryColumnWidth}%">
+					{getWellValue(well, secondaryIdentifier)}
 				</span>
 			</label>
 		{/each}
@@ -183,84 +285,278 @@
 		color: var(--color-accent);
 	}
 
-	.actions {
+	/* Header checkbox container */
+	.checkbox-container {
+		position: relative;
 		display: flex;
-		gap: var(--spacing-sm);
-	}
-
-	.action-btn {
-		flex: 1;
-		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: var(--spacing-xs);
-		padding: var(--spacing-sm) var(--spacing-md);
-		background: var(--color-accent-soft);
-		border: 1px solid transparent;
-		border-radius: var(--radius-md);
-		font-size: var(--font-size-sm);
-		font-weight: 500;
-		color: var(--color-accent);
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
+		cursor: pointer;
+	}
+
+	.checkbox-container input[type='checkbox'] {
+		position: absolute;
+		width: 18px;
+		height: 18px;
+		opacity: 0;
+		cursor: pointer;
+		margin: 0;
+		z-index: 1;
+	}
+
+	.checkbox-container::before {
+		content: '';
+		width: 16px;
+		height: 16px;
+		border: 2px solid var(--color-border-strong);
+		border-radius: var(--radius-sm);
+		background: var(--color-surface);
 		transition: all var(--transition-fast);
 	}
 
-	.action-btn svg {
-		width: 14px;
-		height: 14px;
+	.checkbox-container:hover::before {
+		border-color: var(--color-accent);
 	}
 
-	.action-btn:hover:not(:disabled) {
+	.checkbox-container input:checked + .checkmark + .indeterminate-mark,
+	.checkbox-container:has(input:checked)::before {
 		background: var(--color-accent);
+		border-color: var(--color-accent);
+	}
+
+	.checkbox-container input:indeterminate + .checkmark + .indeterminate-mark {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	.checkbox-container:has(input:indeterminate)::before {
+		background: var(--color-accent);
+		border-color: var(--color-accent);
+	}
+
+	.checkbox-container .checkmark {
+		position: absolute;
+		width: 12px;
+		height: 12px;
 		color: white;
+		opacity: 0;
+		transform: scale(0.5);
+		transition: all var(--transition-fast);
+		pointer-events: none;
 	}
 
-	.action-btn.secondary {
-		background: var(--color-surface-sunken);
-		color: var(--color-text-secondary);
+	.checkbox-container input:checked + .checkmark {
+		opacity: 1;
+		transform: scale(1);
 	}
 
-	.action-btn.secondary:hover:not(:disabled) {
-		background: var(--color-border);
+	.checkbox-container input:indeterminate + .checkmark {
+		opacity: 0;
+	}
+
+	.checkbox-container .indeterminate-mark {
+		position: absolute;
+		width: 12px;
+		height: 12px;
+		color: white;
+		opacity: 0;
+		transform: scale(0.5);
+		transition: all var(--transition-fast);
+		pointer-events: none;
+	}
+
+	/* Table header */
+	.well-table-header {
+		display: flex;
+		align-items: center;
+		padding: var(--spacing-sm) 0;
+		border-bottom: 1px solid var(--color-border);
+		user-select: none;
+		gap: var(--spacing-xs);
+	}
+
+	.well-table-header.resizing {
+		cursor: col-resize;
+	}
+
+	.th-checkbox {
+		width: 32px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.th-primary,
+	.th-secondary {
+		display: flex;
+		align-items: center;
+		min-width: 0;
+	}
+
+	.th-primary {
+		position: relative;
+		padding-right: var(--spacing-sm);
+	}
+
+	/* Header dropdown - serves as both column selector and label */
+	.header-dropdown {
+		appearance: none;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: var(--radius-sm);
+		padding: var(--spacing-xs) var(--spacing-lg) var(--spacing-xs) var(--spacing-xs);
+		font-size: 10px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--color-text-muted);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 4px center;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.header-dropdown:hover {
+		background-color: var(--color-surface-sunken);
+		border-color: var(--color-border);
 		color: var(--color-text);
 	}
 
-	.action-btn:disabled {
-		opacity: 0.4;
-		cursor: not-allowed;
+	.header-dropdown:focus {
+		outline: none;
+		background-color: var(--color-surface-sunken);
+		border-color: var(--color-accent);
+		color: var(--color-text);
 	}
 
+	.resize-handle {
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 12px;
+		height: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: col-resize;
+		background: transparent;
+		border: none;
+		padding: 0;
+		opacity: 0;
+		transition: opacity var(--transition-fast);
+	}
+
+	.well-table-header:hover .resize-handle,
+	.resize-handle:focus {
+		opacity: 1;
+	}
+
+	.resize-grip {
+		width: 3px;
+		height: 14px;
+		background: linear-gradient(
+			to bottom,
+			var(--color-border-strong) 0%,
+			var(--color-border-strong) 20%,
+			transparent 20%,
+			transparent 40%,
+			var(--color-border-strong) 40%,
+			var(--color-border-strong) 60%,
+			transparent 60%,
+			transparent 80%,
+			var(--color-border-strong) 80%,
+			var(--color-border-strong) 100%
+		);
+		border-radius: 1px;
+	}
+
+	.resize-handle:hover .resize-grip,
+	.resize-handle:focus .resize-grip {
+		background: linear-gradient(
+			to bottom,
+			var(--color-accent) 0%,
+			var(--color-accent) 20%,
+			transparent 20%,
+			transparent 40%,
+			var(--color-accent) 40%,
+			var(--color-accent) 60%,
+			transparent 60%,
+			transparent 80%,
+			var(--color-accent) 80%,
+			var(--color-accent) 100%
+		);
+	}
+
+	/* Well list */
 	.well-list {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-xs);
 		max-height: 340px;
 		overflow-y: auto;
 		padding-right: var(--spacing-xs);
 		margin-right: calc(-1 * var(--spacing-xs));
 	}
 
-	.well-item {
+	.well-row {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-sm);
-		padding: var(--spacing-sm) var(--spacing-md);
-		background: var(--color-surface-sunken);
-		border-radius: var(--radius-md);
+		padding: var(--spacing-sm) 0;
 		cursor: pointer;
-		transition: all var(--transition-fast);
-		border: 1px solid transparent;
+		transition: background var(--transition-fast);
+		border-bottom: 1px solid transparent;
 	}
 
-	.well-item:hover {
+	.well-row:hover {
 		background: var(--color-accent-soft);
-		border-color: var(--color-accent);
 	}
 
-	.well-item.selected {
+	.well-row.selected {
 		background: var(--color-accent-soft);
-		border-color: var(--color-accent);
 	}
 
+	.well-row:not(:last-child) {
+		border-bottom-color: var(--color-border);
+	}
+
+	.cell-checkbox {
+		width: 32px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.cell-primary,
+	.cell-secondary {
+		font-size: var(--font-size-sm);
+		font-family: var(--font-mono);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		padding-right: var(--spacing-sm);
+		min-width: 0;
+	}
+
+	.cell-primary {
+		font-weight: 500;
+		color: var(--color-text);
+	}
+
+	.cell-secondary {
+		font-weight: 400;
+		color: var(--color-text-secondary);
+	}
+
+	/* Checkbox styling for rows */
 	.checkbox-wrapper {
 		position: relative;
 		display: flex;
@@ -290,12 +586,12 @@
 		transition: all var(--transition-fast);
 	}
 
-	.well-item.selected .checkbox-wrapper::before {
+	.well-row.selected .checkbox-wrapper::before {
 		background: var(--color-accent);
 		border-color: var(--color-accent);
 	}
 
-	.checkmark {
+	.checkbox-wrapper .checkmark {
 		position: absolute;
 		width: 12px;
 		height: 12px;
@@ -305,30 +601,8 @@
 		transition: all var(--transition-fast);
 	}
 
-	.well-item.selected .checkmark {
+	.well-row.selected .checkbox-wrapper .checkmark {
 		opacity: 1;
 		transform: scale(1);
-	}
-
-	.well-info {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-
-	.well-name {
-		font-size: var(--font-size-sm);
-		font-weight: 500;
-		font-family: var(--font-mono);
-		color: var(--color-text);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.well-facility {
-		font-size: var(--font-size-xs);
-		color: var(--color-text-muted);
 	}
 </style>
