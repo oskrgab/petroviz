@@ -5,117 +5,135 @@
  * Uses Svelte 5 $state runes for reactivity.
  */
 
-import type { DateRange } from '$lib/types';
+import type { DateRange } from "$lib/types";
 
 /**
  * Dashboard filter and UI state
  * Using Svelte 5 $state rune for reactivity
  */
 export const dashboardState = $state({
-	/** Currently selected well IDs (empty array = all wells) */
-	selectedWellIds: [] as number[],
+  /** Currently selected well IDs (empty array = all wells) */
+  selectedWellIds: [] as number[],
 
-	/** Selected date range for filtering (null = full range) */
-	dateRange: null as DateRange | null,
+  /** Selected date range for filtering (null = full range) */
+  dateRange: null as DateRange | null,
 
-	/** Whether data is currently loading */
-	isLoading: false,
+  /** Whether data is currently loading */
+  isLoading: false,
 
-	/** Error message if any operation failed */
-	error: null as string | null
+  /** Error message if any operation failed */
+  error: null as string | null,
 });
 
 /**
  * Set selected well IDs
  */
 export function setSelectedWells(wellIds: number[]): void {
-	dashboardState.selectedWellIds = wellIds;
+  dashboardState.selectedWellIds = wellIds;
 }
 
 /**
  * Toggle a single well selection
  */
 export function toggleWellSelection(wellId: number): void {
-	const index = dashboardState.selectedWellIds.indexOf(wellId);
-	const prevLength = dashboardState.selectedWellIds.length;
-	if (index === -1) {
-		dashboardState.selectedWellIds = [...dashboardState.selectedWellIds, wellId];
-	} else {
-		dashboardState.selectedWellIds = dashboardState.selectedWellIds.filter((id) => id !== wellId);
-	}
-	console.log('[toggleWellSelection] wellId:', wellId, 'prev:', prevLength, 'now:', dashboardState.selectedWellIds.length);
+  const index = dashboardState.selectedWellIds.indexOf(wellId);
+  const prevLength = dashboardState.selectedWellIds.length;
+  if (index === -1) {
+    dashboardState.selectedWellIds = [
+      ...dashboardState.selectedWellIds,
+      wellId,
+    ];
+  } else {
+    dashboardState.selectedWellIds = dashboardState.selectedWellIds.filter(
+      (id) => id !== wellId,
+    );
+  }
+  console.log(
+    "[toggleWellSelection] wellId:",
+    wellId,
+    "prev:",
+    prevLength,
+    "now:",
+    dashboardState.selectedWellIds.length,
+  );
 }
 
 /**
  * Select all wells
  */
 export function selectAllWells(allWellIds: number[]): void {
-	dashboardState.selectedWellIds = [...allWellIds];
+  dashboardState.selectedWellIds = [...allWellIds];
 }
 
 /**
  * Clear all well selections
  */
 export function clearWellSelection(): void {
-	dashboardState.selectedWellIds = [];
+  dashboardState.selectedWellIds = [];
 }
 
 /**
  * Check if a well is selected
  */
 export function isWellSelected(wellId: number): boolean {
-	return dashboardState.selectedWellIds.includes(wellId);
+  return dashboardState.selectedWellIds.includes(wellId);
 }
 
 /**
  * Set the date range filter
  */
 export function setDateRange(range: DateRange | null): void {
-	dashboardState.dateRange = range;
+  dashboardState.dateRange = range;
 }
 
 /**
  * Clear the date range filter
  */
 export function clearDateRange(): void {
-	dashboardState.dateRange = null;
+  dashboardState.dateRange = null;
 }
 
 /**
  * Set loading state
  */
 export function setLoading(loading: boolean): void {
-	dashboardState.isLoading = loading;
+  dashboardState.isLoading = loading;
 }
 
 /**
  * Set error message
  */
 export function setError(error: string | null): void {
-	dashboardState.error = error;
+  dashboardState.error = error;
 }
 
 /**
  * Clear error message
  */
 export function clearError(): void {
-	dashboardState.error = null;
+  dashboardState.error = null;
 }
 
 /**
  * Reset all filters to default state
  */
 export function resetFilters(): void {
-	dashboardState.selectedWellIds = [];
-	dashboardState.dateRange = null;
+  dashboardState.selectedWellIds = [];
+  dashboardState.dateRange = null;
 }
 
 /**
  * Get current filter state (for query building)
  */
-export function getFilters(): { wellIds: number[] | undefined; dateRange: DateRange | undefined } {
-	return {
-		wellIds: dashboardState.selectedWellIds.length > 0 ? dashboardState.selectedWellIds : undefined,
-		dateRange: dashboardState.dateRange ?? undefined
-	};
+export function getFilters(): {
+  wellIds: number[] | undefined;
+  dateRange: DateRange | undefined;
+} {
+  return {
+    wellIds:
+      dashboardState.selectedWellIds.length > 0
+        ? dashboardState.selectedWellIds
+        : undefined,
+    dateRange: dashboardState.dateRange ?? undefined,
+  };
 }

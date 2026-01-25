@@ -7,13 +7,13 @@
  */
 
 import type {
-	SchemaDefinition,
-	TableSchema,
-	ColumnSchema,
-	ForeignKey,
-	ColumnType
-} from '$lib/types';
-import { getSchemaUrl } from '$lib/config/data-sources';
+  SchemaDefinition,
+  TableSchema,
+  ColumnSchema,
+  ForeignKey,
+  ColumnType,
+} from "$lib/types";
+import { getSchemaUrl } from "$lib/config/data-sources";
 
 const SCHEMA_URL = getSchemaUrl();
 
@@ -32,61 +32,61 @@ let loadingPromise: Promise<void> | null = null;
  * Tables is an object keyed by table name, not an array
  */
 interface RawColumn {
-	name: string;
-	type: string;
-	not_null?: boolean;
-	primary_key?: boolean;
-	default_value?: unknown;
-	comment?: string | null;
+  name: string;
+  type: string;
+  not_null?: boolean;
+  primary_key?: boolean;
+  default_value?: unknown;
+  comment?: string | null;
 }
 
 interface RawTable {
-	columns: RawColumn[];
-	foreign_keys?: Array<{
-		columns: string[];
-		references_table: string;
-		references_columns: string[];
-	}>;
+  columns: RawColumn[];
+  foreign_keys?: Array<{
+    columns: string[];
+    references_table: string;
+    references_columns: string[];
+  }>;
 }
 
 interface RawSchema {
-	database?: string;
-	description?: string;
-	tables: Record<string, RawTable>;
+  database?: string;
+  description?: string;
+  tables: Record<string, RawTable>;
 }
 
 /**
  * Parse raw schema response into typed SchemaDefinition
  */
 function parseSchema(raw: RawSchema): SchemaDefinition {
-	const tableEntries = Object.entries(raw.tables);
+  const tableEntries = Object.entries(raw.tables);
 
-	return {
-		tables: tableEntries.map(([tableName, table]) => {
-			// Extract primary key columns
-			const primaryKey = table.columns
-				.filter((col) => col.primary_key)
-				.map((col) => col.name);
+  return {
+    tables: tableEntries.map(([tableName, table]) => {
+      // Extract primary key columns
+      const primaryKey = table.columns
+        .filter((col) => col.primary_key)
+        .map((col) => col.name);
 
-			return {
-				name: tableName,
-				columns: table.columns.map((col) => ({
-					name: col.name,
-					type: col.type.toLowerCase() as ColumnType,
-					nullable: !col.not_null,
-					description: col.comment ?? undefined
-				})),
-				primaryKey,
-				foreignKeys: table.foreign_keys?.map((fk) => ({
-					columns: fk.columns,
-					references: {
-						table: fk.references_table,
-						columns: fk.references_columns
-					}
-				}))
-			};
-		})
-	};
+      return {
+        name: tableName,
+        columns: table.columns.map((col) => ({
+          name: col.name,
+          type: col.type.toLowerCase() as ColumnType,
+          nullable: !col.not_null,
+          description: col.comment ?? undefined,
+        })),
+        primaryKey,
+        foreignKeys: table.foreign_keys?.map((fk) => ({
+          columns: fk.columns,
+          references: {
+            table: fk.references_table,
+            columns: fk.references_columns,
+          },
+        })),
+      };
+    }),
+  };
 }
 
 /**
@@ -94,46 +94,48 @@ function parseSchema(raw: RawSchema): SchemaDefinition {
  * @throws Error if fetch fails or response is invalid
  */
 export async function loadSchema(): Promise<void> {
-	// Return cached schema if available
-	if (cachedSchema) {
-		return;
-	}
+  // Return cached schema if available
+  if (cachedSchema) {
+    return;
+  }
 
-	// Wait for existing load if in progress
-	if (loadingPromise) {
-		return loadingPromise;
-	}
+  // Wait for existing load if in progress
+  if (loadingPromise) {
+    return loadingPromise;
+  }
 
-	loadingPromise = (async () => {
-		try {
-			const response = await fetch(SCHEMA_URL);
+  loadingPromise = (async () => {
+    try {
+      const response = await fetch(SCHEMA_URL);
 
-			if (!response.ok) {
-				throw new Error(`Failed to fetch schema: ${response.status} ${response.statusText}`);
-			}
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch schema: ${response.status} ${response.statusText}`,
+        );
+      }
 
-			const raw: RawSchema = await response.json();
+      const raw: RawSchema = await response.json();
 
-			if (!raw.tables || typeof raw.tables !== 'object') {
-				throw new Error('Invalid schema format: missing tables object');
-			}
+      if (!raw.tables || typeof raw.tables !== "object") {
+        throw new Error("Invalid schema format: missing tables object");
+      }
 
-			cachedSchema = parseSchema(raw);
-		} catch (error) {
-			// Reset loading promise on error so retry is possible
-			loadingPromise = null;
-			throw error;
-		}
-	})();
+      cachedSchema = parseSchema(raw);
+    } catch (error) {
+      // Reset loading promise on error so retry is possible
+      loadingPromise = null;
+      throw error;
+    }
+  })();
 
-	return loadingPromise;
+  return loadingPromise;
 }
 
 /**
  * Check if schema is loaded
  */
 export function isSchemaLoaded(): boolean {
-	return cachedSchema !== null;
+  return cachedSchema !== null;
 }
 
 /**
@@ -141,10 +143,10 @@ export function isSchemaLoaded(): boolean {
  * @throws Error if schema not loaded
  */
 export function getSchema(): SchemaDefinition {
-	if (!cachedSchema) {
-		throw new Error('Schema not loaded. Call loadSchema() first.');
-	}
-	return cachedSchema;
+  if (!cachedSchema) {
+    throw new Error("Schema not loaded. Call loadSchema() first.");
+  }
+  return cachedSchema;
 }
 
 /**
@@ -153,10 +155,10 @@ export function getSchema(): SchemaDefinition {
  * @returns TableSchema or undefined if not found
  */
 export function getTable(tableName: string): TableSchema | undefined {
-	if (!cachedSchema) {
-		throw new Error('Schema not loaded. Call loadSchema() first.');
-	}
-	return cachedSchema.tables.find((t) => t.name === tableName);
+  if (!cachedSchema) {
+    throw new Error("Schema not loaded. Call loadSchema() first.");
+  }
+  return cachedSchema.tables.find((t) => t.name === tableName);
 }
 
 /**
@@ -165,10 +167,13 @@ export function getTable(tableName: string): TableSchema | undefined {
  * @param columnName - Name of the column
  * @returns ColumnSchema or undefined if not found
  */
-export function getColumn(tableName: string, columnName: string): ColumnSchema | undefined {
-	const table = getTable(tableName);
-	if (!table) return undefined;
-	return table.columns.find((c) => c.name === columnName);
+export function getColumn(
+  tableName: string,
+  columnName: string,
+): ColumnSchema | undefined {
+  const table = getTable(tableName);
+  if (!table) return undefined;
+  return table.columns.find((c) => c.name === columnName);
 }
 
 /**
@@ -180,11 +185,11 @@ export function getColumn(tableName: string, columnName: string): ColumnSchema |
  * @throws Error if column doesn't exist
  */
 export function requireColumn(tableName: string, columnName: string): string {
-	const column = getColumn(tableName, columnName);
-	if (!column) {
-		throw new Error(`Column '${columnName}' not found in table '${tableName}'`);
-	}
-	return column.name;
+  const column = getColumn(tableName, columnName);
+  if (!column) {
+    throw new Error(`Column '${columnName}' not found in table '${tableName}'`);
+  }
+  return column.name;
 }
 
 /**
@@ -193,10 +198,13 @@ export function requireColumn(tableName: string, columnName: string): string {
  * @param type - Column type to filter by
  * @returns Array of matching columns
  */
-export function getColumnsByType(tableName: string, type: ColumnType): ColumnSchema[] {
-	const table = getTable(tableName);
-	if (!table) return [];
-	return table.columns.filter((c) => c.type === type);
+export function getColumnsByType(
+  tableName: string,
+  type: ColumnType,
+): ColumnSchema[] {
+  const table = getTable(tableName);
+  if (!table) return [];
+  return table.columns.filter((c) => c.type === type);
 }
 
 /**
@@ -205,9 +213,9 @@ export function getColumnsByType(tableName: string, type: ColumnType): ColumnSch
  * @returns Array of foreign keys or empty array
  */
 export function getForeignKeys(tableName: string): ForeignKey[] {
-	const table = getTable(tableName);
-	if (!table) return [];
-	return table.foreignKeys ?? [];
+  const table = getTable(tableName);
+  if (!table) return [];
+  return table.foreignKeys ?? [];
 }
 
 /**
@@ -216,9 +224,12 @@ export function getForeignKeys(tableName: string): ForeignKey[] {
  * @param referencedTable - Name of the table being referenced
  * @returns ForeignKey or undefined if not found
  */
-export function getRelationship(tableName: string, referencedTable: string): ForeignKey | undefined {
-	const foreignKeys = getForeignKeys(tableName);
-	return foreignKeys.find((fk) => fk.references.table === referencedTable);
+export function getRelationship(
+  tableName: string,
+  referencedTable: string,
+): ForeignKey | undefined {
+  const foreignKeys = getForeignKeys(tableName);
+  return foreignKeys.find((fk) => fk.references.table === referencedTable);
 }
 
 /**
@@ -226,10 +237,10 @@ export function getRelationship(tableName: string, referencedTable: string): For
  * @returns Array of table names
  */
 export function getTableNames(): string[] {
-	if (!cachedSchema) {
-		throw new Error('Schema not loaded. Call loadSchema() first.');
-	}
-	return cachedSchema.tables.map((t) => t.name);
+  if (!cachedSchema) {
+    throw new Error("Schema not loaded. Call loadSchema() first.");
+  }
+  return cachedSchema.tables.map((t) => t.name);
 }
 
 /**
@@ -238,9 +249,9 @@ export function getTableNames(): string[] {
  * @returns Array of column names
  */
 export function getColumnNames(tableName: string): string[] {
-	const table = getTable(tableName);
-	if (!table) return [];
-	return table.columns.map((c) => c.name);
+  const table = getTable(tableName);
+  if (!table) return [];
+  return table.columns.map((c) => c.name);
 }
 
 /**
@@ -251,19 +262,19 @@ export function getColumnNames(tableName: string): string[] {
  * @returns First matching column or undefined
  */
 export function findColumnByPartialName(
-	tableName: string,
-	partialName: string
+  tableName: string,
+  partialName: string,
 ): ColumnSchema | undefined {
-	const table = getTable(tableName);
-	if (!table) return undefined;
-	const lowerPartial = partialName.toLowerCase();
-	return table.columns.find((c) => c.name.toLowerCase().includes(lowerPartial));
+  const table = getTable(tableName);
+  if (!table) return undefined;
+  const lowerPartial = partialName.toLowerCase();
+  return table.columns.find((c) => c.name.toLowerCase().includes(lowerPartial));
 }
 
 /**
  * Clear the cached schema (useful for testing or forcing refresh)
  */
 export function clearSchemaCache(): void {
-	cachedSchema = null;
-	loadingPromise = null;
+  cachedSchema = null;
+  loadingPromise = null;
 }

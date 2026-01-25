@@ -14,6 +14,7 @@ A high-performance static dashboard for exploring the Volve dataset production i
 ### Local Development
 
 1. **Clone and install dependencies**
+
    ```bash
    git clone https://github.com/oscarcortez/volve-explorer.git
    cd volve-explorer
@@ -21,12 +22,14 @@ A high-performance static dashboard for exploring the Volve dataset production i
    ```
 
 2. **Configure environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env if needed - defaults should work
    ```
 
 3. **Run development server**
+
    ```bash
    pnpm run dev
    ```
@@ -46,20 +49,22 @@ pnpm run preview  # Test production build locally
 ### Environment Variables
 
 The app uses environment variables to configure data sources. These can be set in:
+
 - `.env` file for local development
 - GitHub Actions repository variables for production deployment
 
 **Required Variables:**
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PUBLIC_DATA_BASE_URL` | Base URL for data files | `https://volve-db.ocortez.com` |
-| `PUBLIC_WELLS_PARQUET` | Wells parquet file path | `wells.parquet` |
-| `PUBLIC_DAILY_PRODUCTION_PARQUET` | Daily production file | `daily_production.parquet` |
-| `PUBLIC_MONTHLY_PRODUCTION_PARQUET` | Monthly production file | `monthly_production.parquet` |
-| `PUBLIC_SCHEMA_JSON` | Schema definition file | `schema.json` |
+| Variable                            | Description             | Example                        |
+| ----------------------------------- | ----------------------- | ------------------------------ |
+| `PUBLIC_DATA_BASE_URL`              | Base URL for data files | `https://volve-db.ocortez.com` |
+| `PUBLIC_WELLS_PARQUET`              | Wells parquet file path | `wells.parquet`                |
+| `PUBLIC_DAILY_PRODUCTION_PARQUET`   | Daily production file   | `daily_production.parquet`     |
+| `PUBLIC_MONTHLY_PRODUCTION_PARQUET` | Monthly production file | `monthly_production.parquet`   |
+| `PUBLIC_SCHEMA_JSON`                | Schema definition file  | `schema.json`                  |
 
 **Note:** Parquet variables can be:
+
 - Simple filenames: `wells.parquet`
 - Relative paths: `data/wells.parquet`
 - Absolute URLs: `https://other-domain.com/wells.parquet`
@@ -102,6 +107,7 @@ volve-explorer/
 ## Data Source
 
 This application consumes data from the Volve database, which provides:
+
 - Well metadata
 - Daily and monthly production data
 - Schema definitions
@@ -116,10 +122,10 @@ The app exposes debugging functions to the browser console (F12 or Cmd+Option+I)
 
 ```javascript
 // View complete configuration with status
-window.volveConfig()
+window.volveConfig();
 
 // Get configuration as JavaScript object
-window.volveConfigSummary()
+window.volveConfigSummary();
 ```
 
 ### Configuration Warnings
@@ -135,12 +141,13 @@ This helps catch configuration issues during development and deployment.
 ### Common Issues
 
 **Environment variables not loading?**
+
 1. Ensure `.env` file exists in project root (copy from `.env.example`)
 2. Restart dev server after changing `.env`
 3. Check console for warnings about missing variables
 
 **Data not loading in production?**
+
 1. Verify GitHub Actions repository variables are set
 2. Check browser console with `window.volveConfig()`
 3. Confirm URLs are accessible (check CORS settings)
-

@@ -7,6 +7,7 @@ This project uses production data from the **Volve field dataset** released by E
 The Volve field dataset contains comprehensive production and geological data from the Volve field in the North Sea, which was in operation from 2008 to 2016. Equinor (formerly Statoil) released this extensive dataset to support research, education, and technology development in the oil and gas industry.
 
 The dataset includes:
+
 - Well metadata and production data
 - Daily and monthly production measurements
 - Geological and seismic data
@@ -15,6 +16,7 @@ The dataset includes:
 ## Data Usage in This Project
 
 The Volve Explorer application visualizes production data from the Volve dataset, including:
+
 - Oil, water, and gas production metrics
 - Well-level production information
 - Time-series analysis of production trends
@@ -48,10 +50,12 @@ When using this project, please provide appropriate credit to Equinor for the or
 ## License Restrictions
 
 Under the CC BY-NC-SA 4.0 license, you are free to:
+
 - **Share** — copy and redistribute the material in any medium or format
 - **Adapt** — remix, transform, and build upon the material
 
 Under the following terms:
+
 - **Attribution** — You must give appropriate credit to Equinor
 - **NonCommercial** — You may not use the material for commercial purposes
 - **ShareAlike** — If you remix, transform, or build upon the material, you must distribute your contributions under the same license
@@ -63,7 +67,6 @@ Under the following terms:
 - Volve Dataset Documentation: Available through the Equinor Data Portal
 - CC BY-NC-SA 4.0 License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 - Full License Terms (PDF): https://www.equinor.com/content/dam/statoil/documents/what-we-do/Equinor-HRS-Terms-and-conditions-for-licence-to-data-Volve.pdf
-
 
 ## Questions?
 

@@ -5,6 +5,7 @@ This directory contains the configuration for a reproducible development environ
 ## What's Included
 
 ### Base Environment
+
 - **Node.js LTS** (v22) - Latest long-term support version
 - **pnpm** - Fast, disk space efficient package manager
 - **Git** - Version control
@@ -12,6 +13,7 @@ This directory contains the configuration for a reproducible development environ
 - **Build tools** - For native dependencies (Python3, build-essential)
 
 ### VS Code Extensions
+
 - **Svelte for VS Code** - Svelte language support, syntax highlighting, and IntelliSense
 - **ESLint** - JavaScript/TypeScript linting
 - **Prettier** - Code formatting
@@ -20,10 +22,12 @@ This directory contains the configuration for a reproducible development environ
 - **GitHub Copilot** - AI pair programming (requires subscription)
 
 ### Configured Ports
+
 - **5173** - SvelteKit development server (default Vite port)
 - **4173** - SvelteKit preview server
 
 ### Editor Settings
+
 - Auto-format on save using Prettier
 - ESLint auto-fix on save
 - Svelte-specific formatting configuration
@@ -32,6 +36,7 @@ This directory contains the configuration for a reproducible development environ
 ## Usage
 
 ### Prerequisites
+
 - [Docker](https://www.docker.com/products/docker-desktop/) installed and running
 - [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
@@ -69,10 +74,13 @@ npm run build        # or: pnpm build
 ## Customization
 
 ### Adding VS Code Extensions
+
 Edit `devcontainer.json` and add extension IDs to the `extensions` array.
 
 ### Changing Node.js Version
+
 Modify the `version` in the `features` section of `devcontainer.json`.
 
 ### Additional Tools
+
 Add installation commands to the `Dockerfile` or use the `features` section in `devcontainer.json`.

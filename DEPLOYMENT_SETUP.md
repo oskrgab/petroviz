@@ -5,6 +5,7 @@ This guide explains how to configure GitHub Actions repository variables for dep
 ## Why Use GitHub Actions Variables?
 
 Instead of hardcoding configuration in the workflow file, repository variables provide:
+
 - **Flexibility**: Change data URLs without modifying code
 - **Security**: Separate configuration from codebase
 - **Convenience**: Update via GitHub UI without git commits
@@ -14,22 +15,27 @@ Instead of hardcoding configuration in the workflow file, repository variables p
 You need to create **5 repository variables** in your GitHub repository:
 
 ### 1. PUBLIC_DATA_BASE_URL
+
 - **Value**: `https://volve-db.ocortez.com`
 - **Purpose**: Base URL where parquet files and schema are hosted
 
 ### 2. PUBLIC_WELLS_PARQUET
+
 - **Value**: `wells.parquet`
 - **Purpose**: Path to wells parquet file (relative to base URL)
 
 ### 3. PUBLIC_DAILY_PRODUCTION_PARQUET
+
 - **Value**: `daily_production.parquet`
 - **Purpose**: Path to daily production parquet file
 
 ### 4. PUBLIC_MONTHLY_PRODUCTION_PARQUET
+
 - **Value**: `monthly_production.parquet`
 - **Purpose**: Path to monthly production parquet file
 
 ### 5. PUBLIC_SCHEMA_JSON
+
 - **Value**: `schema.json`
 - **Purpose**: Path to schema JSON file
 
@@ -125,6 +131,7 @@ No code changes needed!
 ### Using Different Paths
 
 If your parquet files are in a subdirectory:
+
 ```
 PUBLIC_WELLS_PARQUET = data/v2/wells.parquet
 ```
@@ -132,6 +139,7 @@ PUBLIC_WELLS_PARQUET = data/v2/wells.parquet
 ### Using Absolute URLs
 
 To mix data sources from different domains:
+
 ```
 PUBLIC_DATA_BASE_URL = https://volve-db.ocortez.com
 PUBLIC_WELLS_PARQUET = https://other-cdn.com/wells.parquet
@@ -150,13 +158,14 @@ The app includes built-in debugging tools accessible from the browser console:
 
 ```javascript
 // View full configuration
-window.volveConfig()
+window.volveConfig();
 
 // Get configuration object
-window.volveConfigSummary()
+window.volveConfigSummary();
 ```
 
 **Console Output Example:**
+
 ```
 🔧 Volve Explorer Configuration
   📊 Environment Variables Status
@@ -191,6 +200,7 @@ When environment variables are missing, you'll see warnings in the browser conso
 **Symptom**: Build succeeds but app fails to load data
 
 **Check**:
+
 1. Open browser console and run `window.volveConfig()` to see current configuration
 2. Verify variables are spelled exactly as shown (case-sensitive)
 3. Ensure variables are in the **Variables** tab, not Secrets tab
@@ -201,6 +211,7 @@ When environment variables are missing, you'll see warnings in the browser conso
 **Symptom**: GitHub Actions workflow fails during build
 
 **Check**:
+
 1. All 5 variables are created in GitHub
 2. Workflow file references `${{ vars.VARIABLE_NAME }}` correctly
 3. Check workflow run logs for specific error messages

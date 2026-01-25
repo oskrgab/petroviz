@@ -2,4 +2,4 @@
  * Configuration module exports
  */
 
-export * from './data-sources';
+export * from "./data-sources";
