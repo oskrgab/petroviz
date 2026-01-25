@@ -1,0 +1,29 @@
+# Vite development server for volve-explorer SvelteKit app
+# Served via Caddy at dev-volve-explorer.ocortez.com with hot reloading
+#
+# Usage:
+#   Start dev server:  docker compose up --build
+#   Stop:              docker compose down
+#   Rebuild:           docker compose up --build --force-recreate
+
+services:
+  volve-explorer:
+    image: volve-explorer
+    container_name: volve-explorer
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: 1001
+        GROUP_ID: 1001
+    volumes:
+      - .:/app
+    restart: "no"
+    networks:
+      cluster-network:
+        ipv4_address: 174.44.0.104
+
+networks:
+  cluster-network:
+    name: cluster-network
+    external: true
