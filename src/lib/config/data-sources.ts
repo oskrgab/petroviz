@@ -16,11 +16,11 @@ import { browser } from "$app/environment";
  * Default values for configuration
  */
 const DEFAULTS = {
-  baseUrl: "https://volve-db.ocortez.com",
-  wellsParquet: "wells.parquet",
-  dailyProductionParquet: "daily_production.parquet",
-  monthlyProductionParquet: "monthly_production.parquet",
-  schemaJson: "schema.json",
+  baseUrl: "https://petrodb.ocortez.com",
+  wellsParquet: "volve/wells.parquet",
+  dailyProductionParquet: "volve/daily_production.parquet",
+  monthlyProductionParquet: "volve/monthly_production.parquet",
+  schemaJson: "volve/schema.json",
 } as const;
 
 /**
@@ -103,12 +103,12 @@ if (browser && missingVars.length > 0) {
   console.group("⚙️ Volve Explorer Configuration");
   console.warn(
     `Using default values for ${missingVars.length} environment variable(s):\n` +
-      missingVars.map((v) => `  - ${v}`).join("\n"),
+    missingVars.map((v) => `  - ${v}`).join("\n"),
   );
   console.info(
     "\nTo configure:\n" +
-      "  Local dev: Create .env file (see .env.example)\n" +
-      "  Production: Set GitHub Actions repository variables",
+    "  Local dev: Create .env file (see .env.example)\n" +
+    "  Production: Set GitHub Actions repository variables",
   );
   console.groupEnd();
 }
