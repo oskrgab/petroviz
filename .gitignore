@@ -74,3 +74,5 @@ CLAUDE.local.md
 .spec-workflow
 GEMINI.md
 .playwright-mcp
+.agents
+skills-lock.json

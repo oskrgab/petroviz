@@ -79,6 +79,22 @@ export async function initializeDatabase(): Promise<void> {
       // Create connection
       conn = await db.connect();
 
+      // Swap the built-in httpfs for the loadable `httpfs` extension, which
+      // does proper HTTP range reads (206 Partial Content) against remote
+      // Parquet files. Without this, every query downloads the whole file.
+      // Must run before the cache settings / first remote query.
+      //
+      // NOTE: range reads only work if the data host serves Parquet WITHOUT
+      // gzip content-encoding. gzip + HTTP range is incompatible (the range
+      // applies to the compressed stream), and DuckDB's footer read then
+      // fails with "No magic bytes found at end of file". GitHub Pages
+      // auto-gzips .parquet, so the PUBLIC_DATA_BASE_URL host must serve raw
+      // Parquet (e.g. dev-petrodb via Caddy, or HuggingFace).
+      await conn.query(`
+				SET builtin_httpfs = false;
+				LOAD httpfs;
+			`);
+
       // Configure for HTTP access to remote files
       await conn.query(`
 				SET enable_http_metadata_cache = true;
