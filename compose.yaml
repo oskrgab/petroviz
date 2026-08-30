@@ -14,8 +14,11 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        USER_ID: 1001
-        GROUP_ID: 1001
+        # The container writes into the bind-mounted /app, so it must run as the
+        # host user. Defaults suit a stock single-user Linux box; anywhere else
+        # (the VPS is 1001) export USER_ID=$(id -u) GROUP_ID=$(id -g) first.
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     volumes:
       - .:/app
     restart: "no"

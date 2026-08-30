@@ -1,0 +1,7 @@
+# pnpm 10+ refuses to run dependency build scripts until they are approved, and
+# exits non-zero, so `pnpm install && pnpm run dev` never reaches the dev server.
+# Both of these need their postinstall: esbuild fetches its platform binary
+# (vite will not start without it) and maplibre-gl builds its native bits.
+allowBuilds:
+  esbuild: true
+  maplibre-gl: true
