@@ -20,8 +20,7 @@ services:
       - .:/app
     restart: "no"
     networks:
-      cluster-network:
-        ipv4_address: 174.44.0.104
+      - cluster-network
 
 networks:
   cluster-network:
