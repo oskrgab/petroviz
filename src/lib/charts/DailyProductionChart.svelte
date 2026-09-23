@@ -30,6 +30,11 @@
   const OIL_HEX = "#16a34a";
   const WATER_HEX = "#0ea5e9";
 
+  // Start the y axis at 0 and let unovis pick the top. unovis accepts
+  // `undefined` for "auto", but its Svelte wrapper types the domain as
+  // [number, number].
+  const Y_DOMAIN = [0, undefined] as unknown as [number, number];
+
   // Filter out any records with invalid dates or NaN values
   const validData = $derived(
     data.filter((d) => {
@@ -117,7 +122,7 @@
   {#if hasData}
     <div class="chart-wrapper">
       {#key dataKey}
-        <VisXYContainer data={validData} yDomain={[0, undefined]}>
+        <VisXYContainer data={validData} yDomain={Y_DOMAIN}>
           <VisLine
             {x}
             y={yOil}
