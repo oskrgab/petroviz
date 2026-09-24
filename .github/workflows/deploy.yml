@@ -36,6 +36,11 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      # Fail the deploy before building if a source has moved or broken. Any
+      # PUBLIC_* overrides belong at job level so this checks what ships.
+      - name: Check data sources
+        run: pnpm run check:sources
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

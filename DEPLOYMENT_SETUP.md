@@ -84,18 +84,21 @@ PUBLIC_SCHEMA_JSON                = schema.json
 When you push to the `main` branch:
 
 1. GitHub Actions workflow triggers (`.github/workflows/deploy.yml`)
-2. The build step uses repository variables:
+2. The data-source check (`pnpm check:sources`) fetches every source before
+   the build. If any fails, the deploy stops.
+3. Repository variables, if you use them, go in a job-level `env:` block so
+   the check and the build resolve the same URLs:
    ```yaml
-   - name: Build
-     env:
-       PUBLIC_DATA_BASE_URL: ${{ vars.PUBLIC_DATA_BASE_URL }}
-       PUBLIC_WELLS_PARQUET: ${{ vars.PUBLIC_WELLS_PARQUET }}
-       # ... etc
-     run: pnpm run build
+   jobs:
+     build:
+       env:
+         PUBLIC_DATA_BASE_URL: ${{ vars.PUBLIC_DATA_BASE_URL }}
+         PUBLIC_WELLS_PARQUET: ${{ vars.PUBLIC_WELLS_PARQUET }}
+         # ... etc
    ```
-3. These environment variables are available during the build
-4. SvelteKit's Vite reads them and includes them in the static build
-5. The app uses them at runtime via `src/lib/config/data-sources.ts`
+4. These environment variables are available during the build
+5. SvelteKit's Vite reads them and includes them in the static build
+6. The app uses them at runtime via `src/lib/config/data-sources.ts`
 
 ### Code Flow
 
@@ -205,6 +208,14 @@ When environment variables are missing, you'll see warnings in the browser conso
 2. Verify variables are spelled exactly as shown (case-sensitive)
 3. Ensure variables are in the **Variables** tab, not Secrets tab
 4. Check for typos in URLs (console will show actual URLs being used)
+
+### Data-Source Check Fails
+
+**Symptom**: The "Check data sources" step fails in the deploy workflow, or the
+weekly "Check data sources" workflow fails
+
+**Check**: The log has one `FAIL` line per broken source with the reason (HTTP
+status, content type, first bytes). Reproduce locally with `pnpm check:sources`.
 
 ### Build Fails
 

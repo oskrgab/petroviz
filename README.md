@@ -79,6 +79,8 @@ For production deployment, set repository variables in GitHub:
 
 The deployment workflow (`.github/workflows/deploy.yml`) will automatically use these during build.
 
+Before building, it runs the data-source check (`pnpm check:sources`), which fetches every source and fails the deploy if one is broken. `.github/workflows/check-sources.yml` runs the same check every Monday and can be started by hand from the Actions tab.
+
 ## Project Structure
 
 ```

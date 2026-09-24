@@ -1,0 +1,32 @@
+name: Check data sources
+
+# Catches a petrodb-side move within a week, even when petroviz hasn't changed.
+# A failed scheduled run emails whoever last edited the cron line, through
+# GitHub's default notification. GitHub disables schedules after 60 days without
+# repository activity; re-enable it from the Actions tab if that happens.
+on:
+  schedule:
+    # Mondays, 06:00 UTC
+    - cron: "0 6 * * 1"
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No dependencies to install: the script only needs Node.
+      - name: Check data sources
+        run: node scripts/check-sources.js
