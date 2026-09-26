@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { parseEnv } from "node:util";
 
-import { resolveHosts, resolveSources } from "./sources.js";
+import { DEFAULTS, resolveHosts, resolveSources } from "./sources.js";
 
 const HF = "https://huggingface.co/datasets/sumpalabs/petrodb/resolve/main";
 
@@ -84,4 +86,11 @@ test("hosts resolve to the defaults, trimmed of trailing slashes", () => {
     resolveHosts({ PUBLIC_SCHEMA_BASE_URL: "https://dev-petrodb.ocortez.com/" }),
     { dataHost: HF, schemaHost: "https://dev-petrodb.ocortez.com" },
   );
+});
+
+test(".env.example lists exactly the overrides, each with its default", () => {
+  const example = parseEnv(
+    readFileSync(new URL("../../../.env.example", import.meta.url), "utf8"),
+  );
+  assert.deepEqual(example, { ...DEFAULTS });
 });

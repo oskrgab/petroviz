@@ -28,7 +28,7 @@ let cachedSchema: SchemaDefinition | null = null;
 let loadingPromise: Promise<void> | null = null;
 
 /**
- * Raw schema format from volve-db.ocortez.com/schema.json
+ * Raw schema format of the Dataset's schema.json on the Schema host
  * Tables is an object keyed by table name, not an array
  */
 interface RawColumn {

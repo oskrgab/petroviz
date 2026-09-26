@@ -248,10 +248,10 @@
   <footer class="dashboard-footer">
     <div class="footer-left">
       <span class="footer-text">
-        Data source: <a
-          href="https://volve-db.ocortez.com"
+        Data from <a
+          href="https://petrodb.ocortez.com"
           target="_blank"
-          rel="noopener">volve-db</a
+          rel="noopener">petrodb</a
         >
       </span>
     </div>

@@ -2,7 +2,7 @@
  * Type definitions for the Volve Explorer Production Dashboard
  *
  * These interfaces are used throughout the application for type safety
- * and are aligned with the remote schema at volve-db.ocortez.com
+ * and are aligned with the Volve Dataset's schema, published by petrodb
  */
 
 // =============================================================================

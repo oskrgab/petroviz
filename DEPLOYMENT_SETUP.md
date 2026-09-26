@@ -1,248 +1,105 @@
-# GitHub Actions Variables Setup Guide
+# Deployment Guide
 
-This guide explains how to configure GitHub Actions repository variables for deploying Volve Explorer.
+This guide explains how Volve Explorer is deployed to GitHub Pages, and how it guards against a source that has moved or broken.
 
-## Why Use GitHub Actions Variables?
+## Where the Data Comes From
 
-Instead of hardcoding configuration in the workflow file, repository variables provide:
+The site reads the Volve **Dataset**'s parquet tables from the **Data host** (Hugging Face) and its schema from the **Schema host** (the petrodb site). The defaults are in `src/lib/config/sources.js`, which is the one place they are defined; the app and the data-source check both resolve them from there. The README's [Configuration](README.md#configuration) section lists the URLs; [petrodb ADR-0005](https://github.com/oskrgab/petrodb/blob/main/docs/adr/0005-host-parquet-on-huggingface.md) explains why the tables moved off the petrodb site.
 
-- **Flexibility**: Change data URLs without modifying code
-- **Security**: Separate configuration from codebase
-- **Convenience**: Update via GitHub UI without git commits
+## No Repository Variables
 
-## Required Variables
+There are **no GitHub repository variables to set**. The deploy builds with the defaults above.
 
-You need to create **5 repository variables** in your GitHub repository:
+Every `PUBLIC_*` variable is still an optional override, inlined at build time. If you ever need a deployed build to use another host, set the override in a **job-level** `env:` block in `.github/workflows/deploy.yml`. Setting it only on the Build step would leave the data-source check testing the defaults while the site ships something else:
 
-### 1. PUBLIC_DATA_BASE_URL
-
-- **Value**: `https://volve-db.ocortez.com`
-- **Purpose**: Base URL where parquet files and schema are hosted
-
-### 2. PUBLIC_WELLS_PARQUET
-
-- **Value**: `wells.parquet`
-- **Purpose**: Path to wells parquet file (relative to base URL)
-
-### 3. PUBLIC_DAILY_PRODUCTION_PARQUET
-
-- **Value**: `daily_production.parquet`
-- **Purpose**: Path to daily production parquet file
-
-### 4. PUBLIC_MONTHLY_PRODUCTION_PARQUET
-
-- **Value**: `monthly_production.parquet`
-- **Purpose**: Path to monthly production parquet file
-
-### 5. PUBLIC_SCHEMA_JSON
-
-- **Value**: `schema.json`
-- **Purpose**: Path to schema JSON file
-
-## Step-by-Step Setup
-
-### 1. Navigate to Repository Settings
-
-1. Go to your GitHub repository: `https://github.com/oscarcortez/volve-explorer`
-2. Click on **Settings** tab (top navigation)
-
-### 2. Access Actions Secrets and Variables
-
-1. In the left sidebar, scroll down to **Secrets and variables**
-2. Click **Actions**
-
-### 3. Switch to Variables Tab
-
-1. You'll see two tabs: "Secrets" and "Variables"
-2. Click the **Variables** tab
-
-### 4. Add Each Variable
-
-For each of the 5 variables listed above:
-
-1. Click **"New repository variable"** button (green button)
-2. Enter the variable **Name** (e.g., `PUBLIC_DATA_BASE_URL`)
-3. Enter the **Value** (e.g., `https://volve-db.ocortez.com`)
-4. Click **"Add variable"**
-
-### 5. Verify Variables
-
-After adding all 5 variables, you should see them listed:
-
+```yaml
+jobs:
+  build:
+    env:
+      PUBLIC_DATA_BASE_URL: https://example.com/data
 ```
-PUBLIC_DATA_BASE_URL              = https://volve-db.ocortez.com
-PUBLIC_WELLS_PARQUET              = wells.parquet
-PUBLIC_DAILY_PRODUCTION_PARQUET   = daily_production.parquet
-PUBLIC_MONTHLY_PRODUCTION_PARQUET = monthly_production.parquet
-PUBLIC_SCHEMA_JSON                = schema.json
-```
+
+The full list of overrides is in `.env.example` and the README.
 
 ## How It Works
 
 ### During Deployment
 
-When you push to the `main` branch:
+When you push to the `main` branch (or run the workflow by hand):
 
-1. GitHub Actions workflow triggers (`.github/workflows/deploy.yml`)
-2. The data-source check (`pnpm check:sources`) fetches every source before
-   the build. If any fails, the deploy stops.
-3. Repository variables, if you use them, go in a job-level `env:` block so
-   the check and the build resolve the same URLs:
-   ```yaml
-   jobs:
-     build:
-       env:
-         PUBLIC_DATA_BASE_URL: ${{ vars.PUBLIC_DATA_BASE_URL }}
-         PUBLIC_WELLS_PARQUET: ${{ vars.PUBLIC_WELLS_PARQUET }}
-         # ... etc
-   ```
-4. These environment variables are available during the build
-5. SvelteKit's Vite reads them and includes them in the static build
-6. The app uses them at runtime via `src/lib/config/data-sources.ts`
+1. GitHub Actions runs `.github/workflows/deploy.yml`
+2. The data-source check (`pnpm check:sources`) fetches every source. If any fails, the deploy stops here.
+3. `pnpm install` and `pnpm run build` produce the static site. Vite inlines the resolved URLs into it.
+4. The site is uploaded and deployed to GitHub Pages.
+
+### The Data-Source Check
+
+`scripts/check-sources.js` fetches every resolved source and checks that it returns the right kind of content:
+
+- a parquet table must start with the `PAR1` marker;
+- the schema must parse as JSON and have a `tables` object.
+
+It prints one PASS/FAIL line per source with the reason (HTTP status, content type, first bytes) and exits non-zero if any fails. This catches a host that answers a `.parquet` path with an HTML page and a `200`.
+
+Run it locally with:
+
+```bash
+pnpm check:sources
+```
+
+### The Weekly Check
+
+`.github/workflows/check-sources.yml` runs the same check every Monday at 06:00 UTC, so a petrodb-side move is noticed within a week even when petroviz hasn't changed. You can also start it by hand from the **Actions** tab (**Check data sources → Run workflow**).
+
+- A failed run emails whoever last edited the workflow's `cron` line, through GitHub's default notification. No issue is opened.
+- GitHub turns off scheduled workflows after 60 days with no repository activity. If that happens, re-enable it from the Actions tab.
 
 ### Code Flow
 
 ```
-GitHub Repo Variables
-    ↓
-GitHub Actions Workflow
-    ↓
-Build Environment Variables
-    ↓
-Vite/SvelteKit Build Process
-    ↓
-src/lib/config/data-sources.ts
-    ↓
-Application Runtime
+src/lib/config/sources.js (defaults + optional PUBLIC_* overrides)
+    ├── scripts/check-sources.js   → fetches and checks every source
+    └── src/lib/config/data-sources.ts
+            ↓
+        Vite/SvelteKit build (URLs inlined)
+            ↓
+        Application runtime
 ```
-
-## Changing Data Sources
-
-To point to a different data source:
-
-1. Go to **Settings → Actions → Variables**
-2. Find `PUBLIC_DATA_BASE_URL`
-3. Click **Edit** (pencil icon)
-4. Change value to new URL
-5. Click **Update variable**
-6. Re-run the deployment workflow or push a new commit
-
-No code changes needed!
-
-## Advanced Configuration
-
-### Using Different Paths
-
-If your parquet files are in a subdirectory:
-
-```
-PUBLIC_WELLS_PARQUET = data/v2/wells.parquet
-```
-
-### Using Absolute URLs
-
-To mix data sources from different domains:
-
-```
-PUBLIC_DATA_BASE_URL = https://volve-db.ocortez.com
-PUBLIC_WELLS_PARQUET = https://other-cdn.com/wells.parquet
-PUBLIC_DAILY_PRODUCTION_PARQUET = daily_production.parquet
-```
-
-The config module handles both relative and absolute URLs automatically.
 
 ## Troubleshooting
 
-### Checking Configuration in Browser
+### Checking Configuration in the Browser
 
-The app includes built-in debugging tools accessible from the browser console:
-
-**Open browser console** (F12 or Cmd+Option+I) and run:
+The app includes debugging tools in the browser console (F12 or Cmd+Option+I):
 
 ```javascript
-// View full configuration
+// Log the Data host, the Schema host and every resolved source URL
 window.volveConfig();
 
-// Get configuration object
+// Get the same configuration as an object
 window.volveConfigSummary();
 ```
 
-**Console Output Example:**
-
-```
-🔧 Volve Explorer Configuration
-  📊 Environment Variables Status
-    ✅ Configured: ['PUBLIC_DATA_BASE_URL']
-    ⚠️  Using Defaults: ['PUBLIC_WELLS_PARQUET', 'PUBLIC_DAILY_PRODUCTION_PARQUET', ...]
-  🌐 Data Sources
-    Base URL: https://volve-db.ocortez.com
-    Wells: https://volve-db.ocortez.com/wells.parquet
-    ...
-```
-
-### Configuration Warnings
-
-When environment variables are missing, you'll see warnings in the browser console:
-
-```
-⚙️ Volve Explorer Configuration
-  Using default values for 5 environment variable(s):
-    - PUBLIC_DATA_BASE_URL
-    - PUBLIC_WELLS_PARQUET
-    - PUBLIC_DAILY_PRODUCTION_PARQUET
-    - PUBLIC_MONTHLY_PRODUCTION_PARQUET
-    - PUBLIC_SCHEMA_JSON
-
-  To configure:
-    Local dev: Create .env file (see .env.example)
-    Production: Set GitHub Actions repository variables
-```
-
-### Variables Not Working
-
-**Symptom**: Build succeeds but app fails to load data
-
-**Check**:
-
-1. Open browser console and run `window.volveConfig()` to see current configuration
-2. Verify variables are spelled exactly as shown (case-sensitive)
-3. Ensure variables are in the **Variables** tab, not Secrets tab
-4. Check for typos in URLs (console will show actual URLs being used)
-
 ### Data-Source Check Fails
 
-**Symptom**: The "Check data sources" step fails in the deploy workflow, or the
-weekly "Check data sources" workflow fails
+**Symptom**: The "Check data sources" step fails in the deploy workflow, or the weekly "Check data sources" workflow fails
 
-**Check**: The log has one `FAIL` line per broken source with the reason (HTTP
-status, content type, first bytes). Reproduce locally with `pnpm check:sources`.
+**Check**: The log has one `FAIL` line per broken source with the reason (HTTP status, content type, first bytes). Reproduce locally with `pnpm check:sources`. If petrodb has moved a table or the schema, update the defaults in `src/lib/config/sources.js`.
 
 ### Build Fails
 
-**Symptom**: GitHub Actions workflow fails during build
+**Symptom**: GitHub Actions workflow fails during install or build
 
-**Check**:
-
-1. All 5 variables are created in GitHub
-2. Workflow file references `${{ vars.VARIABLE_NAME }}` correctly
-3. Check workflow run logs for specific error messages
-4. Verify variable names match exactly (including `PUBLIC_` prefix)
+**Check**: The workflow run logs for the failing step. The deploy uses pnpm 10; `pnpm-workspace.yaml` holds pnpm 10 settings that pnpm 9 can't read.
 
 ## Testing Locally
 
-Local development doesn't use GitHub variables. Instead:
+Local development needs no configuration: `pnpm install && pnpm run dev` reads from the default hosts.
 
-1. Copy `.env.example` to `.env`
-2. Edit `.env` with your local configuration
-3. Run `pnpm run dev`
+To test data changes before petrodb publishes them, point both hosts at the homelab `dev-petrodb.ocortez.com` in a `.env` file (see `.env.example`), then restart the dev server. The `.env` file is git-ignored and doesn't affect the deployment.
 
-The `.env` file is git-ignored and won't affect production deployment.
+## After Deploying
 
-## Next Steps
-
-After setting up variables:
-
-1. ✅ Push a commit to trigger deployment
-2. ✅ Monitor GitHub Actions workflow run
-3. ✅ Visit your deployed site at `https://volve-explorer.ocortez.com`
-4. ✅ Verify data loads correctly
+1. Monitor the GitHub Actions workflow run
+2. Visit the deployed site
+3. Verify data loads correctly
