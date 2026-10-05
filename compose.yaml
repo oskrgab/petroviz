@@ -1,5 +1,5 @@
-# Vite development server for volve-explorer SvelteKit app
-# Served via Caddy at dev-volve-explorer.ocortez.com with hot reloading
+# Vite development server for petroviz SvelteKit app
+# Served via Caddy at dev-petroviz.ocortez.com with hot reloading
 #
 # Usage:
 #   Start dev server:  docker compose up --build
@@ -7,9 +7,9 @@
 #   Rebuild:           docker compose up --build --force-recreate
 
 services:
-  volve-explorer:
-    image: volve-explorer
-    container_name: volve-explorer
+  petroviz:
+    image: petroviz
+    container_name: petroviz
     build:
       context: .
       dockerfile: Dockerfile

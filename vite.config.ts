@@ -14,7 +14,7 @@ export default defineConfig({
     },
     hmr: {
       protocol: "wss",
-      host: "dev-volve-explorer.ocortez.com",
+      host: "dev-petroviz.ocortez.com",
       clientPort: 443,
     },
     watch: {

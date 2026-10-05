@@ -1,4 +1,4 @@
-# Vite development server for volve-explorer SvelteKit app
+# Vite development server for petroviz SvelteKit app
 FROM node:22-slim
 
 # Pin pnpm to the version this project was developed against (see node_modules/.modules.yaml).
