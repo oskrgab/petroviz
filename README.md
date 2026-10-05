@@ -6,7 +6,7 @@ A high-performance static dashboard for exploring the Volve dataset production i
 
 - **Interactive Data Exploration**: Visualize oil, water, and gas production data
 - **Client-Side Processing**: DuckDB-WASM enables powerful SQL queries in the browser
-- **Static Deployment**: Fully static site deployed to GitHub Pages
+- **Static Deployment**: Fully static site deployed to Cloudflare Pages
 - **Configurable Data Sources**: Environment-based configuration for flexibility
 
 ## Quick Start
@@ -72,7 +72,7 @@ A path can also be an absolute URL, which replaces its host. `.env.example` show
 
 ### Deployment
 
-Pushing to `main` deploys to GitHub Pages with the defaults above; there are no GitHub repository variables to set. Before building, the deploy runs the data-source check (`pnpm check:sources`), which fetches every source and fails the deploy if one is broken. `.github/workflows/check-sources.yml` runs the same check every Monday and can be started by hand from the Actions tab. See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md).
+Pushing to `main` deploys production to Cloudflare Pages and pushing to `dev` deploys a preview, both with the defaults above. The deploy needs two repository secrets and one variable (listed in the deployment guide). Before building, the deploy runs the data-source check (`pnpm check:sources`), which fetches every source and fails the deploy if one is broken. `.github/workflows/check-sources.yml` runs the same check every Monday and can be started by hand from the Actions tab. See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md).
 
 ## Project Structure
 
@@ -96,7 +96,7 @@ volve-explorer/
 - **Frontend**: SvelteKit 5 (static adapter)
 - **Data Processing**: DuckDB-WASM
 - **Visualizations**: Unovis
-- **Deployment**: GitHub Pages
+- **Deployment**: Cloudflare Pages
 - **Package Manager**: pnpm
 
 ## Dataset

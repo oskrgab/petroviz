@@ -1,25 +1,24 @@
-name: Deploy to GitHub Pages
+name: Deploy to Cloudflare Pages
 
+# main deploys production (petroviz.pages.dev); dev deploys a preview at
+# dev.petroviz.pages.dev. Previews read the same production data sources.
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "dev"]
 
-  # Allow manual trigger
+  # Allow manual trigger; the branch picked in the UI is the one deployed
   workflow_dispatch:
 
-# Sets permissions for GITHUB_TOKEN to deploy to GitHub Pages
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow only one concurrent deployment
+# One deploy per branch at a time; a newer push supersedes an older one
 concurrency:
-  group: "pages"
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,18 +46,32 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: "build/"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }} --branch=${{ github.ref_name }}
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      # A deploy that Cloudflare accepted can still serve the wrong thing, so
+      # fetch it. Retries cover the seconds before a new deployment is reachable.
+      # The app is client-rendered (ssr = false), so its HTML has no <title>;
+      # the SvelteKit bootstrap is the marker that it is the app and not an
+      # error page.
+      - name: Verify deployment
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          echo "Checking $DEPLOYMENT_URL"
+          code=$(curl -sS --retry 5 --retry-delay 5 --retry-all-errors \
+            -o body.html -w '%{http_code}' "$DEPLOYMENT_URL")
+          if [ "$code" != "200" ]; then
+            echo "::error::Expected HTTP 200 from $DEPLOYMENT_URL, got $code"
+            exit 1
+          fi
+          if ! grep -q '__sveltekit' body.html; then
+            echo "::error::$DEPLOYMENT_URL returned 200 but not the app's HTML"
+            exit 1
+          fi
+          echo "OK: 200 with the app's HTML"
