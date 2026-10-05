@@ -11,7 +11,7 @@
     version?: string;
   }
 
-  let { repo = "oskrgab/volve-explorer", version = "0.1.0" }: Props = $props();
+  let { repo = "oskrgab/petroviz", version = "0.1.0" }: Props = $props();
 
   // GitHub repo URL
   const repoUrl = `https://github.com/${repo}`;

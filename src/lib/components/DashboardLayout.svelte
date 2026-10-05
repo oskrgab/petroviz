@@ -180,7 +180,7 @@
 
     <div class="header-right">
       <a
-        href="https://github.com/oskrgab/volve-explorer"
+        href="https://github.com/oskrgab/petroviz"
         class="github-link"
         target="_blank"
         rel="noopener noreferrer"

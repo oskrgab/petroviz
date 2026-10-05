@@ -16,8 +16,8 @@ A high-performance static dashboard for exploring the Volve dataset production i
 1. **Clone and install dependencies**
 
    ```bash
-   git clone https://github.com/oscarcortez/volve-explorer.git
-   cd volve-explorer
+   git clone https://github.com/oskrgab/petroviz.git
+   cd petroviz
    pnpm install
    ```
 
@@ -77,7 +77,7 @@ Pushing to `main` deploys production to Cloudflare Pages and pushing to `dev` de
 ## Project Structure
 
 ```
-volve-explorer/
+petroviz/
 ├── src/
 │   ├── lib/
 │   │   ├── config/          # Centralized configuration
