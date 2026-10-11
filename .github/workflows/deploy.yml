@@ -43,6 +43,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # A failing test stops the deploy before anything reaches Cloudflare
+      - name: Test
+        run: pnpm test
+
       - name: Build
         run: pnpm run build
 

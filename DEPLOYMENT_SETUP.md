@@ -47,9 +47,10 @@ When you push to `main` or `dev` (or run the workflow by hand):
 
 1. GitHub Actions runs `.github/workflows/deploy.yml`
 2. The data-source check (`pnpm check:sources`) fetches every source. If any fails, the deploy stops here.
-3. `pnpm install` and `pnpm run build` produce the static site. Vite inlines the resolved URLs into it.
-4. `cloudflare/wrangler-action@v3` uploads `build/` to the Pages project, with the branch set to the pushed ref.
-5. The post-deploy check fetches the deployment URL the action reports and fails the run unless it returns `200` and the app's HTML.
+3. `pnpm install` installs dependencies, then `pnpm test` runs the unit tests. If any fails, the deploy stops here.
+4. `pnpm run build` produces the static site. Vite inlines the resolved URLs into it.
+5. `cloudflare/wrangler-action@v3` uploads `build/` to the Pages project, with the branch set to the pushed ref.
+6. The post-deploy check fetches the deployment URL the action reports and fails the run unless it returns `200` and the app's HTML.
 
 ### The Post-Deploy Check
 
@@ -108,6 +109,12 @@ window.volveConfigSummary();
 **Symptom**: The "Check data sources" step fails in the deploy workflow, or the weekly "Check data sources" workflow fails
 
 **Check**: The log has one `FAIL` line per broken source with the reason (HTTP status, content type, first bytes). Reproduce locally with `pnpm check:sources`. If petrodb has moved a table or the schema, update the defaults in `src/lib/config/sources.js`.
+
+### Test Step Fails
+
+**Symptom**: The "Test" step fails in the deploy workflow
+
+**Check**: The log names each failing test. Reproduce locally with `pnpm test`; nothing has been uploaded, so production is unchanged.
 
 ### Build Fails
 
