@@ -40,6 +40,14 @@ _Avoid_: log (when meaning a single quantity), channel, trace
 A named depth interval of the wellbore, such as a formation or group.
 _Avoid_: top (a top is a zone's upper boundary, not the zone), marker
 
+**Zone set**:
+The zones of one well log that come from one source column, such as GROUP or FORMATION. Zones within a set do not overlap; zones in different sets are independent and need not nest.
+_Avoid_: zonation, level, tops
+
+**Load warning**:
+A note a log adapter attaches to the well log it produced, recording something it tolerated or changed in the source, such as sentinels replaced, depths re-sorted or a mnemonic renamed.
+_Avoid_: error, log message
+
 **Depth reference**:
 The depth axis a well log is displayed against: MD (measured along the wellbore) or TVDSS (true vertical depth below sea level). TVD below the rig floor needs a datum elevation and is not available for every well log.
 _Avoid_: index, reference (unqualified), SSTVD
