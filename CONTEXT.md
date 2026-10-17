@@ -61,12 +61,28 @@ One column of a log view, holding one or more curves drawn against a shared widt
 _Avoid_: lane, panel
 
 **Depth track**:
-The track that shows the depth reference's scale.
+A track that shows a depth reference's scale: the active one, or a fixed one such as TVDSS beside an MD view.
 _Avoid_: index track, depth column
 
+**Discrete track**:
+A track that shows one discrete curve, such as lithology, as coloured or patterned blocks.
+_Avoid_: lithology column, facies track
+
+**Zone track**:
+A track that shows the zones of one zone set.
+_Avoid_: tops track, formation column
+
 **Curve scale**:
-How a curve's values map across its track: a left and a right value (either can be the larger, so a scale can run reversed) and linear or logarithmic.
+How a curve's values map across its track: a left and a right value (either can be the larger, so a scale can run reversed) and linear or logarithmic. The ends are either fixed or computed once from the whole curve, never from the visible depth interval.
 _Avoid_: range (ambiguous with the depth interval), limits
+
+**Wrap**:
+Drawing a curve's off-scale values shifted back by one scale width, in a lighter style, instead of clipping them at the track edge.
+_Avoid_: backup scale (that is the shifted scale, not the behaviour), overflow
+
+**Fill**:
+Shading in a curve track between two boundaries, each a curve in that track, a fixed value or a track edge, coloured by which boundary lies to the left on screen.
+_Avoid_: shading, area (unqualified), crossover (one particular fill)
 
 **Depth cursor**:
 The horizontal line across the whole log view that follows the pointer's depth and reads out every displayed curve and the depth reference at that depth.
@@ -77,5 +93,5 @@ The kind of quantity a curve measures (gamma ray, resistivity, bulk density, neu
 _Avoid_: curve type, log type, class
 
 **Template**:
-A saved log view layout — its tracks, the curves in each and how each is styled — that can be applied to any well log. The **default template** is the one a well opens with.
-_Avoid_: layout file, preset, format
+A log view layout — its tracks, the curves in each with their curve scales and styling, and its fills — that can be applied to any well log. The layout being edited is the **current template**, and the **default template** is the one a well opens with.
+_Avoid_: layout (as a separate thing), layout file, preset, format
