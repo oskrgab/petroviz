@@ -105,7 +105,7 @@
 			<button class:on={activeRef === 'tvdss'} onclick={() => (activeRef = 'tvdss')}>TVDSS</button>
 		</div>
 		<div class="spacer"></div>
-		<span class="dim">{view.unmatched.length} curves not shown</span>
+		<span class="dim">{view.unmatched.length} curve{view.unmatched.length === 1 ? '' : 's'} not shown</span>
 		<button class="ghost" onclick={() => view.resetTemplate()}>Reset layout</button>
 		<ThemeToggle />
 	</header>

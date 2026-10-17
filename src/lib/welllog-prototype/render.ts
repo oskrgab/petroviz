@@ -304,6 +304,7 @@ export function drawDepthTrack(ctx: CanvasRenderingContext2D, log: WellLog, ref:
 	ctx.textBaseline = 'middle';
 	const tick = (d: number, label: number) => {
 		const y = Math.round((d - f.top) * f.k) + 0.5;
+		if (y < 7 * vp.dpr || y > f.h - 7 * vp.dpr) return;
 		ctx.beginPath();
 		ctx.moveTo(f.w - 5 * vp.dpr, y);
 		ctx.lineTo(f.w, y);

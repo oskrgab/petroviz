@@ -25,7 +25,7 @@
 
 	function onKey(e: KeyboardEvent) {
 		const el = e.target as HTMLElement;
-		if (el.closest('input, textarea, select, [contenteditable]')) return;
+		if (el.closest?.('input, textarea, select, [contenteditable]')) return;
 		if (e.key === 'ArrowLeft') go(-1);
 		if (e.key === 'ArrowRight') go(1);
 	}
