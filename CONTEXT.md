@@ -88,6 +88,10 @@ _Avoid_: shading, area (unqualified), crossover (one particular fill)
 The horizontal line across the whole log view that follows the pointer's depth and reads out every displayed curve and the depth reference at that depth.
 _Avoid_: crosshair, transversal line, tooltip
 
+**Overview strip**:
+A narrow strip beside the log view that shows the whole well as one curve and one zone set, with the visible depth interval marked on it.
+_Avoid_: minimap, navigator, scrollbar
+
 **Curve family**:
 The kind of quantity a curve measures (gamma ray, resistivity, bulk density, neutron porosity, sonic, lithology), independent of its mnemonic. A log adapter assigns it; the default template keys on it.
 _Avoid_: curve type, log type, class
