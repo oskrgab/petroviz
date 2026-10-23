@@ -49,8 +49,8 @@ A note a log adapter attaches to the well log it produced, recording something i
 _Avoid_: error, log message
 
 **Depth reference**:
-The depth axis a well log is displayed against: MD (measured along the wellbore) or TVDSS (true vertical depth below sea level). TVD below the rig floor needs a datum elevation and is not available for every well log.
-_Avoid_: index, reference (unqualified), SSTVD
+The depth axis a well log is displayed against: MD (measured along the wellbore) or TVDSS (true vertical depth below sea level). Every well log has MD; not every well log has TVDSS. TVD below the rig floor is not a depth reference.
+_Avoid_: index, reference (unqualified), SSTVD, TVD (when meaning TVDSS)
 
 **Log view**:
 The display of one well log: a row of tracks side by side, sharing one depth reference and one visible depth interval.
