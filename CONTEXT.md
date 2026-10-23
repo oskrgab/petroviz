@@ -45,8 +45,12 @@ The zones of one well log that come from one source column, such as GROUP or FOR
 _Avoid_: zonation, level, tops
 
 **Load warning**:
-A note a log adapter attaches to the well log it produced, recording something it tolerated or changed in the source, such as sentinels replaced, depths re-sorted or a mnemonic renamed.
+A record a log adapter attaches to the well log it produced, of something it tolerated or changed in the source, such as sentinels replaced, depths re-sorted or a mnemonic renamed. Each has a severity: a **note** when nothing was lost, a **caution** when data was dropped or the adapter had to assume something, so what is drawn may not match what the source holds or means.
 _Avoid_: error, log message
+
+**Gap**:
+A depth interval of a well log where no curve has a value, such as a stretch the source holds no samples for. One curve lacking values while others have them is not a gap.
+_Avoid_: hole, missing interval, no-data zone
 
 **Depth reference**:
 The depth axis a well log is displayed against: MD (measured along the wellbore) or TVDSS (true vertical depth below sea level). Every well log has MD; not every well log has TVDSS. TVD below the rig floor is not a depth reference.
@@ -77,8 +81,12 @@ How a curve's values map across its track: a left and a right value (either can 
 _Avoid_: range (ambiguous with the depth interval), limits
 
 **Wrap**:
-Drawing a curve's off-scale values shifted back by one scale width, in a lighter style, instead of clipping them at the track edge.
+Drawing a curve's off-scale values shifted back by one scale width, in a lighter style, instead of clipping them at the track edge. Values still off-scale after the shift are clipped.
 _Avoid_: backup scale (that is the shifted scale, not the behaviour), overflow
+
+**Clip**:
+Cutting a curve off where it leaves its curve scale: the line runs out of the track and comes back when its values return. A clipped curve is never drawn pinned along the track edge.
+_Avoid_: cap, pin, clamp
 
 **Fill**:
 Shading in a curve track between two boundaries, each a curve in that track, a fixed value or a track edge, coloured by which boundary lies to the left on screen.

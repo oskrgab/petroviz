@@ -15,7 +15,10 @@ A well log is a plain, immutable data object. Every curve and depth reference is
 - Where TVDSS is present, it is strictly increasing over its non-NaN samples. An adapter whose source breaks this drops TVDSS and records a load warning, so no renderer ever has to draw a fold. All 108 FORCE 2020 wells meet the rule once sorted by MD, and FORCE 2020 is the only TVDSS source in scope, because a LAS `TVD` column stays an ordinary curve. Added by [#31](https://github.com/oskrgab/petroviz/issues/31).
 - Curve values are `Float32Array`. Precision is far beyond what the display shows, and big LAS files take half the memory. Discrete curves hold integer codes in the same array, plus an optional code → label table. Colour and pattern are styling and do not live here.
 - Zone sets are separate lists of `{ name, top, base }` in MD. They are not a tree, and a zone is not keyed by its name.
+- The gap row sits at the last sample's MD plus the nominal step: 0.152 m for FORCE 2020, the median step for LAS. That always falls inside the gap, because a gap is longer than 1.5 steps. A zone's base is the MD of the first row after its run, gap rows included, so a zone and a discrete block end at the same depth. At the end of the data, the base is the last sample's MD. The log view shows a gap wherever no curve has a value: it reads the NaN rows, never the step sizes. Added by [#34](https://github.com/oskrgab/petroviz/issues/34).
+- Every curve has at least one value. An adapter leaves out a curve that has none, and `checkWellLog` rejects one. A first-match template selector can then never pick an empty `GR` over a usable `GR:2`. Added by [#34](https://github.com/oskrgab/petroviz/issues/34).
 - Each adapter removes sentinels on its own terms (never on depth references) and records load warnings. Derived buffers such as log10 and decimation belong to the renderer.
+- Load warning codes are a closed set, and each code has a fixed severity: a note when nothing was lost, a caution when data was dropped or the adapter assumed something. Added by [#34](https://github.com/oskrgab/petroviz/issues/34).
 
 ## Considered options
 
