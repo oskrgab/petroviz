@@ -103,7 +103,7 @@ Chromium deserialises before `onmessage` runs, so timing inside the handler show
 ## Re-running
 
 ```sh
-cd docs/research/las-parse-benchmark/tools && npm ci   # playwright-core; needs a Chromium headless shell
+cd docs/research/las-parse-benchmark/tools && npm install   # playwright-core 1.64.1; needs a Chromium headless shell
 cd ../src
 node tile.mjs --in DATA/west_mac60.las --out GEN/mac60_100k_50.las --rows 100000 --keep 50
 node bench-node.mjs --tok scan,naive FILE...
