@@ -1,0 +1,431 @@
+{
+ "browser": "156.0.8078.4",
+ "runs": 10,
+ "warm": 2,
+ "results": [
+  {
+   "file": "west_mac60.las",
+   "MB": 16.494173,
+   "mode": "memory",
+   "tok": "-",
+   "scan": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 17,
+      "rss": 16
+     },
+     "decode": {
+      "jsHeap": 33,
+      "rss": 32
+     },
+     "parse": {
+      "jsHeap": 44,
+      "rss": 72
+     },
+     "build": {
+      "jsHeap": 50,
+      "rss": 79
+     },
+     "dropBuf": {
+      "jsHeap": 34,
+      "rss": 63
+     },
+     "dropDoc": {
+      "jsHeap": 22,
+      "rss": 51
+     },
+     "dropText": {
+      "jsHeap": 22,
+      "rss": 51
+     },
+     "later": {
+      "jsHeap": 22,
+      "rss": 51
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 6,
+      "rss": 36
+     }
+    },
+    "peak": {
+     "rssBefore": 96,
+     "hwmAfterReset": 96,
+     "hwmAfter": 178,
+     "peakIncrement": 83
+    }
+   },
+   "naive": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 17,
+      "rss": 0
+     },
+     "decode": {
+      "jsHeap": 33,
+      "rss": 0
+     },
+     "parse": {
+      "jsHeap": 44,
+      "rss": 61
+     },
+     "build": {
+      "jsHeap": 50,
+      "rss": 67
+     },
+     "dropBuf": {
+      "jsHeap": 34,
+      "rss": 51
+     },
+     "dropDoc": {
+      "jsHeap": 22,
+      "rss": 40
+     },
+     "dropText": {
+      "jsHeap": 22,
+      "rss": 40
+     },
+     "later": {
+      "jsHeap": 22,
+      "rss": 40
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 6,
+      "rss": 24
+     }
+    },
+    "peak": {
+     "rssBefore": 96,
+     "hwmAfterReset": 96,
+     "hwmAfter": 203,
+     "peakIncrement": 107
+    }
+   }
+  },
+  {
+   "file": "mac60_100k_50.las",
+   "MB": 60.105949,
+   "mode": "memory",
+   "tok": "-",
+   "scan": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 60,
+      "rss": 58
+     },
+     "decode": {
+      "jsHeap": 120,
+      "rss": 116
+     },
+     "parse": {
+      "jsHeap": 166,
+      "rss": 198
+     },
+     "build": {
+      "jsHeap": 187,
+      "rss": 225
+     },
+     "dropBuf": {
+      "jsHeap": 126,
+      "rss": 167
+     },
+     "dropDoc": {
+      "jsHeap": 81,
+      "rss": 123
+     },
+     "dropText": {
+      "jsHeap": 81,
+      "rss": 123
+     },
+     "later": {
+      "jsHeap": 81,
+      "rss": 123
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 21,
+      "rss": 66
+     }
+    },
+    "peak": {
+     "rssBefore": 95,
+     "hwmAfterReset": 95,
+     "hwmAfter": 368,
+     "peakIncrement": 272
+    }
+   },
+   "naive": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 60,
+      "rss": 0
+     },
+     "decode": {
+      "jsHeap": 120,
+      "rss": 50
+     },
+     "parse": {
+      "jsHeap": 166,
+      "rss": 175
+     },
+     "build": {
+      "jsHeap": 187,
+      "rss": 201
+     },
+     "dropBuf": {
+      "jsHeap": 126,
+      "rss": 144
+     },
+     "dropDoc": {
+      "jsHeap": 81,
+      "rss": 100
+     },
+     "dropText": {
+      "jsHeap": 81,
+      "rss": 100
+     },
+     "later": {
+      "jsHeap": 81,
+      "rss": 100
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 21,
+      "rss": 43
+     }
+    },
+    "peak": {
+     "rssBefore": 96,
+     "hwmAfterReset": 96,
+     "hwmAfter": 422,
+     "peakIncrement": 326
+    }
+   }
+  },
+  {
+   "file": "mac60_200k_63.las",
+   "MB": 151.406718,
+   "mode": "memory",
+   "tok": "-",
+   "scan": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 151,
+      "rss": 145
+     },
+     "decode": {
+      "jsHeap": 303,
+      "rss": 290
+     },
+     "parse": {
+      "jsHeap": 433,
+      "rss": 450
+     },
+     "build": {
+      "jsHeap": 484,
+      "rss": 511
+     },
+     "dropBuf": {
+      "jsHeap": 333,
+      "rss": 367
+     },
+     "dropDoc": {
+      "jsHeap": 203,
+      "rss": 242
+     },
+     "dropText": {
+      "jsHeap": 203,
+      "rss": 242
+     },
+     "later": {
+      "jsHeap": 203,
+      "rss": 242
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 51,
+      "rss": 98
+     }
+    },
+    "peak": {
+     "rssBefore": 96,
+     "hwmAfterReset": 96,
+     "hwmAfter": 676,
+     "peakIncrement": 581
+    }
+   },
+   "naive": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 151,
+      "rss": 47
+     },
+     "decode": {
+      "jsHeap": 303,
+      "rss": 192
+     },
+     "parse": {
+      "jsHeap": 433,
+      "rss": 416
+     },
+     "build": {
+      "jsHeap": 484,
+      "rss": 477
+     },
+     "dropBuf": {
+      "jsHeap": 333,
+      "rss": 332
+     },
+     "dropDoc": {
+      "jsHeap": 203,
+      "rss": 208
+     },
+     "dropText": {
+      "jsHeap": 203,
+      "rss": 208
+     },
+     "later": {
+      "jsHeap": 203,
+      "rss": 208
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 51,
+      "rss": 64
+     }
+    },
+    "peak": {
+     "rssBefore": 95,
+     "hwmAfterReset": 95,
+     "hwmAfter": 738,
+     "peakIncrement": 643
+    }
+   }
+  },
+  {
+   "file": "acord_100k_18_wrapped.las",
+   "MB": 37.202324,
+   "mode": "memory",
+   "tok": "-",
+   "scan": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 37,
+      "rss": 36
+     },
+     "decode": {
+      "jsHeap": 74,
+      "rss": 72
+     },
+     "parse": {
+      "jsHeap": 91,
+      "rss": 102
+     },
+     "build": {
+      "jsHeap": 99,
+      "rss": 122
+     },
+     "dropBuf": {
+      "jsHeap": 61,
+      "rss": 87
+     },
+     "dropDoc": {
+      "jsHeap": 45,
+      "rss": 71
+     },
+     "dropText": {
+      "jsHeap": 45,
+      "rss": 71
+     },
+     "later": {
+      "jsHeap": 45,
+      "rss": 71
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 8,
+      "rss": 36
+     }
+    },
+    "peak": {
+     "rssBefore": 95,
+     "hwmAfterReset": 95,
+     "hwmAfter": 245,
+     "peakIncrement": 150
+    }
+   },
+   "naive": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 37,
+      "rss": 1
+     },
+     "decode": {
+      "jsHeap": 74,
+      "rss": 36
+     },
+     "parse": {
+      "jsHeap": 91,
+      "rss": 144
+     },
+     "build": {
+      "jsHeap": 99,
+      "rss": 157
+     },
+     "dropBuf": {
+      "jsHeap": 61,
+      "rss": 122
+     },
+     "dropDoc": {
+      "jsHeap": 45,
+      "rss": 106
+     },
+     "dropText": {
+      "jsHeap": 45,
+      "rss": 106
+     },
+     "later": {
+      "jsHeap": 45,
+      "rss": 106
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 8,
+      "rss": 70
+     }
+    },
+    "peak": {
+     "rssBefore": 95,
+     "hwmAfterReset": 95,
+     "hwmAfter": 276,
+     "peakIncrement": 181
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,151 @@
+{
+ "browser": "156.0.8078.4",
+ "runs": 10,
+ "warm": 2,
+ "results": [
+  {
+   "file": "mac60_100k_50_cp1252_twobyte.las",
+   "MB": 60.105997,
+   "mode": "main",
+   "tok": "scan",
+   "cold": {
+    "read": 68.82000005245209,
+    "decode": 82.29999995231628,
+    "header": 0.6449999809265137,
+    "data": 416.65000009536743,
+    "parse": 417.47000002861023,
+    "sortCheck": 3.2549999952316284,
+    "medianStep": 25.319999933242798,
+    "sentinelsPack": 28.925000071525574,
+    "gapRows": 31.1599999666214,
+    "build": 89.02499997615814,
+    "sync": 588.7949999570847,
+    "total": 657.6150000095367,
+    "longestTask": 589
+   },
+   "med": {
+    "read": 62.8199999332428,
+    "decode": 102.83000004291534,
+    "header": 0.18999993801116943,
+    "data": 397.0199999809265,
+    "parse": 397.18500006198883,
+    "sortCheck": 2.990000009536743,
+    "medianStep": 23.954999923706055,
+    "sentinelsPack": 47.325000047683716,
+    "gapRows": 33.68500006198883,
+    "build": 110.38999998569489,
+    "sync": 613.0699999332428,
+    "total": 669.6050000190735,
+    "longestTask": 613
+   },
+   "n": 7,
+   "info": {
+    "rows": 100004,
+    "curves": 49,
+    "encoding": "windows-1252"
+   },
+   "renderers": {
+    "before": {
+     "506165": {
+      "hwm": 60.984375,
+      "rss": 4.5
+     },
+     "3493057": {
+      "hwm": 88.7109375,
+      "rss": 88.7109375
+     }
+    },
+    "after": {
+     "506165": {
+      "hwm": 60.984375,
+      "rss": 4.5
+     },
+     "3493057": {
+      "hwm": 611.078125,
+      "rss": 440.3046875
+     }
+    }
+   }
+  },
+  {
+   "file": "mac60_100k_50_cp1252_twobyte.las",
+   "MB": 60.105997,
+   "mode": "decode",
+   "tok": "-",
+   "decode": {
+    "utf8": {
+     "cold": 88.76499998569489,
+     "med": 104.13499999046326
+    },
+    "utf8fatal": {
+     "cold": 0.28999996185302734,
+     "med": 0.2549999952316284
+    },
+    "win1252": {
+     "cold": 125.19000005722046,
+     "med": 101.2849999666214
+    },
+    "decodeLas": {
+     "cold": 101.48000001907349,
+     "med": 102.32000005245209
+    }
+   }
+  },
+  {
+   "file": "mac60_100k_50_cp1252_twobyte.las",
+   "MB": 60.105997,
+   "mode": "memory",
+   "tok": "-",
+   "scan": {
+    "phases": {
+     "base": {
+      "jsHeap": 0,
+      "rss": 0
+     },
+     "read": {
+      "jsHeap": 60,
+      "rss": 58
+     },
+     "decode": {
+      "jsHeap": 120,
+      "rss": 173
+     },
+     "parse": {
+      "jsHeap": 166,
+      "rss": 255
+     },
+     "build": {
+      "jsHeap": 187,
+      "rss": 281
+     },
+     "dropBuf": {
+      "jsHeap": 126,
+      "rss": 224
+     },
+     "dropDoc": {
+      "jsHeap": 81,
+      "rss": 180
+     },
+     "dropText": {
+      "jsHeap": 81,
+      "rss": 180
+     },
+     "later": {
+      "jsHeap": 81,
+      "rss": 180
+     },
+     "dropHeaderStrings": {
+      "jsHeap": 21,
+      "rss": 65
+     }
+    },
+    "peak": {
+     "rssBefore": 94,
+     "hwmAfterReset": 94,
+     "hwmAfter": 425,
+     "peakIncrement": 330
+    }
+   }
+  }
+ ]
+}
