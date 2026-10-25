@@ -1,11 +1,14 @@
-// PROTOTYPE (#30) — throwaway Canvas 2D renderer, after docs/research/log-view-rendering.md:
+// PROTOTYPE (#30, #37) — throwaway Canvas 2D renderer, after docs/research/log-view-rendering.md:
 // one canvas per track, M4 min/max decimation per device-pixel row, log10 precomputed,
 // fills as clipped polygons, wrap drawn by re-stroking the path shifted one scale width.
+// #37: every colour comes from the Theme (colours.ts): chrome from its --welllog-* tokens,
+// template colours through theme.stroke / theme.fill, categorical ones through theme.zone / code.
 
 import type { Curve, WellLog, Zone } from './data';
 import { lowerBound } from './data';
 import type { Boundary, Fill, MatchedEntry, ResolvedScale } from './template';
-import { hashColour, lithology, type Dash, type Hatch } from './families';
+import { lithology, type Dash, type Hatch } from './families';
+import type { Theme } from './colours';
 
 export interface Viewport {
 	top: number;
@@ -15,22 +18,7 @@ export interface Viewport {
 	dpr: number;
 }
 
-export interface Theme {
-	grid: string;
-	gridStrong: string;
-	text: string;
-	surface: string;
-}
-
-export function readTheme(): Theme {
-	const s = getComputedStyle(document.documentElement);
-	return {
-		grid: s.getPropertyValue('--color-border').trim() || '#e2e8f0',
-		gridStrong: s.getPropertyValue('--color-border-strong').trim() || '#cbd5e1',
-		text: s.getPropertyValue('--color-text-secondary').trim() || '#64748b',
-		surface: s.getPropertyValue('--color-surface').trim() || '#fff'
-	};
-}
+export type { Theme };
 
 // ---- normalised curve positions (0..1 across the track) ------------------------------
 
@@ -155,7 +143,7 @@ function depthGrid(ctx: CanvasRenderingContext2D, f: Frame, dpr: number, theme: 
 	const minor = steps.find((s) => s * pxPerUnit >= 10) ?? 1000;
 	const major = steps.find((s) => s >= minor * 5) ?? minor * 5;
 	const bottom = f.top + f.h / f.k;
-	for (const [step, colour] of [[minor, theme.grid], [major, theme.gridStrong]] as const) {
+	for (const [step, colour] of [[minor, theme.sheet.grid], [major, theme.sheet.gridMajor]] as const) {
 		ctx.strokeStyle = colour;
 		ctx.lineWidth = dpr;
 		ctx.beginPath();
@@ -170,7 +158,7 @@ function depthGrid(ctx: CanvasRenderingContext2D, f: Frame, dpr: number, theme: 
 }
 
 function scaleGrid(ctx: CanvasRenderingContext2D, s: ResolvedScale | null, f: Frame, dpr: number, theme: Theme) {
-	ctx.strokeStyle = theme.grid;
+	ctx.strokeStyle = theme.sheet.grid;
 	ctx.lineWidth = dpr;
 	ctx.beginPath();
 	if (s?.log) {
@@ -214,7 +202,7 @@ function boundaryX(b: Boundary, matched: MatchedEntry[], other: Boundary, f: Fra
 	return () => x;
 }
 
-function drawFill(ctx: CanvasRenderingContext2D, log: WellLog, fill: Fill, matched: MatchedEntry[], f: Frame) {
+function drawFill(ctx: CanvasRenderingContext2D, log: WellLog, fill: Fill, matched: MatchedEntry[], f: Frame, theme: Theme) {
 	const xa = boundaryX(fill.a, matched, fill.b, f);
 	const xb = boundaryX(fill.b, matched, fill.a, f);
 	if (!xa || !xb) return;
@@ -247,7 +235,7 @@ function drawFill(ctx: CanvasRenderingContext2D, log: WellLog, fill: Fill, match
 			if (!colour) continue;
 			ctx.save();
 			ctx.clip(side(xa, r, clipEdge)); // the side of A away from clipEdge's opposite
-			ctx.fillStyle = colour;
+			ctx.fillStyle = theme.fill(colour);
 			ctx.fill(side(xb, r, fillEdge));
 			ctx.restore();
 		}
@@ -259,7 +247,7 @@ export function drawCurveTrack(ctx: CanvasRenderingContext2D, log: WellLog, matc
 	ctx.clearRect(0, 0, f.w, f.h);
 	scaleGrid(ctx, matched.find((m) => m.scale)?.scale ?? null, f, vp.dpr, theme);
 	depthGrid(ctx, f, vp.dpr, theme);
-	for (const fill of fills) drawFill(ctx, log, fill, matched, f);
+	for (const fill of fills) drawFill(ctx, log, fill, matched, f, theme);
 	ctx.save();
 	ctx.beginPath();
 	ctx.rect(0, 0, f.w, f.h);
@@ -268,7 +256,7 @@ export function drawCurveTrack(ctx: CanvasRenderingContext2D, log: WellLog, matc
 	for (const m of matched) {
 		if (!m.curve || !m.scale) continue;
 		const e = envelope(log.md, normalised(m.curve, m.scale), f);
-		ctx.strokeStyle = m.entry.colour;
+		ctx.strokeStyle = theme.stroke(m.entry.colour);
 		ctx.lineWidth = m.entry.width * vp.dpr;
 		ctx.setLineDash(dashes[m.entry.dash].map((d) => d * vp.dpr));
 		ctx.globalAlpha = 1;
@@ -288,16 +276,45 @@ export function drawCurveTrack(ctx: CanvasRenderingContext2D, log: WellLog, matc
 	ctx.setLineDash([]);
 }
 
+// ---- gaps (#34: hatched in the depth tracks and the overview strip) -------------------
+
+function gapBands(ctx: CanvasRenderingContext2D, log: WellLog, f: Frame, vp: Viewport, theme: Theme, x0: number, x1: number) {
+	const bottom = f.top + f.h / f.k;
+	const gap = 6 * vp.dpr;
+	ctx.save();
+	ctx.strokeStyle = theme.sheet.gapHatch;
+	ctx.lineWidth = vp.dpr;
+	for (const g of log.gaps) {
+		if (g.base < f.top || g.top > bottom) continue;
+		const y0 = Math.max(0, (g.top - f.top) * f.k);
+		const y1 = Math.min(f.h, (g.base - f.top) * f.k);
+		const h = Math.max(y1 - y0, 2 * vp.dpr);
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(x0, y0, x1 - x0, h);
+		ctx.clip();
+		ctx.beginPath();
+		for (let x = x0 - h; x < x1 + h; x += gap) {
+			ctx.moveTo(x, y0 + h);
+			ctx.lineTo(x + h, y0);
+		}
+		ctx.stroke();
+		ctx.restore();
+	}
+	ctx.restore();
+}
+
 // ---- depth track -------------------------------------------------------------------
 
 export function drawDepthTrack(ctx: CanvasRenderingContext2D, log: WellLog, ref: 'md' | 'tvdss', vp: Viewport, theme: Theme) {
 	const f = frameOf(log, vp);
 	ctx.clearRect(0, 0, f.w, f.h);
+	gapBands(ctx, log, f, vp, theme, 0, f.w);
 	const pxPerUnit = f.k / vp.dpr;
 	const steps = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 	const step = steps.find((s) => s * pxPerUnit >= 40) ?? 1000;
-	ctx.fillStyle = theme.text;
-	ctx.strokeStyle = theme.gridStrong;
+	ctx.fillStyle = theme.sheet.text;
+	ctx.strokeStyle = theme.sheet.gridMajor;
 	ctx.lineWidth = vp.dpr;
 	ctx.font = `${11 * vp.dpr}px "IBM Plex Mono", monospace`;
 	ctx.textAlign = 'right';
@@ -363,16 +380,16 @@ function hatchTile(colour: string, hatch: Hatch, dpr: number): HTMLCanvasElement
 	return c;
 }
 
-export function codeStyle(code: number): { colour: string; hatch: Hatch | null } {
+export function codeStyle(code: number, theme: Theme): { colour: string; hatch: Hatch | null } {
 	const l = lithology[String(code)];
-	return l ? { colour: l.colour, hatch: l.hatch } : { colour: hashColour(String(code)), hatch: null };
+	return l ? { colour: l.colour, hatch: l.hatch } : { colour: theme.code(String(code)), hatch: null };
 }
 
-function fillFor(ctx: CanvasRenderingContext2D, code: number, dpr: number): CanvasPattern | string {
-	const key = `${code}@${dpr}`;
+function fillFor(ctx: CanvasRenderingContext2D, code: number, dpr: number, theme: Theme): CanvasPattern | string {
+	const key = `${code}@${dpr}@${theme.key}`;
 	let p = patternCache.get(key);
 	if (!p) {
-		const st = codeStyle(code);
+		const st = codeStyle(code, theme);
 		p = st.hatch ? ctx.createPattern(hatchTile(st.colour, st.hatch, dpr), 'repeat')! : st.colour;
 		patternCache.set(key, p);
 	}
@@ -392,13 +409,12 @@ export function drawDiscreteTrack(ctx: CanvasRenderingContext2D, log: WellLog, c
 			if (!Number.isNaN(code)) {
 				const y0 = (md[start] - f.top) * f.k;
 				const y1 = ((i < md.length ? md[i] : md[md.length - 1]) - f.top) * f.k;
-				ctx.fillStyle = fillFor(ctx, code, vp.dpr);
+				ctx.fillStyle = fillFor(ctx, code, vp.dpr, theme);
 				ctx.fillRect(0, y0, f.w, Math.max(y1 - y0, 1));
 			}
 			start = i;
 		}
 	}
-	void theme;
 }
 
 // ---- zone track --------------------------------------------------------------------
@@ -413,11 +429,10 @@ export function drawZoneTrack(ctx: CanvasRenderingContext2D, log: WellLog, zones
 		if (z.base < vp.top || z.top > vp.bottom) continue;
 		const y0 = (z.top - f.top) * f.k;
 		const y1 = (z.base - f.top) * f.k;
-		ctx.globalAlpha = z === hovered ? 0.85 : 0.55;
-		ctx.fillStyle = hashColour(z.name);
+		const zc = theme.zone(z.name, z === hovered);
+		ctx.fillStyle = zc.fill;
 		ctx.fillRect(0, y0, f.w, y1 - y0);
-		ctx.globalAlpha = 1;
-		ctx.strokeStyle = theme.gridStrong;
+		ctx.strokeStyle = theme.sheet.zoneLine;
 		ctx.lineWidth = vp.dpr;
 		ctx.beginPath();
 		ctx.moveTo(0, Math.round(y0) + 0.5);
@@ -425,7 +440,7 @@ export function drawZoneTrack(ctx: CanvasRenderingContext2D, log: WellLog, zones
 		ctx.stroke();
 		if (y1 - y0 > 14 * vp.dpr) {
 			const yc = Math.min(Math.max((Math.max(y0, 0) + Math.min(y1, f.h)) / 2, y0 + 8 * vp.dpr), y1 - 8 * vp.dpr);
-			ctx.fillStyle = '#111';
+			ctx.fillStyle = zc.text;
 			ctx.save();
 			ctx.beginPath();
 			ctx.rect(0, y0, f.w, y1 - y0);
@@ -444,11 +459,10 @@ export function drawOverview(ctx: CanvasRenderingContext2D, log: WellLog, curve:
 	ctx.clearRect(0, 0, f.w, f.h);
 	const zw = Math.round(f.w * zoneWidth);
 	for (const z of zones) {
-		ctx.fillStyle = hashColour(z.name);
-		ctx.globalAlpha = 0.6;
+		ctx.fillStyle = theme.zone(z.name).fill;
 		ctx.fillRect(0, (z.top - f.top) * f.k, zw, (z.base - z.top) * f.k);
 	}
-	ctx.globalAlpha = 1;
+	gapBands(ctx, log, f, vp, theme, 0, f.w);
 	if (curve) {
 		const sub = { ...f, w: f.w - zw };
 		ctx.save();
@@ -456,10 +470,9 @@ export function drawOverview(ctx: CanvasRenderingContext2D, log: WellLog, curve:
 		ctx.beginPath();
 		ctx.rect(0, 0, sub.w, f.h);
 		ctx.clip();
-		ctx.strokeStyle = curve.colour;
+		ctx.strokeStyle = theme.stroke(curve.colour);
 		ctx.lineWidth = vp.dpr;
 		strokeEnvelope(ctx, envelope(log.md, normalised(curve.c, curve.s), sub));
 		ctx.restore();
 	}
-	void theme;
 }

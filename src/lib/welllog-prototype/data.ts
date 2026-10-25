@@ -1,6 +1,8 @@
-// PROTOTYPE (#30) — throwaway FORCE 2020 log adapter, following
+// PROTOTYPE (#30, #37) — throwaway FORCE 2020 log adapter, following
 // docs/research/force-parquet-reading.md: one whole-file GET, hyparquet + fzstd,
 // Cache API for the bytes, NULL and sentinels (<= -999) to NaN.
+// #37 adds #34's gap rows: an all-NaN row one nominal step below the last sample before
+// each gap, so lines break there, and the gap list the depth tracks and overview hatch.
 
 import { parquetMetadata, parquetRead } from 'hyparquet';
 import { decompress } from 'fzstd';
@@ -29,6 +31,8 @@ export interface WellLog {
 	curves: Curve[];
 	zoneSets: { name: string; zones: Zone[] }[];
 	codeLabels: Record<string, string>;
+	/** PROTOTYPE: depth intervals with no value in any curve, from the last sample to the next */
+	gaps: { top: number; base: number }[];
 }
 
 export interface LoadTiming {
@@ -116,10 +120,29 @@ export async function loadWell(well: string): Promise<{ log: WellLog; timing: Lo
 	const units: Record<string, string> = {};
 	for (const c of sch.tables.wells.columns) units[c.name] = c.unit ?? '';
 
-	const n = raw.DEPTH_MD.length;
-	const md = Float64Array.from(raw.DEPTH_MD as ArrayLike<number>);
+	// rows in MD order, with a gap row (-1) wherever the step jumps past twice the median step
+	const n0 = raw.DEPTH_MD.length;
+	const order = Array.from({ length: n0 }, (_, i) => i).sort((a, b) => raw.DEPTH_MD[a] - raw.DEPTH_MD[b]);
+	const steps = order.slice(1).map((r, i) => raw.DEPTH_MD[r] - raw.DEPTH_MD[order[i]]).sort((a, b) => a - b);
+	const step = steps[steps.length >> 1] ?? 0.1524;
+	const rows: number[] = [];
+	const gapMd: number[] = [];
+	const gaps: { top: number; base: number }[] = [];
+	for (let j = 0; j < n0; j++) {
+		rows.push(order[j]);
+		const here = raw.DEPTH_MD[order[j]], next = raw.DEPTH_MD[order[j + 1]];
+		if (j + 1 < n0 && next - here > 2 * step) {
+			rows.push(-1);
+			gapMd.push(here + step);
+			gaps.push({ top: here, base: next });
+		}
+	}
+	const n = rows.length;
+	const field = <T,>(name: string, fill: T) => rows.map((r) => (r < 0 ? fill : raw[name][r]));
+	const md = new Float64Array(n);
+	for (let i = 0, g = 0; i < n; i++) md[i] = rows[i] < 0 ? gapMd[g++] : raw.DEPTH_MD[rows[i]];
 	const tvdss = new Float64Array(n);
-	for (let i = 0; i < n; i++) tvdss[i] = raw.Z_LOC[i] == null ? NaN : -raw.Z_LOC[i];
+	for (let i = 0; i < n; i++) tvdss[i] = rows[i] < 0 || raw.Z_LOC[rows[i]] == null ? NaN : -raw.Z_LOC[rows[i]];
 
 	const curves: Curve[] = [];
 	for (const col of sch.tables.wells.columns) {
@@ -127,7 +150,7 @@ export async function loadWell(well: string): Promise<{ log: WellLog; timing: Lo
 		if (NON_CURVES.has(name) || !raw[name]) continue;
 		const family = forceMnemonicFamily[name] ?? 'unknown';
 		const discrete = family === 'lithology';
-		const values = toFloat32(raw[name], !discrete);
+		const values = toFloat32(field(name, null), !discrete);
 		let any = false;
 		for (let i = 0; i < n && !any; i++) any = !Number.isNaN(values[i]);
 		if (!any) continue; // all-NULL in this well: treated as absent
@@ -140,10 +163,11 @@ export async function loadWell(well: string): Promise<{ log: WellLog; timing: Lo
 		tvdss,
 		curves,
 		zoneSets: [
-			{ name: 'GROUP', zones: zonesOf(md, raw.GROUP) },
-			{ name: 'FORMATION', zones: zonesOf(md, raw.FORMATION) }
+			{ name: 'GROUP', zones: zonesOf(md, field('GROUP', null)) },
+			{ name: 'FORMATION', zones: zonesOf(md, field('FORMATION', null)) }
 		],
-		codeLabels: sch.lithology_labels ?? {}
+		codeLabels: sch.lithology_labels ?? {},
+		gaps
 	};
 	const t3 = performance.now();
 	return { log, timing: { cached, fetchMs: t1 - t0, decodeMs: t2 - t1, buildMs: t3 - t2, bytes: bytes.byteLength } };

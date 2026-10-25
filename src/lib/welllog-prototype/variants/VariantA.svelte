@@ -19,7 +19,8 @@
 	import AddCurve from '../controls/AddCurve.svelte';
 	import { navigate } from '../navigation';
 	import { fmt, entryFor, uid, type Track, type MatchedEntry } from '../template';
-	import { nearestIndex } from '../data';
+	import { nearestIndex, lowerBound } from '../data';
+	import { tokensCss } from '../colours';
 
 	let { view }: { view: LogViewState } = $props();
 
@@ -91,14 +92,29 @@
 	}
 
 	const dashCss = (d: string) => (d === 'solid' ? 'solid' : d === 'dotted' ? 'dotted' : 'dashed');
+
+	// #37 — a sample caution (FORCE 2020 has none) and #34's "no data in view"
+	const CAUTION_ON = 'DTC';
+	const cautions = $derived(view.colours.caution && view.log?.curves.some((c) => c.mnemonic === CAUTION_ON) ? 1 : 0);
+	function noDataInView(m: MatchedEntry) {
+		const log = view.log;
+		if (!log || !m.curve) return false;
+		const v = m.curve.values;
+		const i1 = Math.min(v.length, lowerBound(log.md, view.bottom) + 1);
+		for (let i = Math.max(0, lowerBound(log.md, view.top) - 1); i < i1; i++) if (!Number.isNaN(v[i])) return false;
+		return true;
+	}
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && (popover = null)} />
 
-<div class="page">
+<div class="page" style={tokensCss(view.theme.chrome)}>
 	<header class="bar">
-		<div class="brand">petroviz <span>log view · prototype A</span></div>
+		<div class="brand">petroviz <span>log view colours · {view.colours.strategy}</span></div>
 		<WellPicker {view} />
+		<button class="ghost wellctl" title="Well panel (PROTOTYPE: not built)">
+			Well{#if cautions}<span class="badge" title="1 caution (sample)">{cautions}</span>{/if}
+		</button>
 		<IntervalInput {view} />
 		<div class="seg" role="group" aria-label="Depth reference">
 			<button class:on={activeRef === 'md'} onclick={() => (activeRef = 'md')}>MD</button>
@@ -110,7 +126,7 @@
 		<ThemeToggle />
 	</header>
 
-	<div class="body">
+	<div class="body" style={tokensCss(view.theme.sheet)}>
 		<aside class="ov">
 			<div class="ov-head">GR · GROUP</div>
 			<div class="ov-plot"><Overview {view} /></div>
@@ -147,9 +163,10 @@
 								{#each ms as m (m.entry.id)}
 									{#if m.curve && m.scale}
 										{@const v = valueAt(m)}
-										<button class="scalebar" style:--c={m.entry.colour} onclick={(e) => open('edit', t.id, e, m.entry.id)} title="Edit {m.curve.mnemonic}">
-											<span class="name">{m.curve.mnemonic}</span>
-											<span class="mid" class:live={v !== null}>{v !== null ? `${v} ${m.curve.unit}` : m.curve.unit}{m.scale.fallback ? ' ·P' : ''}</span>
+										{@const none = noDataInView(m)}
+										<button class="scalebar" class:nodata={none} style:--c={view.theme.stroke(m.entry.colour)} onclick={(e) => open('edit', t.id, e, m.entry.id)} title="Edit {m.curve.mnemonic}">
+											<span class="name">{m.curve.mnemonic}{#if cautions && m.curve.mnemonic === CAUTION_ON}<span class="caution" title="Sample caution: values unreadable in 12 rows (PROTOTYPE)">⚠</span>{/if}</span>
+											<span class="mid" class:live={v !== null && !none}>{none ? 'no data in view' : v !== null ? `${v} ${m.curve.unit}` : m.curve.unit}{m.scale.fallback ? ' ·P' : ''}</span>
 											<span class="ends"><span>{fmt(m.scale.shownLeft)}</span><span>{fmt(m.scale.shownRight)}</span></span>
 											<span class="line" style:border-top-style={dashCss(m.entry.dash)} style:border-top-width="{Math.max(1, m.entry.width) + 0.5}px"></span>
 										</button>
@@ -289,6 +306,18 @@
 		background: var(--color-accent);
 		color: #fff;
 	}
+	.wellctl {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+	}
+	.badge {
+		font: 700 10px/1 var(--font-mono);
+		padding: 2px 5px;
+		border-radius: 8px;
+		background: var(--welllog-caution);
+		color: var(--welllog-caution-ink);
+	}
 	.ghost {
 		font: inherit;
 		font-size: var(--font-size-xs);
@@ -309,12 +338,12 @@
 		flex: none;
 		display: flex;
 		flex-direction: column;
-		border-right: 1px solid var(--color-border);
-		background: var(--color-surface);
+		border-right: 1px solid var(--welllog-border);
+		background: var(--welllog-header-bg);
 	}
 	.ov-head {
 		font: 9px var(--font-mono);
-		color: var(--color-text-muted);
+		color: var(--welllog-text-muted);
 		padding: 4px;
 		text-align: center;
 	}
@@ -322,7 +351,7 @@
 		flex: 1;
 		min-height: 0;
 		margin: 0 6px 8px;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--welllog-border);
 	}
 	.scroll {
 		flex: 1;
@@ -339,8 +368,8 @@
 	.heads {
 		display: flex;
 		align-items: stretch;
-		border-bottom: 1px solid var(--color-border-strong);
-		background: var(--color-surface);
+		border-bottom: 1px solid var(--welllog-border);
+		background: var(--welllog-header-bg);
 	}
 	.head {
 		position: relative;
@@ -350,15 +379,15 @@
 		justify-content: flex-end;
 		gap: 2px;
 		padding: 18px 3px 4px;
-		border-right: 1px solid var(--color-border-strong);
+		border-right: 1px solid var(--welllog-border);
 		min-height: 64px;
 		cursor: grab;
 	}
 	.head.drop-before {
-		box-shadow: inset 3px 0 0 var(--color-accent);
+		box-shadow: inset 3px 0 0 var(--welllog-accent);
 	}
 	.head.drop-after {
-		box-shadow: inset -3px 0 0 var(--color-accent);
+		box-shadow: inset -3px 0 0 var(--welllog-accent);
 	}
 	.tools {
 		position: absolute;
@@ -381,8 +410,8 @@
 		font-size: 11px;
 		border: 0;
 		border-radius: 3px;
-		background: var(--color-surface-sunken);
-		color: var(--color-text-secondary);
+		background: var(--welllog-depth-bg);
+		color: var(--welllog-text-muted);
 		cursor: pointer;
 		padding: 0;
 	}
@@ -412,7 +441,19 @@
 		text-align: center;
 	}
 	.scalebar:hover {
-		background: var(--color-accent-soft);
+		background: color-mix(in srgb, var(--welllog-accent) 12%, transparent);
+	}
+	.scalebar.nodata {
+		opacity: 0.5;
+	}
+	.scalebar.nodata .mid {
+		color: var(--welllog-no-data);
+		font-style: italic;
+	}
+	.caution {
+		color: var(--welllog-caution);
+		margin-left: 3px;
+		font-weight: 700;
 	}
 	.scalebar .name {
 		grid-area: 1 / 1;
@@ -422,18 +463,18 @@
 	.scalebar .mid {
 		grid-area: 1 / 1;
 		justify-self: end;
-		color: var(--color-text-muted);
+		color: var(--welllog-text-muted);
 		font-size: 9.5px;
 	}
 	.scalebar .mid.live {
-		color: var(--color-text);
+		color: var(--welllog-text);
 		font-weight: 600;
 	}
 	.scalebar .ends {
 		display: flex;
 		justify-content: space-between;
 		font-size: 9.5px;
-		color: var(--color-text-secondary);
+		color: var(--welllog-text-muted);
 	}
 	.scalebar .line {
 		display: block;
@@ -441,26 +482,29 @@
 		margin-top: 1px;
 	}
 	.scalebar.missing {
-		color: var(--color-text-muted);
+		color: var(--welllog-text-muted);
 		font-size: 9.5px;
 		text-decoration: line-through;
 		text-align: left;
 	}
 	.empty {
 		font-size: 10px;
-		color: var(--color-text-muted);
+		color: var(--welllog-text-muted);
 		text-align: center;
 		padding: 4px 0;
 	}
 	.label {
 		font: 600 10.5px var(--font-mono);
 		text-align: center;
-		color: var(--color-text-secondary);
+		color: var(--welllog-text-muted);
+	}
+	.label .dim {
+		color: var(--welllog-text-muted);
 	}
 	.live {
 		font: 600 11px var(--font-mono);
 		text-align: center;
-		color: var(--color-text);
+		color: var(--welllog-text);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -474,7 +518,7 @@
 		flex: 1;
 		min-height: 0;
 		display: flex;
-		background: var(--color-surface);
+		background: var(--welllog-bg);
 		cursor: crosshair;
 		user-select: none;
 	}
@@ -482,10 +526,10 @@
 		position: relative;
 		flex: none;
 		height: 100%;
-		border-right: 1px solid var(--color-border-strong);
+		border-right: 1px solid var(--welllog-border);
 	}
 	.plot.depth {
-		background: var(--color-surface-sunken);
+		background: var(--welllog-depth-bg);
 	}
 	.resize {
 		position: absolute;
@@ -497,7 +541,7 @@
 		z-index: 2;
 	}
 	.resize:hover {
-		background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+		background: color-mix(in srgb, var(--welllog-accent) 30%, transparent);
 	}
 	.cursor {
 		position: absolute;
@@ -505,7 +549,7 @@
 		right: 0;
 		top: 0;
 		height: 0;
-		border-top: 1px solid var(--color-error);
+		border-top: 1px solid var(--welllog-cursor);
 		pointer-events: none;
 		will-change: transform;
 		z-index: 3;

@@ -111,7 +111,7 @@
 		height: 100%;
 		touch-action: none;
 		cursor: grab;
-		background: var(--color-surface);
+		background: var(--welllog-bg);
 		user-select: none;
 		overflow: hidden;
 	}
@@ -125,8 +125,8 @@
 		position: absolute;
 		left: 0;
 		right: 0;
-		background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-		border: 1.5px solid var(--color-accent);
+		background: color-mix(in srgb, var(--welllog-window) 18%, transparent);
+		border: 1.5px solid var(--welllog-window);
 		border-radius: 2px;
 		pointer-events: none;
 	}
@@ -135,7 +135,7 @@
 		left: 0;
 		right: 0;
 		height: 0;
-		border-top: 1px solid var(--color-error);
+		border-top: 1px solid var(--welllog-cursor);
 		pointer-events: none;
 	}
 	.zlabel {

@@ -4,7 +4,9 @@
 import { replaceState } from '$app/navigation';
 import { loadWell, listWells, nearestIndex, type Curve, type LoadTiming, type WellLog, type Zone } from './data';
 import { defaultTemplate, entryFor, entryForCurve, fmt, matchTrack, uid, unmatchedCurves, type CurveEntry, type MatchedEntry, type Template, type Track } from './template';
-import { readTheme, type Theme } from './render';
+import type { Theme } from './render';
+import { buildTheme, type ColourSettings, type Strategy } from './colours';
+import { themeStore } from '$lib/stores/theme.svelte';
 
 export type Drawer = { draw(theme: Theme): void };
 
@@ -18,7 +20,7 @@ export interface ReadoutRow {
 
 export class LogViewState {
 	wells = $state<string[]>([]);
-	well = $state('15-9-13');
+	well = $state('35-11-11');
 	log = $state.raw<WellLog | null>(null);
 	loading = $state(false);
 	error = $state<string | null>(null);
@@ -33,6 +35,14 @@ export class LogViewState {
 	cursorMd = $state<number | null>(null);
 	hoveredZone = $state.raw<Zone | null>(null);
 	dprOverride = $state<number | null>(null);
+
+	/** #37: the colour strategy under test and its knobs (prototype only) */
+	colours = $state<ColourSettings>({ strategy: 'A', palette: 'tableau', method: 'mirror', floor: 4.5, fillBoost: 1.5, paper: 'dim', caution: true });
+	theme: Theme = $derived(buildTheme(this.colours, themeStore.isDark));
+
+	setStrategy(s: Strategy) {
+		this.colours.strategy = s;
+	}
 
 	fps = $state(0);
 	lastDrawMs = $state(0);
@@ -151,7 +161,7 @@ export class LogViewState {
 
 	drawAll(ts = performance.now()) {
 		if (!this.log) return;
-		const theme = readTheme();
+		const theme = this.theme;
 		const t0 = performance.now();
 		for (const d of this.#drawers) d.draw(theme);
 		const t1 = performance.now();
