@@ -25,7 +25,7 @@ Nothing under `welllog/` imports `$app/*`, `$lib/` outside `welllog/`, DuckDB, o
 - The log view accepts a `WellLog` and nothing else. The host renders the loading, error and empty states.
 - The log view writes a bound prop only on a user action. The interval clamped to the well, and the depth reference the well actually has, are derived values. So a TVDSS preference survives a well without TVDSS.
 - Template file parsing and validation are pure functions in `view`. The host wires up the file picker and `localStorage` and uses the same parser for both.
-- Colours reach the module as `--welllog-*` CSS custom properties, never by importing petroviz's theme store.
+- Colours reach the module as `--welllog-*` CSS custom properties, never by importing petroviz's theme store. The host also passes a `scheme: 'light' | 'dark'` prop, so the view knows when to read the tokens again and redraw (ADR-0006).
 - Modules under `welllog/` import each other by relative path with the `.ts` extension, not through `$lib`. That way `node --test` on Node 24 runs their tests with no build step.
 
 ## Considered options

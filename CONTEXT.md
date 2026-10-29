@@ -49,7 +49,7 @@ A record a log adapter attaches to the well log it produced, of something it tol
 _Avoid_: error, log message
 
 **Gap**:
-A depth interval of a well log where no curve has a value, such as a stretch the source holds no samples for. One curve lacking values while others have them is not a gap.
+A depth interval of a well log where no curve has a value, such as a stretch the source holds no samples for. One curve lacking values while others have them is not a gap. A gap does not break a zone: the zone continues across it.
 _Avoid_: hole, missing interval, no-data zone
 
 **Depth reference**:
