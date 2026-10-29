@@ -2,7 +2,7 @@
 // one canvas per track, M4 min/max decimation per device-pixel row, log10 precomputed,
 // fills as clipped polygons, wrap drawn by re-stroking the path shifted one scale width.
 // #37: every colour comes from the Theme (colours.ts): chrome from its --welllog-* tokens,
-// template colours through theme.stroke / theme.fill, categorical ones through theme.zone / code.
+// template colours through theme.stroke / theme.fill, categorical ones through theme.zones / code.
 
 import type { Curve, WellLog, Zone } from './data';
 import { lowerBound } from './data';
@@ -425,13 +425,20 @@ export function drawZoneTrack(ctx: CanvasRenderingContext2D, log: WellLog, zones
 	ctx.font = `${10.5 * vp.dpr}px "IBM Plex Sans", sans-serif`;
 	ctx.textBaseline = 'middle';
 	ctx.textAlign = 'left';
-	for (const z of zones) {
-		if (z.base < vp.top || z.top > vp.bottom) continue;
+	const styles = theme.zones(zones);
+	zones.forEach((z, i) => {
+		if (z.base < vp.top || z.top > vp.bottom) return;
 		const y0 = (z.top - f.top) * f.k;
 		const y1 = (z.base - f.top) * f.k;
-		const zc = theme.zone(z.name, z === hovered);
+		const zc = styles[i];
 		ctx.fillStyle = zc.fill;
 		ctx.fillRect(0, y0, f.w, y1 - y0);
+		if (z === hovered) {
+			// opaque fills leave no room for an alpha hover: an inset outline in the sheet's text colour
+			ctx.strokeStyle = theme.sheet.text;
+			ctx.lineWidth = 2 * vp.dpr;
+			ctx.strokeRect(vp.dpr, y0 + vp.dpr, f.w - 2 * vp.dpr, y1 - y0 - 2 * vp.dpr);
+		}
 		ctx.strokeStyle = theme.sheet.zoneLine;
 		ctx.lineWidth = vp.dpr;
 		ctx.beginPath();
@@ -448,7 +455,7 @@ export function drawZoneTrack(ctx: CanvasRenderingContext2D, log: WellLog, zones
 			ctx.fillText(z.name, 4 * vp.dpr, yc);
 			ctx.restore();
 		}
-	}
+	});
 }
 
 // ---- overview strip ----------------------------------------------------------------
@@ -458,10 +465,11 @@ export function drawOverview(ctx: CanvasRenderingContext2D, log: WellLog, curve:
 	const f = frameOf(log, vp);
 	ctx.clearRect(0, 0, f.w, f.h);
 	const zw = Math.round(f.w * zoneWidth);
-	for (const z of zones) {
-		ctx.fillStyle = theme.zone(z.name).fill;
+	const styles = theme.zones(zones);
+	zones.forEach((z, i) => {
+		ctx.fillStyle = styles[i].fill;
 		ctx.fillRect(0, (z.top - f.top) * f.k, zw, (z.base - z.top) * f.k);
-	}
+	});
 	gapBands(ctx, log, f, vp, theme, 0, f.w);
 	if (curve) {
 		const sub = { ...f, w: f.w - zw };

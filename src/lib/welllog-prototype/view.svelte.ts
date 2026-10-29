@@ -37,7 +37,7 @@ export class LogViewState {
 	dprOverride = $state<number | null>(null);
 
 	/** #37: the colour strategy under test and its knobs (prototype only) */
-	colours = $state<ColourSettings>({ strategy: 'A', palette: 'tableau', method: 'mirror', floor: 4.5, fillBoost: 1.5, paper: 'dim', caution: true });
+	colours = $state<ColourSettings>({ strategy: 'A', palette: 'set3', method: 'mirror', floor: 4.5, fillBoost: 1, neutralFills: 'mirror', paper: 'dim', caution: true });
 	theme: Theme = $derived(buildTheme(this.colours, themeStore.isDark));
 
 	setStrategy(s: Strategy) {

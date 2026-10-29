@@ -11,7 +11,7 @@
 
 	const rules = {
 		A: 'As stored. Chrome follows the theme; every template colour is drawn exactly as saved.',
-		B: 'Adapted on dark. Strokes below the contrast floor have their OKLCH lightness mirrored (black → white) or minimally lifted, hue kept; fills get more alpha. Light theme draws as stored. The template file never changes.',
+		B: 'Adapted on dark. Strokes below the contrast floor have their OKLCH lightness mirrored (black → white) or minimally lifted, hue kept; fills can get more alpha and greys can be mirrored so they recede as on paper. Light theme draws as stored. The template file never changes.',
 		C: 'Paper. The log sheet (headers, tracks, overview) stays light in both themes; only the app chrome goes dark.'
 	};
 
@@ -51,7 +51,7 @@
 	const zoneRows = $derived.by(() =>
 		(view.log?.zoneSets ?? []).map((s) => ({
 			set: s.name,
-			names: [...new Set(s.zones.map((z) => z.name))].map((n) => ({ n, ...t.zone(n) }))
+			names: t.zones(s.zones).map((st, i) => ({ n: s.zones[i].name, ...st }))
 		}))
 	);
 
@@ -95,6 +95,13 @@
 						<option value={1}>as stored</option>
 						<option value={1.5}>× 1.5</option>
 						<option value={2}>× 2</option>
+					</select>
+				</label>
+				<label>
+					Grey fills on dark
+					<select bind:value={view.colours.neutralFills}>
+						<option value="stored">as stored (lighter than the track)</option>
+						<option value="mirror">lightness mirrored (darker, recede)</option>
 					</select>
 				</label>
 			{/if}
@@ -148,14 +155,14 @@
 				<p class="note">Swatches are shown composited on the track background ({bg}). Lithology is drawn as stored (KGS colours, black hatches) in every strategy.</p>
 			{:else if tab === 'zones'}
 				{#each zoneRows as s (s.set)}
-					<h4>{s.set} <span class="dim">{s.names.length} names</span></h4>
+					<h4>{s.set} <span class="dim">{s.names.length} zones, top to base · {new Set(s.names.filter((z) => z.index !== z.hashed).map((z) => z.n)).size} names moved off the zone above</span></h4>
 					<div class="chips" style:background={bg}>
 						{#each s.names as z, i (i)}
-							<span class="chip" style:background={zoneShown(z.fill)} style:color={z.text}>{z.n}</span>
+							<span class="chip" class:moved={z.index !== z.hashed} style:background={zoneShown(z.fill)} style:color={z.text} title={z.index !== z.hashed ? `hashes to colour ${z.hashed + 1}, matched the zone above, drawn in colour ${z.index + 1}` : `colour ${z.index + 1}`}>{z.n}{z.index !== z.hashed ? ' ↷' : ''}</span>
 						{/each}
 					</div>
 				{/each}
-				<p class="note">Colour is picked by hashing the zone name, so a name keeps its colour across wells. Label colour is black or white, whichever contrasts more.</p>
+				<p class="note">Colour is picked by hashing the zone name. When a new name matches the differently named zone directly above it moves on to the next palette colour (↷), so neighbours never match; a moved name may differ between wells. A name keeps one colour within the well, so a formation split by a gap stays one colour. Label colour is black or white, whichever contrasts more.</p>
 			{:else}
 				<table>
 					<thead><tr><th>Token</th><th>Sheet</th>{#if view.colours.strategy === 'C'}<th>Chrome</th>{/if}</tr></thead>
@@ -336,6 +343,10 @@
 		gap: 3px;
 		padding: 6px;
 		border-radius: 4px;
+	}
+	.chip.moved {
+		outline: 1.5px dashed currentColor;
+		outline-offset: -1.5px;
 	}
 	.chip {
 		font-size: 10.5px;

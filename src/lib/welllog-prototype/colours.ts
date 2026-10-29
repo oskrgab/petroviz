@@ -257,8 +257,16 @@ export interface ColourSettings {
 	method: 'mirror' | 'lift'; // B: how a stroke below the floor is adapted
 	floor: number; // B: contrast floor for strokes on dark
 	fillBoost: number; // B: alpha multiplier for fills on dark
+	neutralFills: 'stored' | 'mirror'; // B: greys keep their role (recede) by mirroring lightness on dark
 	paper: 'dim' | 'white'; // C on dark
 	caution: boolean; // show a sample caution (FORCE 2020 has none)
+}
+
+export interface ZoneStyle {
+	fill: string;
+	text: string;
+	hashed: number; // palette index the name hashes to
+	index: number; // palette index drawn (differs when moved off the zone above)
 }
 
 export interface Theme {
@@ -268,7 +276,10 @@ export interface Theme {
 	sheet: Tokens; // headers, tracks, overview strip
 	stroke(stored: string): string;
 	fill(stored: string): string;
-	zone(name: string, hovered?: boolean): { fill: string; text: string };
+	/** One style per zone, in order: the hashed palette colour, moved on by one when a new name
+	 *  matches the differently named zone directly above (#37 Q3 (b)). A name keeps the colour
+	 *  it first got, so a formation split by a gap stays one colour. */
+	zones(list: readonly { name: string }[]): ZoneStyle[];
 	code(code: string): string;
 }
 
@@ -280,7 +291,7 @@ export function buildTheme(s: ColourSettings, isDark: boolean): Theme {
 	const bg = parse(sheet.bg);
 	const adapt = s.strategy === 'B' && isDark;
 	const pal = palettes[s.palette];
-	const key = `${s.strategy}|${isDark}|${s.palette}|${s.method}|${s.floor}|${s.fillBoost}|${s.paper}`;
+	const key = `${s.strategy}|${isDark}|${s.palette}|${s.method}|${s.floor}|${s.fillBoost}|${s.neutralFills}|${s.paper}`;
 
 	const stroke = (stored: string) => {
 		if (!adapt) return stored;
@@ -291,18 +302,41 @@ export function buildTheme(s: ColourSettings, isDark: boolean): Theme {
 	};
 	const fill = (stored: string) => {
 		if (!adapt) return stored;
-		const c = parse(stored);
+		let c = parse(stored);
+		if (s.neutralFills === 'mirror') {
+			const p = toOklch(c);
+			if (p.C < 0.03) c = fromOklch({ ...p, L: 1 - p.L }, c.a);
+		}
 		return hex({ ...c, a: Math.min(0.9, c.a * s.fillBoost) }, true);
 	};
-	const zone = (name: string, hovered = false) => {
-		const c = parse(pal.colours[hashIndex(name, pal.colours.length)]);
-		const a = hovered ? Math.min(1, pal.alpha + 0.3) : pal.alpha;
-		const shown = over({ ...c, a }, bg);
+	const styleOf = (index: number, hashed: number): ZoneStyle => {
+		const c = parse(pal.colours[index]);
+		const shown = over({ ...c, a: pal.alpha }, bg);
 		const ink = parse('#111111'), paper = parse('#F8FAFC');
-		return { fill: hex({ ...c, a }, a < 1), text: contrast(ink, shown) >= contrast(paper, shown) ? '#111111' : '#F8FAFC' };
+		return { fill: hex({ ...c, a: pal.alpha }, pal.alpha < 1), text: contrast(ink, shown) >= contrast(paper, shown) ? '#111111' : '#F8FAFC', hashed, index };
+	};
+	const zoneMemo = new WeakMap<readonly { name: string }[], ZoneStyle[]>();
+	const zones = (list: readonly { name: string }[]) => {
+		let v = zoneMemo.get(list);
+		if (v) return v;
+		const n = pal.colours.length;
+		const byName = new Map<string, number>(); // a name keeps one colour throughout the well
+		let prev: { name: string; index: number } | null = null;
+		v = list.map((z) => {
+			const hashed = hashIndex(z.name, n);
+			let index = byName.get(z.name);
+			if (index === undefined) {
+				index = prev && prev.name !== z.name && prev.index === hashed ? (hashed + 1) % n : hashed;
+				byName.set(z.name, index);
+			}
+			prev = { name: z.name, index };
+			return styleOf(index, hashed);
+		});
+		zoneMemo.set(list, v);
+		return v;
 	};
 	const code = (c: string) => pal.colours[hashIndex(c, pal.colours.length)];
-	return { key, dark: isDark, chrome, sheet, stroke, fill, zone, code };
+	return { key, dark: isDark, chrome, sheet, stroke, fill, zones, code };
 }
 
 /** For the colour panel: what a stored colour becomes, and how it reads on the sheet. */
