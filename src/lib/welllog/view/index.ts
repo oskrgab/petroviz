@@ -5,5 +5,6 @@
 export { default as LogView } from "./LogView.svelte";
 export { resolveTemplate, type ResolvedTemplate } from "./resolve.ts";
 export { curveFamilyDefaults, defaultTemplate, type CurveFamilyDefault } from "./template/defaults.ts";
+export { readTemplate, templateFileName, writeTemplate, type TemplateRead } from "./template/file.ts";
 export type * from "./template/types.ts";
 export type { DepthInterval, DepthRef } from "./interval.ts";

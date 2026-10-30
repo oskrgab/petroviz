@@ -27,9 +27,15 @@
 	 * that can't be read only shows its message: it never reached the URL.
 	 *
 	 * It holds the current template, the interval and the depth reference,
-	 * which outlive the well log: the template starts as the default template,
-	 * and the interval goes back to the link's (the whole well when it names
-	 * none) when another well opens.
+	 * which outlive the well log: the interval goes back to the link's (the
+	 * whole well when it names none) when another well opens. The template
+	 * is kept in localStorage (templates.ts), written about 500 ms after each
+	 * change, and read back on arrival; a stored copy that won't read opens
+	 * the default template under a notice offering it as a file. The Template
+	 * menu saves it to a file, opens one (as a dropped `.json` file does) or
+	 * resets it; opening and resetting can be undone for about 10 s. A file
+	 * that isn't a template is refused whole, with every problem listed, and
+	 * the template on screen stays.
 	 *
 	 * It shares the header with the production dashboard but never imports
 	 * DuckDB, so a cold visit doesn't wait for it.
@@ -45,16 +51,46 @@
 	import { ForceLoadError, listWells, loadWell, unknownWellError, wellName } from '$lib/sources/force2020';
 	import type { WellLog } from '$lib/welllog/core';
 	import { readLas } from '$lib/welllog/las';
-	import { LogView, defaultTemplate, type DepthInterval, type DepthRef } from '$lib/welllog/view';
+	import {
+		LogView,
+		defaultTemplate,
+		readTemplate,
+		templateFileName,
+		writeTemplate,
+		type DepthInterval,
+		type DepthRef,
+		type Template
+	} from '$lib/welllog/view';
 	import OpenLasButton from './OpenLasButton.svelte';
+	import TemplateMenu from './TemplateMenu.svelte';
 	import WellPicker from './WellPicker.svelte';
 	import { DEFAULT_WELL, parseLink, sourceKey, writeLink, type LinkSource, type LogLink } from './link.ts';
+	import { browserStorage, isTemplateFile, restoreTemplate, storeTemplate } from './templates.ts';
 	import { entryName, isUnlisted, lasEntry, skippedNote, sortWells, type PickerCurrent, type WellList } from './wells.ts';
 
 	/** Interval and depth reference changes reach the URL this long after the last one. */
 	const URL_DELAY_MS = 250;
 	/** How long the note about skipped files stays. */
 	const NOTE_MS = 8000;
+	/** The template reaches localStorage this long after the last change. */
+	const SAVE_DELAY_MS = 500;
+	/** How long Undo is offered after opening a template file or resetting. */
+	const UNDO_MS = 10_000;
+	/** How long a download's object URL outlives the click that started it. */
+	const DOWNLOAD_URL_MS = 10_000;
+
+	/** A template file refused, and why. */
+	interface Refused {
+		readonly fileName: string;
+		readonly problems: readonly string[];
+	}
+
+	/** A template replaced at once, which Undo puts back while `next` is still the template. */
+	interface Replaced {
+		readonly message: string;
+		readonly previous: Template;
+		readonly next: Template;
+	}
 
 	interface Failure {
 		/** The well, or the LAS file, that didn't open. */
@@ -99,8 +135,10 @@
 		return source.kind === 'well' ? source.id : source.name;
 	}
 
+	const storage = browserStorage();
+	const restored = restoreTemplate(storage);
 	// Raw: templates change only by replacement (#55's operations are immutable).
-	let template = $state.raw(defaultTemplate());
+	let template = $state.raw(restored.template);
 	let interval = $state.raw<DepthInterval | null>(null);
 	let depthRef = $state<DepthRef>(untrack(() => link.ref));
 
@@ -383,6 +421,95 @@
 		return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
 	}
 
+	/** The template last written to storage, or read from it. */
+	let lastStored = restored.template;
+	let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+	$effect(() => {
+		if (template === lastStored) return;
+		clearTimeout(saveTimer);
+		saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);
+	});
+
+	/** Write a change still waiting, as the page is left or hidden. */
+	function saveNow() {
+		clearTimeout(saveTimer);
+		saveTimer = undefined;
+		if (template === lastStored) return;
+		lastStored = template;
+		storeTemplate(storage, template);
+	}
+
+	onDestroy(saveNow);
+
+	/** The stored copy that wouldn't read, offered as a file until dismissed. */
+	let unreadable = $state<string | null>(restored.unreadable);
+	let refused = $state.raw<Refused | null>(null);
+	let undo = $state.raw<Replaced | null>(null);
+	let undoTimer: ReturnType<typeof setTimeout> | undefined;
+	const undoShown = $derived(undo !== null && undo.next === template);
+
+	/** Replace the template at once, offering Undo for a while. */
+	function replaceTemplate(next: Template, message: string) {
+		clearTimeout(undoTimer);
+		undo = { message, previous: template, next };
+		template = next;
+		undoTimer = setTimeout(() => (undo = null), UNDO_MS);
+	}
+
+	function undoReplace() {
+		if (!undoShown || !undo) return;
+		template = undo.previous;
+		clearTimeout(undoTimer);
+		undo = null;
+	}
+
+	function resetTemplate() {
+		refused = null;
+		replaceTemplate(defaultTemplate(), 'The template was reset to the default.');
+	}
+
+	/** Read `file` as a template and use it, or list why it can't be. */
+	async function openTemplate(file: File) {
+		let text: string;
+		try {
+			text = await file.text();
+		} catch {
+			refused = { fileName: file.name, problems: [`Could not read ${file.name}.`] };
+			return;
+		}
+		const read = readTemplate(text);
+		if (!read.ok) {
+			refused = { fileName: file.name, problems: read.problems };
+			return;
+		}
+		refused = null;
+		replaceTemplate(read.template, `Opened the template ${read.template.name || file.name}.`);
+	}
+
+	/** Name the template `name` and download it. */
+	function saveTemplate(name: string) {
+		// The same name changes nothing, so Undo stays on offer.
+		if (name !== template.name) template = { ...template, name };
+		download(writeTemplate(template), templateFileName(name));
+	}
+
+	function saveUnreadable() {
+		if (unreadable === null) return;
+		download(unreadable, templateFileName('unreadable template'));
+		unreadable = null;
+	}
+
+	function download(text: string, fileName: string) {
+		const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = fileName;
+		link.click();
+		// After the download has started with it.
+		setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_URL_MS);
+	}
+
 	let note = $state<string | null>(null);
 	let noteTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -428,13 +555,14 @@
 		dragging = false;
 		const files = [...(event.dataTransfer?.files ?? [])];
 		if (files.length === 0) return;
-		// Every file is read as LAS; .json templates come with the template file ticket (#57).
-		openFile(files[0]);
-		if (files.length > 1) showNote(skippedNote(files[0].name, files.length - 1));
+		const [first] = files;
+		if (isTemplateFile(first.name)) openTemplate(first);
+		else openFile(first);
+		if (files.length > 1) showNote(skippedNote(first.name, files.length - 1));
 	}
 </script>
 
-<svelte:window {ondragenter} {ondragover} {ondragleave} {ondrop} />
+<svelte:window {ondragenter} {ondragover} {ondragleave} {ondrop} onpagehide={saveNow} />
 
 <svelte:head>
 	<title>{title}</title>
@@ -451,6 +579,7 @@
 				onretry={() => listAttempt++}
 			/>
 			<OpenLasButton bind:this={opener} onfile={openFile} />
+			<TemplateMenu name={template.name} onsave={saveTemplate} onopen={openTemplate} onreset={resetTemplate} />
 		{/snippet}
 	</AppHeader>
 	<main class="logs-content">
@@ -467,19 +596,6 @@
 			{#if loading}
 				<div class="overlay">
 					<LoadingSpinner message={`Loading ${entryName(loading.entry)}…`} />
-				</div>
-			{:else if failure}
-				<div class="banner" role="alert">
-					<span>{failure.message}</span>
-					<div class="banner-actions">
-						{#if failure.kind === 'ask'}
-							<button type="button" onclick={() => opener?.open()}>Open LAS file…</button>
-						{/if}
-						{#if failure.retry}
-							<button type="button" onclick={retry}>Retry</button>
-						{/if}
-						<button type="button" onclick={() => (failure = null)}>Dismiss</button>
-					</div>
 				</div>
 			{/if}
 		{:else if loading}
@@ -501,16 +617,65 @@
 				<LoadingSpinner message="Loading…" />
 			</div>
 		{/if}
-		{#if note}
-			<div class="note" role="status">
-				<span>{note}</span>
-				<button type="button" onclick={() => (note = null)}>Dismiss</button>
-			</div>
-		{/if}
+		<div class="notices">
+			{#if shown && !loading && failure}
+				<div class="banner" role="alert">
+					<span>{failure.message}</span>
+					<div class="banner-actions">
+						{#if failure.kind === 'ask'}
+							<button type="button" onclick={() => opener?.open()}>Open LAS file…</button>
+						{/if}
+						{#if failure.retry}
+							<button type="button" onclick={retry}>Retry</button>
+						{/if}
+						<button type="button" onclick={() => (failure = null)}>Dismiss</button>
+					</div>
+				</div>
+			{/if}
+			{#if refused}
+				<div class="banner refused" role="alert">
+					<div>
+						<strong>{refused.fileName} couldn't be opened as a template</strong>
+						<ul>
+							{#each refused.problems as problem, i (i)}
+								<li>{problem}</li>
+							{/each}
+						</ul>
+						<span class="kept">The current template is unchanged.</span>
+					</div>
+					<div class="banner-actions">
+						<button type="button" onclick={() => (refused = null)}>Dismiss</button>
+					</div>
+				</div>
+			{/if}
+			{#if unreadable !== null}
+				<div class="banner warning" role="alert">
+					<span>Your saved layout couldn't be read and was replaced by the default.</span>
+					<div class="banner-actions">
+						<button type="button" onclick={saveUnreadable}>Save it as a file</button>
+						<button type="button" onclick={() => (unreadable = null)}>Dismiss</button>
+					</div>
+				</div>
+			{/if}
+		</div>
+		<div class="toasts">
+			{#if note}
+				<div class="note" role="status">
+					<span>{note}</span>
+					<button type="button" onclick={() => (note = null)}>Dismiss</button>
+				</div>
+			{/if}
+			{#if undoShown && undo}
+				<div class="note" role="status">
+					<span>{undo.message}</span>
+					<button type="button" onclick={undoReplace}>Undo</button>
+				</div>
+			{/if}
+		</div>
 	</main>
 	{#if dragging}
 		<div class="drop" aria-hidden="true">
-			<p>Drop a LAS file to open it</p>
+			<p>Drop a LAS file, or a template, to open it</p>
 		</div>
 	{/if}
 </div>
@@ -551,24 +716,52 @@
 		pointer-events: none;
 	}
 
-	.banner {
+	/* Banners stack at the top, toasts at the bottom, centred over the view. */
+	.notices,
+	.toasts {
 		position: absolute;
-		top: var(--spacing-sm);
 		left: 50%;
 		z-index: 10;
 		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-xs);
+		width: min(40rem, calc(100% - 2 * var(--spacing-sm)));
+		transform: translateX(-50%);
+		pointer-events: none;
+	}
+
+	.notices {
+		top: var(--spacing-sm);
+	}
+
+	.toasts {
+		bottom: var(--spacing-lg);
+	}
+
+	.banner,
+	.note {
+		pointer-events: auto;
+	}
+
+	.banner,
+	.note {
+		display: flex;
 		align-items: center;
 		gap: var(--spacing-md);
-		max-width: min(40rem, calc(100% - 2 * var(--spacing-sm)));
+		max-width: 100%;
 		padding: var(--spacing-sm) var(--spacing-md);
-		transform: translateX(-50%);
 		font-size: var(--font-size-sm);
 		color: var(--color-text);
 		background: var(--color-surface-elevated);
-		border: 1px solid var(--color-error);
-		border-left-width: 4px;
+		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
+	}
+
+	.banner {
+		border-color: var(--color-error);
+		border-left-width: 4px;
 	}
 
 	.banner-actions {
@@ -590,23 +783,26 @@
 		cursor: pointer;
 	}
 
-	.note {
-		position: absolute;
-		bottom: var(--spacing-lg);
-		left: 50%;
-		z-index: 10;
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-md);
-		max-width: min(40rem, calc(100% - 2 * var(--spacing-sm)));
-		padding: var(--spacing-sm) var(--spacing-md);
-		transform: translateX(-50%);
-		font-size: var(--font-size-sm);
-		color: var(--color-text);
-		background: var(--color-surface-elevated);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-lg);
+	.banner.warning {
+		border-color: var(--color-warning);
+	}
+
+	.banner.refused {
+		align-items: flex-start;
+	}
+
+	.refused ul {
+		max-height: 12rem;
+		margin: var(--spacing-xs) 0;
+		padding-left: 1.25rem;
+		overflow-y: auto;
+		font-family: var(--font-mono);
+		font-size: var(--font-size-xs);
+		overflow-wrap: anywhere;
+	}
+
+	.kept {
+		color: var(--color-text-secondary);
 	}
 
 	.drop {
