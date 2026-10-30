@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { curveFamilyOf, type Curve, type WellLog } from "../core/index.ts";
 import { GAP, NO_VALUE } from "./format.ts";
-import { cardGroups, isGapRow, readoutAt } from "./readout.ts";
+import { cardGroups, readoutAt } from "./readout.ts";
 import { resolveTemplate } from "./resolve.ts";
 import type { CurveEntry, Template } from "./template/types.ts";
 
@@ -121,11 +121,6 @@ test("a well log without TVDSS reads TVDSS as — and NaN", () => {
   const at = read(100.2, noTvdss);
   assert.deepEqual(at.tracks.get("tvd"), [NO_VALUE]);
   assert.ok(Number.isNaN(at.tvdss));
-});
-
-test("a gap row is one where no curve, continuous or discrete, has a value", () => {
-  assert.deepEqual([0, 1, 2, 3].map((row) => isGapRow(LOG, row)), [false, false, true, false]);
-  assert.equal(isGapRow(LOG, -1), false);
 });
 
 test("the card lists MD and TVDSS, each curve track's curves, the lithology and every zone set", () => {

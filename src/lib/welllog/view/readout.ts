@@ -15,6 +15,7 @@ import type { DepthRef } from "./interval.ts";
 import { codeLabelAt, discreteCurveName } from "./kinds/discrete/index.ts";
 import { readTrack, type ResolvedTrack, type TrackReading } from "./kinds/index.ts";
 import { zoneNameAt } from "./kinds/zone/index.ts";
+import { isGapRow } from "./quality.ts";
 
 export interface CursorReadout {
   readonly md: number;
@@ -24,11 +25,6 @@ export interface CursorReadout {
   readonly gap: boolean;
   /** Each track's reading, by track id. */
   readonly tracks: ReadonlyMap<string, TrackReading>;
-}
-
-/** Whether no curve, continuous or discrete, has a value in the row. */
-export function isGapRow(log: WellLog, row: number): boolean {
-  return row >= 0 && row < log.md.length && log.curves.every((curve) => Number.isNaN(curve.values[row]));
 }
 
 /** What every track reads at `md`, against the depth reference the view shows. */

@@ -1,13 +1,16 @@
 /**
  * The depth track kind: round depths of the active depth reference, or of a
- * fixed `md` or `tvdss`, labelled down the track.
+ * fixed `md` or `tvdss`, labelled down the track over the well log's gaps,
+ * hatched.
  */
 
+import { intervalSpans } from "../../geometry/blocks.ts";
 import { depthStep, depthsEvery } from "../../geometry/grid.ts";
 import { pixelsPerUnit, visibleRows } from "../../geometry/polyline.ts";
-import { crisp, hairline } from "../../canvas.ts";
+import { crisp, hairline, hatchGaps } from "../../canvas.ts";
 import { formatDepth } from "../../format.ts";
 import type { DepthRef } from "../../interval.ts";
+import { gapsOf } from "../../quality.ts";
 import type { DepthTrack } from "../../template/types.ts";
 import type { ResolvedTrackBase, TrackKind } from "../types.ts";
 
@@ -36,6 +39,8 @@ export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
     const decimals = step < 1 ? 1 : 0;
     const tick = 5 * dpr;
     const margin = 7 * dpr;
+
+    hatchGaps(ctx, intervalSpans(gapsOf(log), frame), frame, dpr, tokens.gapHatch);
 
     ctx.strokeStyle = tokens.gridMajor;
     ctx.fillStyle = tokens.text;

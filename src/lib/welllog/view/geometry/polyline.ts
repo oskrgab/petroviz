@@ -21,22 +21,27 @@ export function pixelsPerUnit(frame: Frame): number {
   return frame.height / (frame.base - frame.top);
 }
 
+/** The first row whose MD is at or below `depth`; `md.length` when there is none. */
+export function firstRowAtOrBelow(md: Float64Array, depth: number): number {
+  let lo = 0;
+  let hi = md.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (md[mid] < depth) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 /**
  * The rows to draw, [start, end): those inside the frame plus one more on
  * each side, so a line runs on to the edges instead of stopping short.
  */
 export function visibleRows(md: Float64Array, frame: Frame): [number, number] {
-  const firstBelow = (depth: number) => {
-    let lo = 0;
-    let hi = md.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (md[mid] < depth) lo = mid + 1;
-      else hi = mid;
-    }
-    return lo;
-  };
-  return [Math.max(0, firstBelow(frame.top) - 1), Math.min(md.length, firstBelow(frame.base) + 1)];
+  return [
+    Math.max(0, firstRowAtOrBelow(md, frame.top) - 1),
+    Math.min(md.length, firstRowAtOrBelow(md, frame.base) + 1),
+  ];
 }
 
 /** M4 runs when the visible samples exceed this many per device-pixel row. */

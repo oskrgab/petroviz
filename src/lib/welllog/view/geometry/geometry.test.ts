@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fractionOf, mappingOf, type ResolvedScale } from "./scale.ts";
 import { log10Values } from "./log10.ts";
-import { curvePolyline, END_TOLERANCE, visibleRows, wrappedPolyline, type Frame } from "./polyline.ts";
+import { curvePolyline, END_TOLERANCE, firstRowAtOrBelow, visibleRows, wrappedPolyline, type Frame } from "./polyline.ts";
+import { intervalSpans } from "./blocks.ts";
 import { depthGridlines, depthStep, depthsEvery, scaleGridlines } from "./grid.ts";
 
 const near = (actual: number, expected: number, message?: string) =>
@@ -276,4 +277,30 @@ test("major depth gridlines are every fifth minor step or more", () => {
   assert.equal(minor[0], 1250);
   assert.equal(minor[1] - minor[0], 50);
   assert.deepEqual(major, [1500, 2000, 2500, 3000]);
+});
+
+test("depth intervals → spans in device px, leaving out those outside the frame", () => {
+  const frame: Frame = { top: 100, base: 110, width: 40, height: 100 };
+  assert.deepEqual(
+    intervalSpans(
+      [
+        { top: 90, base: 95 },
+        { top: 98, base: 101 },
+        { top: 104, base: 104 },
+        { top: 109, base: 130 },
+        { top: 111, base: 120 },
+      ],
+      frame,
+    ),
+    [
+      { y0: -20, y1: 10 },
+      { y0: 40, y1: 40 },
+      { y0: 90, y1: 300 },
+    ],
+  );
+});
+
+test("the first row at or below a depth", () => {
+  const md = Float64Array.from([100, 101, 102]);
+  assert.deepEqual([99, 100, 100.5, 102, 103].map((d) => firstRowAtOrBelow(md, d)), [0, 0, 1, 2, 3]);
 });

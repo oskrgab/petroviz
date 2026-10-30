@@ -11,12 +11,13 @@
  */
 
 import { getContext, setContext } from "svelte";
-import type { WellLog } from "../core/index.ts";
+import type { LoadWarning, WellLog } from "../core/index.ts";
 import { FrameScheduler } from "./canvas.ts";
 import { adaptStroke } from "./colour/adapt.ts";
 import type { Tokens } from "./kinds/types.ts";
 import { wholeWell, type DepthInterval, type DepthRef } from "./interval.ts";
 import { effectiveInterval } from "./navigation.ts";
+import { curveCautions } from "./quality.ts";
 import type { TrackReading } from "./kinds/index.ts";
 import { readoutAt, type CursorReadout } from "./readout.ts";
 import { resolveTemplate } from "./resolve.ts";
@@ -67,6 +68,9 @@ export class LogViewState {
   }
 
   resolved = $derived.by(() => resolveTemplate(this.#props.template, this.#props.log));
+
+  /** The cautions that mark a curve's scale bar, by curve key. */
+  cautions: ReadonlyMap<string, readonly LoadWarning[]> = $derived.by(() => curveCautions(this.#props.log));
 
   /** The well log's whole MD range: the most the view can show. */
   whole: DepthInterval = $derived.by(() => wholeWell(this.#props.log));

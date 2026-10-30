@@ -9,17 +9,20 @@
    * The curve takes its family's default scale and colour; the zones take
    * their zone track's colours when the template shows that set, so the two
    * agree. The curve colour is adapted on a dark track, as a curve track's
-   * is. Drawn through the view's frame scheduler, like the tracks.
+   * is. Gaps are hatched across the strip, over the zones and under the
+   * curve. Drawn through the view's frame scheduler, like the tracks.
    */
 
-  import { prepareCanvas, strokePolyline } from "./canvas.ts";
+  import { hatchGaps, prepareCanvas, strokePolyline } from "./canvas.ts";
   import { zoneColours } from "./colour/categorical.ts";
+  import { intervalSpans } from "./geometry/blocks.ts";
   import { scaleSource } from "./geometry/log10.ts";
   import { curvePolyline } from "./geometry/polyline.ts";
   import { mappingOf } from "./geometry/scale.ts";
   import type { DepthInterval } from "./interval.ts";
   import { getLogView } from "./logView.svelte.ts";
   import { centreOn, keyStep, overviewCurve, panByPixels, wheelPixels } from "./navigation.ts";
+  import { gapsOf } from "./quality.ts";
   import { resolveScale } from "./scaleEnds.ts";
   import { curveFamilyDefaults, type ContinuousFamily } from "./template/defaults.ts";
 
@@ -56,6 +59,7 @@
     const fills = zoneFills;
     const drawn = line;
     const colour = drawn && view.strokeColour(drawn.colour);
+    const hatch = view.tokens?.gapHatch;
     if (width <= 0 || height <= 0) return;
 
     view.requestFrame(key, () => {
@@ -70,8 +74,10 @@
         ctx.fillStyle = fills[i];
         ctx.fillRect(0, y0, zoneWidth, y1 - y0);
       });
+      const strip = { top: whole.top, base: whole.base, width: canvas.width, height: canvas.height };
+      if (hatch) hatchGaps(ctx, intervalSpans(gapsOf(log), strip), strip, dpr, hatch);
       if (!drawn || !colour) return;
-      const frame = { top: whole.top, base: whole.base, width: canvas.width - zoneWidth, height: canvas.height };
+      const frame = { ...strip, width: strip.width - zoneWidth };
       ctx.save();
       ctx.translate(zoneWidth, 0);
       ctx.beginPath();

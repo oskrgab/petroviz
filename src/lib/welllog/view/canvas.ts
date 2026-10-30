@@ -5,7 +5,7 @@
  * Not unit-tested: it is checked by running the app.
  */
 
-import type { Block } from "./geometry/blocks.ts";
+import type { Block, Span } from "./geometry/blocks.ts";
 import type { FillPolygon } from "./geometry/fill.ts";
 import { depthGridlines, type Gridline } from "./geometry/grid.ts";
 import { pixelsPerUnit, type Frame } from "./geometry/polyline.ts";
@@ -122,22 +122,49 @@ export function strokeDepthGrid(ctx: CanvasRenderingContext2D, frame: Frame, dpr
   }
 }
 
-/** FGDC hatches are black, softened so the colour beneath still reads. */
-const HATCH_INK = "rgba(0, 0, 0, 0.55)";
+const tiles = new Map<string, HTMLCanvasElement>();
 
-const hatchTiles = new Map<string, HTMLCanvasElement>();
-
-/** A repeating tile of the style's colour with its pattern's marks, at this dpr. */
-function hatchTile(style: CodeStyle & { pattern: NonNullable<CodeStyle["pattern"]> }, dpr: number) {
-  const key = `${style.colour} ${style.pattern} ${dpr}`;
-  let tile = hatchTiles.get(key);
+/** A square tile `size` device px across, drawn once per key and kept. */
+function cachedTile(key: string, size: number, draw: (g: CanvasRenderingContext2D) => void): HTMLCanvasElement {
+  let tile = tiles.get(key);
   if (tile) return tile;
-  const size = Math.max(HATCH_TILE, Math.round(HATCH_TILE * dpr));
-  const unit = size / HATCH_TILE;
   tile = document.createElement("canvas");
   tile.width = tile.height = size;
   const g = tile.getContext("2d");
-  if (g) {
+  if (g) draw(g);
+  tiles.set(key, tile);
+  return tile;
+}
+
+/** The tile repeated, anchored to depth rather than to the canvas, so its marks pan with what they fill. */
+function depthPattern(ctx: CanvasRenderingContext2D, tile: HTMLCanvasElement, frame: Frame): CanvasPattern | null {
+  const pattern = ctx.createPattern(tile, "repeat");
+  const offset = (frame.top * pixelsPerUnit(frame)) % tile.height;
+  pattern?.setTransform(new DOMMatrix([1, 0, 0, 1, 0, -(offset < 0 ? offset + tile.height : offset)]));
+  return pattern;
+}
+
+/**
+ * Fills a span across the track. Its edges snap to whole device px so
+ * neighbours meet without a seam, and a span thinner than a pixel still
+ * shows as one.
+ */
+function fillSpan(ctx: CanvasRenderingContext2D, { y0, y1 }: Span, frame: Frame, fill: string | CanvasPattern) {
+  const top = Math.max(0, Math.round(y0));
+  const bottom = Math.min(frame.height, Math.max(Math.round(y1), top + 1));
+  if (bottom <= top) return;
+  ctx.fillStyle = fill;
+  ctx.fillRect(0, top, frame.width, bottom - top);
+}
+
+/** FGDC hatches are black, softened so the colour beneath still reads. */
+const HATCH_INK = "rgba(0, 0, 0, 0.55)";
+
+/** A repeating tile of the style's colour with its pattern's marks, at this dpr. */
+function hatchTile(style: CodeStyle & { pattern: NonNullable<CodeStyle["pattern"]> }, dpr: number) {
+  const size = Math.max(HATCH_TILE, Math.round(HATCH_TILE * dpr));
+  const unit = size / HATCH_TILE;
+  return cachedTile(`hatch ${style.colour} ${style.pattern} ${dpr}`, size, (g) => {
     g.fillStyle = style.colour;
     g.fillRect(0, 0, size, size);
     const { lines, dots } = HATCHES[style.pattern];
@@ -150,17 +177,10 @@ function hatchTile(style: CodeStyle & { pattern: NonNullable<CodeStyle["pattern"
       g.stroke();
     }
     for (const [x, y] of dots) g.fillRect(x * unit, y * unit, 1.3 * unit, 1.3 * unit);
-  }
-  hatchTiles.set(key, tile);
-  return tile;
+  });
 }
 
-/**
- * Fills each block across the track in its code's colour and pattern, the
- * pattern fixed to depth so it pans with the blocks. Edges
- * snap to whole device px so neighbours meet without a seam, and a block
- * thinner than a pixel still shows as one.
- */
+/** Fills each block across the track in its code's colour and pattern (see fillSpan, depthPattern). */
 export function fillDiscreteBlocks(
   ctx: CanvasRenderingContext2D,
   blocks: readonly Block[],
@@ -168,32 +188,48 @@ export function fillDiscreteBlocks(
   frame: Frame,
   dpr: number,
 ) {
-  const k = pixelsPerUnit(frame);
-  const mod = (a: number, n: number) => ((a % n) + n) % n;
   const fills = new Map<number, string | CanvasPattern>();
   const fillOf = (code: number) => {
     let fill = fills.get(code);
     if (fill === undefined) {
       const style = styles.get(code);
       if (!style) return undefined;
-      const tile = style.pattern ? hatchTile({ ...style, pattern: style.pattern }, dpr) : null;
-      const pattern = tile ? ctx.createPattern(tile, "repeat") : null;
-      // Anchored to depth, not to the canvas, so the marks move with the blocks.
-      if (tile && pattern) pattern.setTransform(new DOMMatrix([1, 0, 0, 1, 0, -mod(frame.top * k, tile.height)]));
+      const pattern = style.pattern ? depthPattern(ctx, hatchTile({ ...style, pattern: style.pattern }, dpr), frame) : null;
       fill = pattern ?? style.colour;
       fills.set(code, fill);
     }
     return fill;
   };
-  for (const { code, y0, y1 } of blocks) {
-    const fill = fillOf(code);
-    if (!fill) continue;
-    const top = Math.max(0, Math.round(y0));
-    const bottom = Math.min(frame.height, Math.max(Math.round(y1), top + 1));
-    if (bottom <= top) continue;
-    ctx.fillStyle = fill;
-    ctx.fillRect(0, top, frame.width, bottom - top);
+  for (const block of blocks) {
+    const fill = fillOf(block.code);
+    if (fill) fillSpan(ctx, block, frame, fill);
   }
+}
+
+/** A gap's hatch: diagonal lines this many CSS px apart, on a clear tile. */
+const GAP_HATCH_PX = 6;
+
+/** A clear tile crossed by one diagonal line in `colour`, at this dpr. */
+function gapTile(colour: string, dpr: number) {
+  const size = Math.max(GAP_HATCH_PX, Math.round(GAP_HATCH_PX * dpr));
+  return cachedTile(`gap ${colour} ${dpr}`, size, (g) => {
+    // Down to the left, with the corners drawn too, so the tiles join into one line.
+    g.strokeStyle = colour;
+    g.lineWidth = Math.max(1, dpr);
+    g.beginPath();
+    for (const offset of [-size, 0, size]) {
+      g.moveTo(offset + size, 0);
+      g.lineTo(offset, size);
+    }
+    g.stroke();
+  });
+}
+
+/** Hatches each gap's span across the track in `colour` (see fillSpan, depthPattern). */
+export function hatchGaps(ctx: CanvasRenderingContext2D, spans: readonly Span[], frame: Frame, dpr: number, colour: string) {
+  if (spans.length === 0 || !colour) return;
+  const pattern = depthPattern(ctx, gapTile(colour, dpr), frame);
+  if (pattern) for (const span of spans) fillSpan(ctx, span, frame, pattern);
 }
 
 /**
@@ -225,6 +261,7 @@ export function readTokens(element: Element): Tokens {
     text: token("text"),
     textMuted: token("text-muted"),
     zoneLine: token("zone-line"),
+    gapHatch: token("gap-hatch"),
     font: style.fontFamily,
   };
 }

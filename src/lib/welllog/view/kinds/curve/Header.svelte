@@ -5,11 +5,17 @@
    * cursor is over the tracks, its value there replaces the unit. An entry
    * that matched nothing stays, struck through. The mnemonic, scale ends and
    * sample take the curve's colour as drawn: adapted on a dark track.
+   *
+   * A curve with cautions carries a ⚠ after its mnemonic (#34). A curve with
+   * no value in the visible interval dims its scale bar and says "no data in
+   * view" in place of its unit; the cursor's reading still replaces it.
    */
 
   import { DASHES } from "../../canvas.ts";
+  import CautionMark from "../../CautionMark.svelte";
   import { formatScaleEnd, hasValue } from "../../format.ts";
   import { getLogView } from "../../logView.svelte.ts";
+  import { hasValueIn } from "../../quality.ts";
   import { entryLabel } from "../../template/label.ts";
   import type { ResolvedCurveTrack } from "./index.ts";
 
@@ -18,18 +24,32 @@
   const view = getLogView();
   const empty = $derived(resolved.entries.every((e) => !e.curve));
   const reading = $derived(view.readingOf(resolved.track.id));
+  const inView = $derived(
+    resolved.entries.map(({ curve }) => !curve || hasValueIn(view.log.md, curve.values, view.effectiveInterval)),
+  );
 </script>
 
 <div class="curve-header">
   {#each resolved.entries as { entry, curve, scale }, i (entry.id)}
     {#if curve && scale}
-      <div class="scale-bar" style:--curve={view.strokeColour(entry.style.colour)} title={curve.description || curve.key}>
+      {@const cautions = view.cautions.get(curve.key)}
+      <div
+        class="scale-bar"
+        class:no-data={!inView[i]}
+        style:--curve={inView[i] ? view.strokeColour(entry.style.colour) : "var(--welllog-no-data)"}
+        title={curve.description || curve.key}
+      >
         <div class="labels">
           <span class="end">{formatScaleEnd(scale.left)}</span>
           <span class="name">
             <span class="mnemonic">{curve.mnemonic}</span>
+            {#if cautions}
+              <CautionMark {cautions} />
+            {/if}
             {#if reading}
               <span class="value" class:none={!hasValue(reading[i])}>{reading[i]}</span>
+            {:else if !inView[i]}
+              <span class="no-data-note">no data in view</span>
             {:else if curve.unit}
               <span class="unit">{curve.unit}</span>
             {/if}
@@ -70,6 +90,21 @@
 
   .scale-bar {
     color: var(--curve);
+  }
+
+  /* Dimmed, in --welllog-no-data, but not the ⚠ or the note saying why. */
+  .no-data .end,
+  .no-data .mnemonic,
+  .no-data .sample {
+    opacity: 0.5;
+  }
+
+  .no-data-note {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+    color: var(--welllog-no-data);
   }
 
   .labels {

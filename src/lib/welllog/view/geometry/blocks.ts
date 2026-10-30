@@ -2,15 +2,28 @@
  * Blocks for a discrete curve: one per run of equal codes, in device px.
  * A row covers its MD down to the next row's MD, so a run ends where the
  * next code starts. A NaN code (no value, or a gap row) draws nothing.
+ * Also the spans of depth intervals, such as gaps, drawn the same way.
  */
 
+import type { DepthInterval } from "../interval.ts";
 import { pixelsPerUnit, visibleRows, type Frame } from "./polyline.ts";
 
-export interface Block {
-  readonly code: number;
-  /** Device px from the frame's top edge; may lie outside the frame. */
+/** A stretch down the frame, in device px from its top edge; may lie outside the frame. */
+export interface Span {
   readonly y0: number;
   readonly y1: number;
+}
+
+export interface Block extends Span {
+  readonly code: number;
+}
+
+/** The intervals that reach into the frame, as spans. */
+export function intervalSpans(intervals: readonly DepthInterval[], frame: Frame): Span[] {
+  const k = pixelsPerUnit(frame);
+  return intervals
+    .filter(({ top, base }) => base >= frame.top && top <= frame.base)
+    .map(({ top, base }) => ({ y0: (top - frame.top) * k, y1: (base - frame.top) * k }));
 }
 
 export function discreteBlocks(md: Float64Array, values: Float32Array, frame: Frame): Block[] {

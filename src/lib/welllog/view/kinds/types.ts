@@ -40,6 +40,8 @@ export interface Tokens {
   readonly text: string;
   readonly textMuted: string;
   readonly zoneLine: string;
+  /** The lines that hatch a gap in the depth tracks and the overview strip. */
+  readonly gapHatch: string;
   readonly font: string;
 }
 
