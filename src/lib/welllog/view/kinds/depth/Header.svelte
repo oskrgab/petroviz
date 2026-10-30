@@ -5,6 +5,7 @@
    * TVDSS track on a well log without TVDSS is greyed, and says so.
    */
 
+  import { DEPTH_REF_LABELS } from "../../interval.ts";
   import { getLogView } from "../../logView.svelte.ts";
   import { depthTrackRef, type ResolvedDepthTrack } from "./index.ts";
 
@@ -16,7 +17,7 @@
 </script>
 
 <div class="depth-header" class:missing={!resolved.shown}>
-  <span class="ref">{ref === "md" ? "MD" : "TVDSS"}</span>
+  <span class="ref">{DEPTH_REF_LABELS[ref]}</span>
   {#if !resolved.shown}
     <span class="unit">not in this well log</span>
   {:else if reading}

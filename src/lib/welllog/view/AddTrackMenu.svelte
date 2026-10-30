@@ -17,8 +17,7 @@
 
   const view = getLogView();
   const discrete = $derived(view.log.curves.filter((c) => c.kind === "discrete"));
-  const hasTvdss = $derived(view.log.tvdss !== undefined);
-
+  
   const DEPTHS: readonly [DepthTrackRef, string][] = [
     ["active", "Active depth reference"],
     ["md", "MD"],
@@ -43,7 +42,7 @@
   {#each DEPTHS as [ref, name] (ref)}
     <button type="button" onclick={() => add(() => newDepthTrack(view.template, ref))}>
       {name}
-      {#if ref === "tvdss" && !hasTvdss}<span class="note">not in this well log</span>{/if}
+      {#if ref === "tvdss" && !view.hasTvdss}<span class="note">not in this well log</span>{/if}
     </button>
   {/each}
 

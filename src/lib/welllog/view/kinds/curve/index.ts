@@ -100,7 +100,7 @@ export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
     });
   },
 
-  draw(ctx, resolved, { log, frame, dpr, tokens }) {
+  draw(ctx, resolved, { axis, frame, dpr, tokens }) {
     if (resolved.grid) strokeVerticalGrid(ctx, scaleGridlines(resolved.grid), frame, dpr, tokens);
     strokeDepthGrid(ctx, frame, dpr, tokens);
 
@@ -114,7 +114,7 @@ export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
         colourWhereALeft: adaptFill(fill.colourWhereALeft, tokens.bg),
         colourWhereARight: adaptFill(fill.colourWhereARight, tokens.bg),
       };
-      fillPolygonPaths(ctx, fillPolygons(log.md, boundaryPlacement(a), boundaryPlacement(b), frame), drawn);
+      fillPolygonPaths(ctx, fillPolygons(axis.depths, boundaryPlacement(a), boundaryPlacement(b), frame), drawn);
     }
 
     // Off-scale stretches run out of the track and are cut here, never pinned;
@@ -135,10 +135,10 @@ export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
       ctx.strokeStyle = adaptStroke(colour, tokens.bg);
       ctx.lineWidth = width * dpr;
       ctx.setLineDash(DASHES[dash].map((d) => d * width * dpr));
-      strokePolyline(ctx, curvePolyline(log.md, source, mapping, frame, inset));
+      strokePolyline(ctx, curvePolyline(axis.depths, source, mapping, frame, inset));
       if (entry.offScale === "wrap") {
         ctx.globalAlpha = WRAPPED_ALPHA;
-        strokePolyline(ctx, wrappedPolyline(log.md, source, mapping, frame, inset));
+        strokePolyline(ctx, wrappedPolyline(axis.depths, source, mapping, frame, inset));
         ctx.globalAlpha = 1;
       }
     }

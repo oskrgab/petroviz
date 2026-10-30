@@ -1,11 +1,12 @@
 /**
  * Depth navigation maths (#46): zooming around a depth, wheel scroll, pan,
- * the zoom buttons and fitting a zone. Every interval is in MD, and every
- * operation returns a new one kept inside the well at a span between
- * MIN_SPAN and the whole well; the caller writes it to the bound interval.
+ * the zoom buttons and fitting a zone. Every interval is on one depth axis,
+ * MD or TVDSS (axis.ts), and every operation returns a new one kept inside
+ * `whole`, the most that can be shown, at a span between MIN_SPAN and all of
+ * it; the caller converts it to MD and writes it to the bound interval.
  */
 
-import type { Curve, DepthUnit, WellLog, Zone } from "../core/index.ts";
+import type { Curve, DepthUnit, WellLog } from "../core/index.ts";
 import type { DepthInterval } from "./interval.ts";
 
 /** The narrowest view, in depth units: a few samples at FORCE 2020's 0.152 m step. */
@@ -77,7 +78,7 @@ export function zoomToSpan(view: DepthInterval, span: number, whole: DepthInterv
 }
 
 /** The view fitted to a zone, with a little room above and below. */
-export function fitZone(zone: Zone, whole: DepthInterval): DepthInterval {
+export function fitZone(zone: DepthInterval, whole: DepthInterval): DepthInterval {
   const room = (zone.base - zone.top) * ZONE_ROOM;
   return placeAt((zone.top + zone.base) / 2, 0.5, zone.base - zone.top + 2 * room, whole);
 }

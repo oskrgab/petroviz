@@ -1,10 +1,17 @@
 /**
- * The depth track kind: round depths of the active depth reference, or of a
- * fixed `md` or `tvdss`, labelled down the track over the well log's gaps,
+ * The depth track kind: depths of the active depth reference, or of a fixed
+ * `md` or `tvdss`, labelled down the track over the well log's gaps,
  * hatched. A fixed `tvdss` track on a well log without TVDSS keeps its
  * place, greyed, with an empty body.
+ *
+ * A track showing the view's own axis labels its round depths. One showing
+ * the other reference (MD beside a TVDSS view, or TVDSS beside an MD one)
+ * labels the rows where that reference crosses a round depth, at each row's
+ * place on the axis.
  */
 
+import { tvdssAt } from "../../../core/index.ts";
+import { hasTvdss, intervalOnAxis, toMd } from "../../axis.ts";
 import { intervalSpans } from "../../geometry/blocks.ts";
 import { depthStep, depthsEvery } from "../../geometry/grid.ts";
 import { pixelsPerUnit, visibleRows } from "../../geometry/polyline.ts";
@@ -33,22 +40,21 @@ const LABEL_SPACING = 40;
 
 export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
   resolve(track, log) {
-    return { kind: "depth", track, entries: [], shown: track.ref !== "tvdss" || log.tvdss !== undefined };
+    return { kind: "depth", track, entries: [], shown: track.ref !== "tvdss" || hasTvdss(log) };
   },
 
   read(resolved, { md, tvdss, depthRef }) {
     return [formatDepth(depthTrackRef(resolved.track, depthRef) === "md" ? md : tvdss)];
   },
 
-  draw(ctx, resolved, { log, frame, dpr, tokens, depthRef }) {
+  draw(ctx, resolved, { log, axis, frame, dpr, tokens }) {
     if (!resolved.shown) return;
+    const ref = depthTrackRef(resolved.track, axis.ref);
     const k = pixelsPerUnit(frame);
-    const step = depthStep(k / dpr, LABEL_SPACING);
-    const decimals = step < 1 ? 1 : 0;
     const tick = 5 * dpr;
     const margin = 7 * dpr;
 
-    hatchGaps(ctx, intervalSpans(gapsOf(log), frame), frame, dpr, tokens.gapHatch);
+    hatchGaps(ctx, intervalSpans(gapsOf(log).map((gap) => intervalOnAxis(axis, gap)), frame), frame, dpr, tokens.gapHatch);
 
     ctx.strokeStyle = tokens.gridMajor;
     ctx.fillStyle = tokens.text;
@@ -57,29 +63,38 @@ export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
 
-    const label = (md: number, depth: number) => {
-      const y = crisp((md - frame.top) * k, dpr);
-      if (y < margin || y > frame.height - margin) return;
+    const label = (axisDepth: number, depth: number, step: number) => {
+      const y = crisp((axisDepth - frame.top) * k, dpr);
+      if (!(y >= margin && y <= frame.height - margin)) return;
       ctx.beginPath();
       ctx.moveTo(frame.width - tick, y);
       ctx.lineTo(frame.width, y);
       ctx.stroke();
-      ctx.fillText(depth.toFixed(decimals), frame.width - margin, y);
+      ctx.fillText(depth.toFixed(step < 1 ? 1 : 0), frame.width - margin, y);
     };
 
-    if (depthTrackRef(resolved.track, depthRef) === "md") {
-      for (const md of depthsEvery(step, frame.top, frame.base)) label(md, md);
+    if (ref === axis.ref) {
+      const step = depthStep(k / dpr, LABEL_SPACING);
+      for (const depth of depthsEvery(step, frame.top, frame.base)) label(depth, depth, step);
       return;
     }
-    // TVDSS: a label where it crosses a round depth, at that row's MD. A row
-    // without TVDSS breaks the run, so no label straddles it.
-    const { tvdss, md } = log;
-    if (!tvdss) return;
-    const [start, end] = visibleRows(md, frame);
+
+    // The other reference: its step from its own span over the view, and a
+    // label where a row crosses a round depth. A row without it breaks the
+    // run, so no label straddles it.
+    const values = ref === "md" ? log.md : log.tvdss;
+    if (!values) return;
+    const refAt = (axisDepth: number) => {
+      const md = toMd(axis, axisDepth);
+      return ref === "md" ? md : tvdssAt(log, md);
+    };
+    const span = refAt(frame.base) - refAt(frame.top);
+    const step = depthStep((span > 0 ? frame.height / span : k) / dpr, LABEL_SPACING);
+    const [start, end] = visibleRows(axis.depths, frame);
     let previous = NaN;
     for (let i = start; i < end; i++) {
-      const band = Math.floor(tvdss[i] / step);
-      if (Number.isFinite(band) && Number.isFinite(previous) && band !== previous) label(md[i], band * step);
+      const band = Math.floor(values[i] / step);
+      if (Number.isFinite(band) && Number.isFinite(previous) && band !== previous) label(axis.depths[i], band * step, step);
       previous = band;
     }
   },

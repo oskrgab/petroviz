@@ -4,6 +4,8 @@
    * reads exactly what the track draws from, and asks the view for a frame
    * when any of it changes; the drawing itself happens in that frame.
    *
+   * The frame is the visible interval on the view's depth axis (axis.ts).
+   *
    * For kinds whose items highlight under the pointer (zones), the pointer's
    * height is kept and turned into an MD against the visible interval, and
    * the kind's `hit` into an item, so scrolling under a still pointer moves
@@ -27,8 +29,7 @@
   const hovered = $derived.by(() => {
     const height = box?.height ?? 0;
     if (pointerY === null || height <= 0) return null;
-    const { top, base } = view.effectiveInterval;
-    return hitTrack(resolved, top + (pointerY / height) * (base - top));
+    return hitTrack(resolved, view.mdAt(pointerY / height));
   });
 
   const hoverable = $derived(hasHit(resolved));
@@ -44,8 +45,8 @@
     const input = {
       resolved,
       log: view.log,
-      interval: view.effectiveInterval,
-      depthRef: view.effectiveDepthRef,
+      axis: view.axis,
+      interval: view.axisInterval,
       hovered,
     };
     if (width <= 0 || height <= 0 || !tokens) return;
@@ -57,10 +58,10 @@
       const { top, base } = input.interval;
       drawTrack(ctx, input.resolved, {
         log: input.log,
+        axis: input.axis,
         frame: { top, base, width: canvas.width, height: canvas.height },
         dpr,
         tokens,
-        depthRef: input.depthRef,
         hovered: input.hovered,
       });
     });

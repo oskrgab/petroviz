@@ -6,6 +6,7 @@
  */
 
 import type { Curve, WellLog } from "../../core/index.ts";
+import type { DepthAxis } from "../axis.ts";
 import type { Frame } from "../geometry/polyline.ts";
 import type { DepthRef } from "../interval.ts";
 import type { ResolvedScale } from "../geometry/scale.ts";
@@ -47,11 +48,11 @@ export interface Tokens {
 
 export interface DrawInput {
   readonly log: WellLog;
+  /** The axis the frame's depths are on, and its rows' depths on it. */
+  readonly axis: DepthAxis;
   readonly frame: Frame;
   readonly dpr: number;
   readonly tokens: Tokens;
-  /** The depth reference the view shows, after the well log's own limits. */
-  readonly depthRef: DepthRef;
   /** The item under the pointer, as the kind's `hit` found it, or null. */
   readonly hovered: number | null;
 }

@@ -10,10 +10,12 @@
    *
    * A top bar starts with the well panel control, which carries an amber
    * badge counting cautions, and only when there are some, then the exact
-   * interval and the zoom buttons. Below it, the overview strip on the left,
-   * then the tracks side by side over the visible interval, one canvas each,
-   * scrolling sideways past the overview when they can't fit. Wheel, drag
-   * and pinch on the tracks move the interval (gestures.ts).
+   * interval, the zoom buttons and the MD/TVDSS toggle. Below it, the
+   * overview strip on the left, then the tracks side by side over the
+   * visible interval, one canvas each, scrolling sideways past the overview
+   * when they can't fit. Wheel, drag and pinch on the tracks move the
+   * interval (gestures.ts). The tracks are laid out down the depth
+   * reference shown (axis.ts); the interval stays in MD.
    *
    * Over the tracks, a depth cursor line follows the pointer (cursor.ts),
    * moved by a CSS transform so it redraws no canvas, and the headers read
@@ -40,6 +42,7 @@
   import CurveEditor from "./CurveEditor.svelte";
   import CurvePicker from "./CurvePicker.svelte";
   import { depthCursor } from "./cursor.ts";
+  import DepthRefToggle from "./DepthRefToggle.svelte";
   import FillEditor from "./FillEditor.svelte";
   import { depthGestures } from "./gestures.ts";
   import IntervalInput from "./IntervalInput.svelte";
@@ -63,8 +66,9 @@
   interface Props {
     log: WellLog;
     template?: Template;
-    /** In MD; null shows the whole well. */
+    /** In MD, whatever the depth reference; null shows the whole well. */
     interval?: DepthInterval | null;
+    /** The preferred depth reference; MD is shown when the well log has no TVDSS. */
     depthRef?: DepthRef;
     scheme?: "light" | "dark";
   }
@@ -96,6 +100,7 @@
       {
         interval: (next) => (interval = next),
         template: (next) => (template = next),
+        depthRef: (next) => (depthRef = next),
       },
     ),
   );
@@ -179,6 +184,7 @@
       <WellPanel {log} id={panelId} onclose={() => (panel = null)} />
     {/if}
     <IntervalInput />
+    <DepthRefToggle />
     <button
       type="button"
       class="bar-button card-toggle"

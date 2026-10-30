@@ -140,11 +140,11 @@ test("zoom button spans are in metres, converted to the well's depth unit", () =
 });
 
 test("clicking a zone fits the view to it, with a little room above and below", () => {
-  const view = fitZone({ name: "Draupne Fm.", top: 2000, base: 2100 }, WHOLE);
+  const view = fitZone({ top: 2000, base: 2100 }, WHOLE);
   assert.ok(view.top < 2000 && view.top >= 1990);
   assert.ok(view.base > 2100 && view.base <= 2110);
-  assert.deepEqual(fitZone({ name: "Nordland Gp.", top: 1000, base: 1500 }, WHOLE).top, 1000);
-  close(fitZone({ name: "thin", top: 2000, base: 2000.5 }, WHOLE).base - fitZone({ name: "thin", top: 2000, base: 2000.5 }, WHOLE).top, MIN_SPAN);
+  assert.deepEqual(fitZone({ top: 1000, base: 1500 }, WHOLE).top, 1000);
+  close(fitZone({ top: 2000, base: 2000.5 }, WHOLE).base - fitZone({ top: 2000, base: 2000.5 }, WHOLE).top, MIN_SPAN);
 });
 
 test("the interval input takes two numbers, top above base", () => {

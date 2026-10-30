@@ -6,11 +6,15 @@
 
 import type { Mapping } from "./scale.ts";
 
-/** What a track draws into: an MD interval over a canvas, in device px. */
+/**
+ * What a track draws into: an interval of the view's depth axis (axis.ts)
+ * over a canvas, in device px. Every function here takes the rows' depths
+ * on that axis: MD, or TVDSS, infinite on rows without it.
+ */
 export interface Frame {
-  /** MD at the top edge. */
+  /** The axis depth at the top edge. */
   readonly top: number;
-  /** MD at the bottom edge. */
+  /** The axis depth at the bottom edge. */
   readonly base: number;
   readonly width: number;
   readonly height: number;
@@ -21,13 +25,13 @@ export function pixelsPerUnit(frame: Frame): number {
   return frame.height / (frame.base - frame.top);
 }
 
-/** The first row whose MD is at or below `depth`; `md.length` when there is none. */
-export function firstRowAtOrBelow(md: Float64Array, depth: number): number {
+/** The first row whose depth is at or below `depth`; `depths.length` when there is none. */
+export function firstRowAtOrBelow(depths: Float64Array, depth: number): number {
   let lo = 0;
-  let hi = md.length;
+  let hi = depths.length;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
-    if (md[mid] < depth) lo = mid + 1;
+    if (depths[mid] < depth) lo = mid + 1;
     else hi = mid;
   }
   return lo;
@@ -37,10 +41,10 @@ export function firstRowAtOrBelow(md: Float64Array, depth: number): number {
  * The rows to draw, [start, end): those inside the frame plus one more on
  * each side, so a line runs on to the edges instead of stopping short.
  */
-export function visibleRows(md: Float64Array, frame: Frame): [number, number] {
+export function visibleRows(depths: Float64Array, frame: Frame): [number, number] {
   return [
-    Math.max(0, firstRowAtOrBelow(md, frame.top) - 1),
-    Math.min(md.length, firstRowAtOrBelow(md, frame.base) + 1),
+    Math.max(0, firstRowAtOrBelow(depths, frame.top) - 1),
+    Math.min(depths.length, firstRowAtOrBelow(depths, frame.base) + 1),
   ];
 }
 
@@ -50,15 +54,16 @@ export const M4_THRESHOLD = 4;
 /**
  * The rows a line is drawn through, in order, with -1 wherever it breaks.
  * Every row where a source has no value breaks it, so it never joins across
- * a gap or a missing value. Above M4_THRESHOLD samples per pixel row, each
+ * a gap or a missing value, and so does every row with no place on the
+ * axis. Above M4_THRESHOLD samples per pixel row, each
  * row keeps only its first and last sample, and each source's minimum and
  * maximum (M4).
  *
  * Each source is a curve's values, or their log10 on a log scale. A fill
  * passes both its curves, so its two boundaries share their rows.
  */
-export function drawnRows(md: Float64Array, sources: readonly Float32Array[], frame: Frame): Int32Array {
-  const [start, end] = visibleRows(md, frame);
+export function drawnRows(depths: Float64Array, sources: readonly Float32Array[], frame: Frame): Int32Array {
+  const [start, end] = visibleRows(depths, frame);
   const out: number[] = [];
   let broken = true;
   const push = (i: number) => {
@@ -70,7 +75,8 @@ export function drawnRows(md: Float64Array, sources: readonly Float32Array[], fr
     out.push(-1);
     broken = true;
   };
-  const isBreak = (i: number) => sources.some((source) => !Number.isFinite(source[i]));
+  const isBreak = (i: number) =>
+    !Number.isFinite(depths[i]) || sources.some((source) => !Number.isFinite(source[i]));
 
   if (end - start <= frame.height * M4_THRESHOLD) {
     for (let i = start; i < end; i++) {
@@ -98,7 +104,7 @@ export function drawnRows(md: Float64Array, sources: readonly Float32Array[], fr
       lineBreak();
       continue;
     }
-    const r = Math.floor((md[i] - frame.top) * k);
+    const r = Math.floor((depths[i] - frame.top) * k);
     if (r !== row) {
       flush();
       row = r;
@@ -159,20 +165,20 @@ function placement(mapping: Mapping, frame: Frame, inset: number) {
  * `inset` is in device px, usually half the line width.
  */
 export function curvePolyline(
-  md: Float64Array,
+  depths: Float64Array,
   source: Float32Array,
   mapping: Mapping,
   frame: Frame,
   inset = 0,
 ): Float32Array {
-  const rows = drawnRows(md, [source], frame);
+  const rows = drawnRows(depths, [source], frame);
   const { fraction, x } = placement(mapping, frame, inset);
   const k = pixelsPerUnit(frame);
   const out = new Float32Array(rows.length * 2);
   for (let j = 0; j < rows.length; j++) {
     const i = rows[j];
     out[2 * j] = i < 0 ? NaN : x(fraction(source[i]));
-    out[2 * j + 1] = i < 0 ? NaN : (md[i] - frame.top) * k;
+    out[2 * j + 1] = i < 0 ? NaN : (depths[i] - frame.top) * k;
   }
   return out;
 }
@@ -185,19 +191,19 @@ export function curvePolyline(
  * still off the scale after one shift runs out of the track and is cut.
  */
 export function wrappedPolyline(
-  md: Float64Array,
+  depths: Float64Array,
   source: Float32Array,
   mapping: Mapping,
   frame: Frame,
   inset = 0,
 ): Float32Array {
-  const rows = drawnRows(md, [source], frame);
+  const rows = drawnRows(depths, [source], frame);
   const { fraction, x } = placement(mapping, frame, inset);
   const k = pixelsPerUnit(frame);
   const out: number[] = [];
   let broken = true;
   const push = (i: number, shift: number) => {
-    out.push(x(fraction(source[i]) + shift), (md[i] - frame.top) * k);
+    out.push(x(fraction(source[i]) + shift), (depths[i] - frame.top) * k);
     broken = false;
   };
   const lineBreak = () => {

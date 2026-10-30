@@ -10,6 +10,7 @@
  */
 
 import { indexAtDepth, tvdssAt, type WellLog } from "../core/index.ts";
+import { hasTvdss } from "./axis.ts";
 import { formatDepth } from "./format.ts";
 import type { DepthRef } from "./interval.ts";
 import { codeLabelAt, discreteCurveName } from "./kinds/discrete/index.ts";
@@ -58,7 +59,7 @@ export function cardGroups(log: WellLog, tracks: readonly ResolvedTrack[], reado
   const { md, gap } = readout;
   const unit = log.depthUnit;
   const depths: CardRow[] = [{ label: "MD", value: formatDepth(md), unit }];
-  if (log.tvdss) depths.push({ label: "TVDSS", value: formatDepth(readout.tvdss), unit });
+  if (hasTvdss(log)) depths.push({ label: "TVDSS", value: formatDepth(readout.tvdss), unit });
 
   const curves = tracks.map((resolved): CardRow[] => {
     if (resolved.kind !== "curve") return [];

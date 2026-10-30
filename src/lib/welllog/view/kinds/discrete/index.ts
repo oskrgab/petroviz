@@ -74,9 +74,9 @@ export const discreteKind: TrackKind<DiscreteTrack, ResolvedDiscreteTrack> = {
     return [curve ? codeLabelAt(log, curve, md, gap) : null];
   },
 
-  draw(ctx, resolved, { log, frame, dpr }) {
+  draw(ctx, resolved, { axis, frame, dpr }) {
     const [{ curve }] = resolved.entries;
     if (!curve) return;
-    fillDiscreteBlocks(ctx, discreteBlocks(log.md, curve.values, frame), resolved.styles, frame, dpr);
+    fillDiscreteBlocks(ctx, discreteBlocks(axis.depths, curve.values, frame), resolved.styles, frame, dpr);
   },
 };

@@ -36,10 +36,10 @@ const withinTrack = (fraction: number) => Math.min(1, Math.max(0, fraction));
  * the boundaries cross, at the crossing interpolated between rows. A
  * stretch where they coincide throughout covers nothing and is left out.
  */
-export function fillPolygons(md: Float64Array, a: BoundaryPlacement, b: BoundaryPlacement, frame: Frame): FillPolygon[] {
+export function fillPolygons(depths: Float64Array, a: BoundaryPlacement, b: BoundaryPlacement, frame: Frame): FillPolygon[] {
   const sources = [a, b].flatMap((p) => ("source" in p ? [p.source] : []));
   if (sources.length === 0) return [];
-  const rows = drawnRows(md, sources, frame);
+  const rows = drawnRows(depths, sources, frame);
   const k = pixelsPerUnit(frame);
   const xOf = (p: BoundaryPlacement) =>
     "source" in p
@@ -75,7 +75,7 @@ export function fillPolygons(md: Float64Array, a: BoundaryPlacement, b: Boundary
       prev = null;
       continue;
     }
-    const point = { xa: xa(i), xb: xb(i), y: (md[i] - frame.top) * k };
+    const point = { xa: xa(i), xb: xb(i), y: (depths[i] - frame.top) * k };
     const sign = Math.sign(point.xa - point.xb);
     if (sign !== 0 && side !== 0 && sign !== side && prev) {
       // They cross between the previous row and this one: end the polygon

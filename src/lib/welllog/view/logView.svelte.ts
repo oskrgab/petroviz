@@ -3,9 +3,9 @@
  * context, never a module-level singleton. It reads the bound props through
  * getters, one per prop, so each derivation follows only the props it reads
  * (panning never re-resolves the template). It derives everything drawn
- * from them, and writes the bound interval only through `navigate`, and the
- * bound template only through `edit`, which gestures and controls call on a
- * user action.
+ * from them, and writes the bound interval only through `navigate`, the
+ * bound template only through `edit`, and the bound depth reference only
+ * through `setDepthRef`, which gestures and controls call on a user action.
  *
  * Glue only: the logic it calls (resolveTemplate, geometry) is pure and
  * tested on its own.
@@ -13,6 +13,7 @@
 
 import { getContext, setContext } from "svelte";
 import type { LoadWarning, WellLog } from "../core/index.ts";
+import { depthAxis, effectiveDepthRef, hasTvdss, intervalOnAxis, intervalToMd, toMd, type DepthAxis } from "./axis.ts";
 import { FrameScheduler } from "./canvas.ts";
 import { adaptFill, adaptStroke } from "./colour/adapt.ts";
 import type { Tokens } from "./kinds/types.ts";
@@ -36,6 +37,7 @@ export interface LogViewProps {
 export interface LogViewWriters {
   readonly interval: (interval: DepthInterval) => void;
   readonly template: (template: Template) => void;
+  readonly depthRef: (depthRef: DepthRef) => void;
 }
 
 /**
@@ -149,11 +151,27 @@ export class LogViewState {
   /** The cautions that mark a curve's scale bar, by curve key. */
   cautions: ReadonlyMap<string, readonly LoadWarning[]> = $derived.by(() => curveCautions(this.#props.log));
 
-  /** The well log's whole MD range: the most the view can show. */
+  /** The well log's whole MD range, as the overview strip shows it. */
   whole: DepthInterval = $derived.by(() => wholeWell(this.#props.log));
 
-  /** The bound interval clamped to the well, or the whole well. */
-  effectiveInterval: DepthInterval = $derived.by(() => effectiveInterval(this.#props.interval, this.whole));
+  /** Whether the well log has TVDSS to show (axis.ts). */
+  hasTvdss: boolean = $derived.by(() => hasTvdss(this.#props.log));
+
+  /** The bound depth reference, or MD when the well log has no TVDSS. */
+  effectiveDepthRef: DepthRef = $derived.by(() => effectiveDepthRef(this.#props.depthRef, this.#props.log));
+
+  /** The depth axis the tracks are drawn down. */
+  axis: DepthAxis = $derived.by(() => depthAxis(this.#props.log, this.effectiveDepthRef));
+
+  /** The MD the view can show: the whole well, or on TVDSS the rows that have it. */
+  extent: DepthInterval = $derived.by(() => this.axis.extent);
+
+  /** The bound interval clamped to the extent, or the whole extent; in MD. */
+  effectiveInterval: DepthInterval = $derived.by(() => effectiveInterval(this.#props.interval, this.extent));
+
+  /** The effective interval, and the extent, as depths on the axis: what the tracks show top to bottom. */
+  axisInterval: DepthInterval = $derived.by(() => intervalOnAxis(this.axis, this.effectiveInterval));
+  axisExtent: DepthInterval = $derived.by(() => intervalOnAxis(this.axis, this.extent));
 
   /**
    * Writes the bound interval; for user actions only. A gesture held at an
@@ -166,9 +184,27 @@ export class LogViewState {
     this.#write.interval(interval);
   }
 
-  /** MD for now; TVDSS joins with the depth reference toggle (#48). */
-  get effectiveDepthRef(): DepthRef {
-    return "md";
+  /** `navigate` for an interval of axis depths, as the tracks' gestures and the interval input work. */
+  navigateOnAxis(interval: DepthInterval) {
+    const shown = this.axisInterval;
+    if (interval.top === shown.top && interval.base === shown.base) return;
+    this.navigate(intervalToMd(this.axis, interval));
+  }
+
+  /** The axis depth at `fraction` down the track bodies. */
+  axisDepthAt(fraction: number): number {
+    const { top, base } = this.axisInterval;
+    return top + fraction * (base - top);
+  }
+
+  /** The MD at `fraction` down the track bodies. */
+  mdAt(fraction: number): number {
+    return toMd(this.axis, this.axisDepthAt(fraction));
+  }
+
+  /** Writes the bound depth reference; for user actions only. */
+  setDepthRef(depthRef: DepthRef) {
+    if (depthRef !== this.#props.depthRef) this.#write.depthRef(depthRef);
   }
 
   /**
@@ -185,8 +221,8 @@ export class LogViewState {
   cursorDepth: number | null = $derived.by(() => {
     const pointer = this.pointer;
     if (!pointer || pointer.height <= 0) return null;
-    const { top, base } = this.effectiveInterval;
-    return top + (pointer.y / pointer.height) * (base - top);
+    const md = this.mdAt(pointer.y / pointer.height);
+    return Number.isNaN(md) ? null : md;
   });
 
   /** What every track reads at the depth cursor, or null when there is none. */

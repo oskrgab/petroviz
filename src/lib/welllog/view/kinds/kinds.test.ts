@@ -88,6 +88,16 @@ test("discrete blocks reach past the frame's edges, so a run crossing an edge fi
   ]);
 });
 
+test("discrete blocks on a TVDSS axis: rows with no place on it draw nothing, and a run meeting one ends at its last row", () => {
+  // TVDSS known from 100 to 104 only; frame 100–110.
+  const depths = Float64Array.from([-Infinity, 100, 101, 104, Infinity, Infinity]);
+  const values = Float32Array.from([1, 1, 2, 2, 2, 3]);
+  assert.deepEqual(discreteBlocks(depths, values, frame), [
+    { code: 1, y0: 0, y1: 10 },
+    { code: 2, y0: 10, y1: 40 },
+  ]);
+});
+
 test("the zone at a depth: top inclusive, base exclusive", () => {
   const zones = [
     { name: "A", top: 100, base: 150 },

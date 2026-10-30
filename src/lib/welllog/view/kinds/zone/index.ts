@@ -6,6 +6,7 @@
  */
 
 import type { Zone, ZoneSet } from "../../../core/index.ts";
+import { toAxis } from "../../axis.ts";
 import { crisp, hairline } from "../../canvas.ts";
 import { zoneColours } from "../../colour/categorical.ts";
 import { labelColour } from "../../colour/contrast.ts";
@@ -53,10 +54,13 @@ export const zoneKind: TrackKind<ZoneTrack, ResolvedZoneTrack> = {
     return [resolved.zoneSet ? zoneNameAt(resolved.zoneSet.zones, md) : null];
   },
 
-  draw(ctx, resolved, { frame, dpr, tokens, hovered }) {
+  draw(ctx, resolved, { axis, frame, dpr, tokens, hovered }) {
     if (!resolved.zoneSet) return;
     const k = pixelsPerUnit(frame);
-    const y = (md: number) => (md - frame.top) * k;
+    // A bound off the axis (no TVDSS there) is infinite: it is held a frame
+    // beyond the edge, far enough that no edge line or outline shows.
+    const y = (md: number) =>
+      Math.min(Math.max((toAxis(axis, md) - frame.top) * k, -frame.height), 2 * frame.height);
     const visible = resolved.zoneSet.zones
       .map((zone, i) => ({ zone, i, y0: y(zone.top), y1: y(zone.base) }))
       .filter(({ y0, y1 }) => y1 > 0 && y0 < frame.height);

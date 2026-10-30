@@ -5,10 +5,13 @@
  * click on a zone to fit the view to it. Headers are left alone.
  *
  * Glue only: every interval comes from the pure functions in navigation.ts,
- * and reaches the bound interval through view.navigate. Checked in the app.
+ * worked on the view's depth axis (axis.ts) since the tracks are laid out
+ * down it, and reaches the bound interval through view.navigateOnAxis.
+ * Checked in the app.
  */
 
 import type { Attachment } from "svelte/attachments";
+import { onAxisWithin } from "./axis.ts";
 import { hitTrack } from "./kinds/index.ts";
 import type { LogViewState } from "./logView.svelte.ts";
 import { fitZone, panByPixels, placeAt, wheelPixels, wheelZoomFactor, zoomAround } from "./navigation.ts";
@@ -39,10 +42,6 @@ export function depthGestures(view: LogViewState): Attachment<HTMLElement> {
     const bodyOf = (target: EventTarget | null) =>
       target instanceof Element ? target.closest<HTMLElement>(`[${TRACK_BODY}]`) : null;
     const fractionDown = (rect: DOMRect, clientY: number) => (clientY - rect.top) / rect.height;
-    const depthAt = (fraction: number) => {
-      const { top, base } = view.effectiveInterval;
-      return top + fraction * (base - top);
-    };
 
     function onwheel(event: WheelEvent) {
       const target = bodyOf(event.target);
@@ -52,22 +51,22 @@ export function depthGestures(view: LogViewState): Attachment<HTMLElement> {
       if (!zoom && (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))) return;
       event.preventDefault();
       const rect = target.getBoundingClientRect();
-      const interval = view.effectiveInterval;
+      const interval = view.axisInterval;
       const pixels = wheelPixels(event.deltaY, event.deltaMode, rect.height);
       if (zoom) {
-        const depth = depthAt(fractionDown(rect, event.clientY));
-        view.navigate(zoomAround(interval, depth, wheelZoomFactor(pixels), view.whole));
+        const depth = view.axisDepthAt(fractionDown(rect, event.clientY));
+        view.navigateOnAxis(zoomAround(interval, depth, wheelZoomFactor(pixels), view.axisExtent));
       } else {
-        view.navigate(panByPixels(interval, pixels, rect.height, view.whole));
+        view.navigateOnAxis(panByPixels(interval, pixels, rect.height, view.axisExtent));
       }
     }
 
     function startPinch() {
       if (!body) return;
       const [p, q] = [...pointers.values()];
-      const { top, base } = view.effectiveInterval;
+      const { top, base } = view.axisInterval;
       pinch = {
-        anchor: depthAt(fractionDown(body.getBoundingClientRect(), (p.y + q.y) / 2)),
+        anchor: view.axisDepthAt(fractionDown(body.getBoundingClientRect(), (p.y + q.y) / 2)),
         span: base - top,
         distance: Math.max(MIN_PINCH_PX, Math.hypot(p.x - q.x, p.y - q.y)),
       };
@@ -99,14 +98,14 @@ export function depthGestures(view: LogViewState): Attachment<HTMLElement> {
         const [p, q] = [...pointers.values()];
         const distance = Math.max(MIN_PINCH_PX, Math.hypot(p.x - q.x, p.y - q.y));
         const fraction = fractionDown(rect, (p.y + q.y) / 2);
-        view.navigate(placeAt(pinch.anchor, fraction, (pinch.span * pinch.distance) / distance, view.whole));
+        view.navigateOnAxis(placeAt(pinch.anchor, fraction, (pinch.span * pinch.distance) / distance, view.axisExtent));
         return;
       }
 
       if (!moved && Math.hypot(point.x - press.x, point.y - press.y) <= CLICK_SLOP_PX) return;
       moved = true;
       pointers.set(event.pointerId, point);
-      view.navigate(panByPixels(view.effectiveInterval, last.y - point.y, rect.height, view.whole));
+      view.navigateOnAxis(panByPixels(view.axisInterval, last.y - point.y, rect.height, view.axisExtent));
     }
 
     function onpointerup(event: PointerEvent) {
@@ -121,8 +120,8 @@ export function depthGestures(view: LogViewState): Attachment<HTMLElement> {
     function fitZoneAt(target: HTMLElement, clientY: number) {
       const resolved = view.resolved.tracks.find((t) => t.track.id === target.getAttribute(TRACK_BODY));
       if (resolved?.kind !== "zone" || !resolved.zoneSet) return;
-      const item = hitTrack(resolved, depthAt(fractionDown(target.getBoundingClientRect(), clientY)));
-      if (item !== null) view.navigate(fitZone(resolved.zoneSet.zones[item], view.whole));
+      const item = hitTrack(resolved, view.mdAt(fractionDown(target.getBoundingClientRect(), clientY)));
+      if (item !== null) view.navigateOnAxis(fitZone(onAxisWithin(view.axis, resolved.zoneSet.zones[item]), view.axisExtent));
     }
 
     // Not passive: the wheel must not also scroll the page or zoom it.

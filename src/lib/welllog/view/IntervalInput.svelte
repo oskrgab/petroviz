@@ -1,13 +1,14 @@
 <script lang="ts">
   /**
-   * The top bar's navigation: the exact interval (MD for now; TVDSS input is
-   * #48) and the zoom buttons. The fields follow the view until one is
-   * typed in, and a typed entry applies on Enter or when focus leaves the
-   * pair. An entry that isn't two numbers with top above base, or lies wholly
+   * The top bar's navigation: the exact interval, in the depth reference
+   * shown (typed TVDSS becomes an MD interval, view.navigateOnAxis), and the
+   * zoom buttons. The fields follow the view until one is typed in, and a
+   * typed entry applies on Enter or when focus leaves the pair. An entry that isn't two numbers with top above base, or lies wholly
    * outside the well, is dropped and the fields show the view again; merely
    * passing through the fields writes nothing.
    */
 
+  import { DEPTH_REF_LABELS } from "./interval.ts";
   import { getLogView } from "./logView.svelte.ts";
   import { spanInUnit, typedInterval, zoomToSpan } from "./navigation.ts";
 
@@ -21,8 +22,10 @@
   let top = $state("");
   let base = $state("");
 
+  const refLabel = $derived(DEPTH_REF_LABELS[view.effectiveDepthRef]);
+
   $effect(() => {
-    const shown = view.effectiveInterval;
+    const shown = view.axisInterval;
     if (typed) return;
     top = shown.top.toFixed(1);
     base = shown.base.toFixed(1);
@@ -30,8 +33,8 @@
 
   function apply() {
     if (!typed) return;
-    const entered = typedInterval(top, base, view.whole);
-    if (entered) view.navigate(entered);
+    const entered = typedInterval(top, base, view.axisExtent);
+    if (entered) view.navigateOnAxis(entered);
     typed = false;
   }
 
@@ -50,19 +53,26 @@
 <div class="navigation">
   <fieldset class="interval" {onfocusout}>
     <legend class="visually-hidden">Visible interval</legend>
-    <span class="ref">MD</span>
-    <input bind:value={top} oninput={() => (typed = true)} {onkeydown} inputmode="decimal" aria-label="Top MD" />
+    <span class="ref">{refLabel}</span>
+    <input bind:value={top} oninput={() => (typed = true)} {onkeydown} inputmode="decimal" aria-label="Top {refLabel}" />
     <span aria-hidden="true">–</span>
-    <input bind:value={base} oninput={() => (typed = true)} {onkeydown} inputmode="decimal" aria-label="Base MD" />
+    <input bind:value={base} oninput={() => (typed = true)} {onkeydown} inputmode="decimal" aria-label="Base {refLabel}" />
     <span class="unit">{view.log.depthUnit}</span>
   </fieldset>
 
   <div class="zoom" role="group" aria-label="Zoom">
-    <button type="button" onclick={() => view.navigate(view.whole)}>Whole well</button>
+    <button
+      type="button"
+      title={view.effectiveDepthRef === "tvdss" ? "All of the well that has TVDSS" : "The whole well"}
+      onclick={() => view.navigate(view.extent)}
+    >
+      Whole well
+    </button>
     {#each ZOOM_METRES as metres (metres)}
       <button
         type="button"
-        onclick={() => view.navigate(zoomToSpan(view.effectiveInterval, spanInUnit(metres, view.log.depthUnit), view.whole))}
+        onclick={() =>
+          view.navigateOnAxis(zoomToSpan(view.axisInterval, spanInUnit(metres, view.log.depthUnit), view.axisExtent))}
       >
         {metres} m
       </button>

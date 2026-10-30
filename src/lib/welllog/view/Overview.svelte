@@ -4,7 +4,9 @@
    * curve, else the first continuous one) beside the colours of the first
    * zone set, with the visible interval as a window. A click centres the
    * view there, dragging pans (a press outside the window centres first, then
-   * drags on from there), and the wheel and keys scroll.
+   * drags on from there), and the wheel and keys scroll. It is laid out down
+   * MD whatever the depth reference; in TVDSS its moves stay within the MD
+   * that has TVDSS (view.extent).
    *
    * The curve takes its family's default scale and colour; the zones take
    * their zone track's colours when the template shows that set, so the two
@@ -117,7 +119,7 @@
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     const depth = depthAt(event.clientY);
     const shown = view.effectiveInterval;
-    if (depth < shown.top || depth > shown.base) view.navigate(centreOn(shown, depth, view.whole));
+    if (depth < shown.top || depth > shown.base) view.navigate(centreOn(shown, depth, view.extent));
     drag = { y: event.clientY, at: view.effectiveInterval, moved: false };
   }
 
@@ -127,11 +129,11 @@
     drag.moved = true;
     const height = canvas.getBoundingClientRect().height;
     const { whole } = view;
-    view.navigate(panByPixels(drag.at, event.clientY - drag.y, height, whole, whole.base - whole.top));
+    view.navigate(panByPixels(drag.at, event.clientY - drag.y, height, view.extent, whole.base - whole.top));
   }
 
   function onpointerup(event: PointerEvent) {
-    if (drag && !drag.moved) view.navigate(centreOn(view.effectiveInterval, depthAt(event.clientY), view.whole));
+    if (drag && !drag.moved) view.navigate(centreOn(view.effectiveInterval, depthAt(event.clientY), view.extent));
     drag = null;
   }
 
@@ -139,11 +141,11 @@
     event.preventDefault();
     const height = canvas.getBoundingClientRect().height;
     const pixels = wheelPixels(event.deltaY, event.deltaMode, height);
-    view.navigate(panByPixels(view.effectiveInterval, pixels, height, view.whole));
+    view.navigate(panByPixels(view.effectiveInterval, pixels, height, view.extent));
   }
 
   function onkeydown(event: KeyboardEvent) {
-    const next = keyStep(view.effectiveInterval, event.key, view.whole);
+    const next = keyStep(view.effectiveInterval, event.key, view.extent);
     if (!next) return;
     event.preventDefault();
     view.navigate(next);

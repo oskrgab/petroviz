@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { indexAtDepth, tvdssAt, valueAt } from "./depth.ts";
+import { indexAtDepth, mdAt, tvdssAt, valueAt } from "./depth.ts";
 import type { Curve, WellLog } from "./wellLog.ts";
 
 const gr: Curve = {
@@ -71,4 +71,33 @@ test("TVDSS is never extrapolated: NaN above the first valid sample, below the l
   assert.ok(Number.isNaN(tvdssAt(withTvdss, 100.1)));
   assert.ok(Number.isNaN(tvdssAt(withTvdss, 150.3)));
   assert.ok(Number.isNaN(tvdssAt(log, 100.2)));
+});
+
+test("MD at a TVDSS interpolates between the valid samples around it, across a NaN row", () => {
+  const withTvdss: WellLog = { ...log, tvdss: new Float64Array([NaN, 80, NaN, 120, 120.2]) };
+  assert.equal(mdAt(withTvdss, 80), 100.2);
+  assert.equal(mdAt(withTvdss, 120.2), 150.2);
+  assert.ok(Math.abs(mdAt(withTvdss, 100) - 125.1) < 1e-9);
+  assert.ok(Math.abs(mdAt(withTvdss, 120.1) - 150.1) < 1e-9);
+});
+
+test("MD → TVDSS → MD comes back where it started, inside the valid samples", () => {
+  const withTvdss: WellLog = {
+    ...log,
+    md: new Float64Array([100, 110, 120, 130, 140, 150, 160]),
+    tvdss: new Float64Array([NaN, 90, 95, NaN, 101, 104, NaN]),
+  };
+  for (let md = 110; md <= 150; md += 0.7) {
+    assert.ok(Math.abs(mdAt(withTvdss, tvdssAt(withTvdss, md)) - md) < 1e-9, `${md}`);
+  }
+});
+
+test("MD is never extrapolated: NaN above the first valid TVDSS, below the last, or without TVDSS", () => {
+  const withTvdss: WellLog = { ...log, tvdss: new Float64Array([NaN, 80, NaN, 120, 120.2]) };
+  assert.ok(Number.isNaN(mdAt(withTvdss, 79.9)));
+  assert.ok(Number.isNaN(mdAt(withTvdss, 120.3)));
+  assert.ok(Number.isNaN(mdAt(withTvdss, NaN)));
+  assert.ok(Number.isNaN(mdAt(log, 100)));
+  const none: WellLog = { ...log, tvdss: new Float64Array(5).fill(NaN) };
+  assert.ok(Number.isNaN(mdAt(none, 100)));
 });

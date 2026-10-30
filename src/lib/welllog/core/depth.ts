@@ -50,3 +50,34 @@ export function tvdssAt(log: WellLog, depth: number): number {
   if (below === md.length) return NaN;
   return tvdss[above] + ((depth - md[above]) / (md[below] - md[above])) * (tvdss[below] - tvdss[above]);
 }
+
+/** The first row from `i` on, stepping by `dir`, that holds a number; -1 when there is none. */
+function validFrom(values: Float64Array, i: number, dir: 1 | -1): number {
+  while (i >= 0 && i < values.length && Number.isNaN(values[i])) i += dir;
+  return i >= 0 && i < values.length ? i : -1;
+}
+
+/**
+ * MD at `depth` (TVDSS), the inverse of tvdssAt: linear between the valid
+ * samples on either side of it; NaN outside them, never extrapolated, and
+ * NaN without TVDSS. TVDSS increases over its valid samples (ADR-0002), so
+ * they can be searched.
+ */
+export function mdAt(log: WellLog, depth: number): number {
+  const { md, tvdss } = log;
+  if (!tvdss) return NaN;
+  let lo = validFrom(tvdss, 0, 1);
+  let hi = validFrom(tvdss, tvdss.length - 1, -1);
+  if (lo === -1 || !(depth >= tvdss[lo] && depth <= tvdss[hi])) return NaN;
+  if (depth === tvdss[hi]) return md[hi];
+  // tvdss[lo] <= depth < tvdss[hi], with lo and hi valid.
+  for (;;) {
+    const mid = (lo + hi) >> 1;
+    let m = validFrom(tvdss, mid, -1);
+    if (m <= lo) m = validFrom(tvdss, mid + 1, 1);
+    if (m >= hi) break;
+    if (tvdss[m] <= depth) lo = m;
+    else hi = m;
+  }
+  return md[lo] + ((depth - tvdss[lo]) / (tvdss[hi] - tvdss[lo])) * (md[hi] - md[lo]);
+}

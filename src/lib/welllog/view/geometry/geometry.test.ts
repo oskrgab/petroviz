@@ -279,6 +279,19 @@ test("major depth gridlines are every fifth minor step or more", () => {
   assert.deepEqual(major, [1500, 2000, 2500, 3000]);
 });
 
+test("a line on a TVDSS axis is placed by each row's TVDSS and breaks at rows without it", () => {
+  // MD rows 10 apart; TVDSS gains 5, then 2; the first and last rows have none.
+  const depths = new Float64Array([-Infinity, 100, 105, 107, Infinity]);
+  const values = new Float32Array([5, 5, 5, 5, 5]);
+  const line = pairs(curvePolyline(depths, values, { a: 0.1, b: 0 }, { top: 100, base: 110, width: 10, height: 100 }));
+  assert.deepEqual(line, [
+    [5, 0],
+    [5, 50],
+    [5, 70],
+    null,
+  ]);
+});
+
 test("depth intervals → spans in device px, leaving out those outside the frame", () => {
   const frame: Frame = { top: 100, base: 110, width: 40, height: 100 };
   assert.deepEqual(
