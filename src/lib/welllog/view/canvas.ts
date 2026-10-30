@@ -155,7 +155,8 @@ function hatchTile(style: CodeStyle & { pattern: NonNullable<CodeStyle["pattern"
 }
 
 /**
- * Fills each block across the track in its code's colour and pattern. Edges
+ * Fills each block across the track in its code's colour and pattern, the
+ * pattern fixed to depth so it pans with the blocks. Edges
  * snap to whole device px so neighbours meet without a seam, and a block
  * thinner than a pixel still shows as one.
  */
@@ -166,13 +167,18 @@ export function fillDiscreteBlocks(
   frame: Frame,
   dpr: number,
 ) {
+  const k = pixelsPerUnit(frame);
+  const mod = (a: number, n: number) => ((a % n) + n) % n;
   const fills = new Map<number, string | CanvasPattern>();
   const fillOf = (code: number) => {
     let fill = fills.get(code);
     if (fill === undefined) {
       const style = styles.get(code);
       if (!style) return undefined;
-      const pattern = style.pattern ? ctx.createPattern(hatchTile({ ...style, pattern: style.pattern }, dpr), "repeat") : null;
+      const tile = style.pattern ? hatchTile({ ...style, pattern: style.pattern }, dpr) : null;
+      const pattern = tile ? ctx.createPattern(tile, "repeat") : null;
+      // Anchored to depth, not to the canvas, so the marks move with the blocks.
+      if (tile && pattern) pattern.setTransform(new DOMMatrix([1, 0, 0, 1, 0, -mod(frame.top * k, tile.height)]));
       fill = pattern ?? style.colour;
       fills.set(code, fill);
     }

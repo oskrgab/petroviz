@@ -4,9 +4,10 @@
    * reads exactly what the track draws from, and asks the view for a frame
    * when any of it changes; the drawing itself happens in that frame.
    *
-   * For kinds whose items highlight under the pointer (zones), the pointer
-   * is turned into an MD and the kind's `hit` into an item; the track
-   * redraws only when that item changes.
+   * For kinds whose items highlight under the pointer (zones), the pointer's
+   * height is kept and turned into an MD against the visible interval, and
+   * the kind's `hit` into an item, so scrolling under a still pointer moves
+   * the highlight too. The track redraws only when that item changes.
    */
 
   import { prepareCanvas } from "./canvas.ts";
@@ -19,20 +20,21 @@
   const key = {};
   let canvas: HTMLCanvasElement;
   let box = $state.raw<DOMRectReadOnly>();
-  // Kept with the resolved track it was found in, so a new well or template
-  // never outlines an item by a stale index.
-  let hover = $state.raw<{ resolved: ResolvedTrack; item: number | null } | null>(null);
-  const hovered = $derived(hover?.resolved === resolved ? hover.item : null);
+  // The pointer's height down the canvas, in CSS px, or null when it is away.
+  let pointerY = $state<number | null>(null);
+  // A derived compares by value, so the draw effect below reruns only when
+  // the item changes, not on every pointer move.
+  const hovered = $derived.by(() => {
+    const height = box?.height ?? 0;
+    if (pointerY === null || height <= 0) return null;
+    const { top, base } = view.effectiveInterval;
+    return hitTrack(resolved, top + (pointerY / height) * (base - top));
+  });
 
   const hoverable = $derived(hasHit(resolved));
 
   function onpointermove(event: PointerEvent) {
-    const height = box?.height ?? 0;
-    if (height <= 0) return;
-    const { top, base } = view.effectiveInterval;
-    const y = event.clientY - canvas.getBoundingClientRect().top;
-    const item = hitTrack(resolved, top + (y / height) * (base - top));
-    if (item !== hovered) hover = { resolved, item };
+    pointerY = event.clientY - canvas.getBoundingClientRect().top;
   }
 
   $effect(() => {
@@ -70,7 +72,7 @@
   class="track-canvas"
   bind:contentRect={box}
   onpointermove={hoverable ? onpointermove : undefined}
-  onpointerleave={hoverable ? () => (hover = null) : undefined}
+  onpointerleave={hoverable ? () => (pointerY = null) : undefined}
 >
   <canvas bind:this={canvas}></canvas>
 </div>

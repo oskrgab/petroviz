@@ -9,9 +9,11 @@
    * is derived from them by resolveTemplate.
    *
    * A top bar starts with the well panel control, which carries an amber
-   * badge counting cautions, and only when there are some. Below it, the
-   * tracks side by side over the whole well, one canvas each, scrolling
-   * sideways when they can't fit.
+   * badge counting cautions, and only when there are some, then the exact
+   * interval and the zoom buttons. Below it, the overview strip on the left,
+   * then the tracks side by side over the visible interval, one canvas each,
+   * scrolling sideways past the overview when they can't fit. Wheel, drag
+   * and pinch on the tracks move the interval (gestures.ts).
    *
    * Colours come in as --welllog-* custom properties. Their light and dark
    * values are set here per `scheme`, and a host may override any of them.
@@ -19,10 +21,14 @@
 
   import type { WellLog } from "../core/index.ts";
   import { readTokens } from "./canvas.ts";
+  import { depthGestures } from "./gestures.ts";
+  import IntervalInput from "./IntervalInput.svelte";
   import type { DepthInterval, DepthRef } from "./interval.ts";
   import { headerFor } from "./kinds/headers.ts";
   import { trackColumns } from "./widths.ts";
   import { LogViewState, setLogView } from "./logView.svelte.ts";
+  import { overviewCurve } from "./navigation.ts";
+  import Overview from "./Overview.svelte";
   import { defaultTemplate } from "./template/defaults.ts";
   import type { Template } from "./template/types.ts";
   import TrackCanvas from "./TrackCanvas.svelte";
@@ -46,12 +52,33 @@
     scheme = "light",
   }: Props = $props();
 
-  const view = setLogView(new LogViewState(() => ({ log, template, interval, depthRef })));
+  const view = setLogView(
+    new LogViewState(
+      {
+        get log() {
+          return log;
+        },
+        get template() {
+          return template;
+        },
+        get interval() {
+          return interval;
+        },
+        get depthRef() {
+          return depthRef;
+        },
+      },
+      (next) => (interval = next),
+    ),
+  );
 
   let root: HTMLDivElement;
   let panelOpen = $state(false);
+  /** The overview strip's width, in CSS px. */
+  const OVERVIEW_PX = 56;
   const cautions = $derived(cautionCount(log));
-  const columns = $derived(trackColumns(template.tracks));
+  const columns = $derived(`${OVERVIEW_PX}px ${trackColumns(template.tracks)}`);
+  const overviewLabel = $derived([overviewCurve(log)?.mnemonic, log.zoneSets[0]?.name].filter(Boolean).join(" · "));
   const panelId = $props.id();
 
   // The tokens resolve per scheme, so read them again when it changes.
@@ -92,16 +119,26 @@
     {#if panelOpen}
       <WellPanel {log} id={panelId} onclose={() => (panelOpen = false)} />
     {/if}
+    <IntervalInput />
   </div>
 
   <div class="tracks">
-    <div class="track-grid" style:grid-template-columns={columns}>
+    <div class="track-grid" style:grid-template-columns={columns} {@attach depthGestures(view)}>
+      <div class="overview-header" title="Overview of the whole well">{overviewLabel}</div>
+      <div class="overview-body">
+        <Overview />
+      </div>
       {#each view.resolved.tracks as resolved (resolved.track.id)}
         {@const Header = headerFor(resolved)}
         <div class="track-header" class:depth={resolved.kind === "depth"}>
           <Header {resolved} />
         </div>
-        <div class="track-body" class:depth={resolved.kind === "depth"}>
+        <div
+          class="track-body"
+          class:depth={resolved.kind === "depth"}
+          class:zone={resolved.kind === "zone"}
+          data-track-body={resolved.track.id}
+        >
           <TrackCanvas {resolved} />
         </div>
       {/each}
@@ -163,6 +200,7 @@
   .top-bar {
     position: relative;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     padding: 0.375rem 0.5rem;
@@ -243,10 +281,53 @@
     min-height: 0;
   }
 
-  /* Every track after the first. */
-  .track-header:nth-child(n + 3),
-  .track-body:nth-child(n + 3) {
+  /* Every track after the first; the overview's own border sets off the first. */
+  .track-header:nth-child(n + 5),
+  .track-body:nth-child(n + 5) {
     border-left: 1px solid var(--welllog-border);
+  }
+
+  /* Pan by dragging, zoom by pinching; sideways touch scrolls the track row. */
+  .track-body {
+    cursor: grab;
+    touch-action: pan-x;
+  }
+
+  .track-body.zone {
+    cursor: pointer;
+  }
+
+  .track-grid:global([data-dragging]) .track-body {
+    cursor: grabbing;
+  }
+
+  /* The overview stays put while the tracks scroll sideways under it. */
+  .overview-header,
+  .overview-body {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 0;
+    border-right: 1px solid var(--welllog-border);
+  }
+
+  .overview-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0.25rem 0.125rem 0.375rem;
+    overflow: hidden;
+    font-size: 0.625rem;
+    line-height: 1.2;
+    text-align: center;
+    color: var(--welllog-text-muted);
+    background: var(--welllog-header-bg);
+    border-bottom: 1px solid var(--welllog-border);
+  }
+
+  .overview-body {
+    min-height: 0;
+    background: var(--welllog-bg);
   }
 
   .track-body.depth {

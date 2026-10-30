@@ -6,7 +6,8 @@
 	 * stem>` (35-11-11 when there is none), shows a spinner while it loads and
 	 * a full error state if it fails, and hands the well log to the log view.
 	 * It holds the current template, the interval and the depth reference,
-	 * which outlive the well log: the template starts as the default template.
+	 * which outlive the well log: the template starts as the default template,
+	 * and the interval goes back to the whole well when another well opens.
 	 *
 	 * It shares the header with the production dashboard but never imports
 	 * DuckDB, so a cold visit doesn't wait for it.
@@ -46,7 +47,10 @@
 		status = { kind: 'loading', id };
 		loadWell(id, { signal: controller.signal, dataHost, schemaHost }).then(
 			(log) => {
-				if (!controller.signal.aborted) status = { kind: 'ready', log };
+				if (controller.signal.aborted) return;
+				// A newly opened well starts whole; the template and depth reference carry over.
+				interval = null;
+				status = { kind: 'ready', log };
 			},
 			(error: unknown) => {
 				if (controller.signal.aborted) return;
