@@ -8,7 +8,8 @@
    *
    * The curve takes its family's default scale and colour; the zones take
    * their zone track's colours when the template shows that set, so the two
-   * agree. Drawn through the view's frame scheduler, like the tracks.
+   * agree. The curve colour is adapted on a dark track, as a curve track's
+   * is. Drawn through the view's frame scheduler, like the tracks.
    */
 
   import { prepareCanvas, strokePolyline } from "./canvas.ts";
@@ -54,6 +55,7 @@
     const zones = zoneSet?.zones ?? [];
     const fills = zoneFills;
     const drawn = line;
+    const colour = drawn && view.strokeColour(drawn.colour);
     if (width <= 0 || height <= 0) return;
 
     view.requestFrame(key, () => {
@@ -68,14 +70,14 @@
         ctx.fillStyle = fills[i];
         ctx.fillRect(0, y0, zoneWidth, y1 - y0);
       });
-      if (!drawn) return;
+      if (!drawn || !colour) return;
       const frame = { top: whole.top, base: whole.base, width: canvas.width - zoneWidth, height: canvas.height };
       ctx.save();
       ctx.translate(zoneWidth, 0);
       ctx.beginPath();
       ctx.rect(0, 0, frame.width, frame.height);
       ctx.clip();
-      ctx.strokeStyle = drawn.colour;
+      ctx.strokeStyle = colour;
       ctx.lineWidth = dpr;
       ctx.lineJoin = "round";
       strokePolyline(ctx, curvePolyline(log.md, drawn.source, drawn.mapping, frame, dpr / 2));

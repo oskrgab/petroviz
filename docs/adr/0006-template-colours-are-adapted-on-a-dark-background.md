@@ -5,7 +5,7 @@ A template stores one colour per curve and fill: the colour it should have on a 
 ## The rule
 
 - **When.** Colours are adapted when the resolved `--welllog-bg` is dark (relative luminance below 0.18). The theme's name doesn't decide it. The host passes `scheme: 'light' | 'dark'` to the log view and may override any `--welllog-*` token. A host that keeps a light track in dark mode gets no adaptation.
-- **Strokes.** This covers curve lines, wrapped segments, and the mnemonic, value and scale ends in a curve's header. A stroke at 4.5:1 or more against the track background is drawn as stored. Below 4.5:1, its OKLCH lightness is mirrored (L → 1 − L) and its hue kept, then it is lifted only as far as 4.5:1 needs. A colour already on the light side is only lifted. For example:
+- **Strokes.** This covers curve lines, wrapped segments, and the mnemonic, value and scale ends in a curve's header. A stroke at 4.5:1 or more against the track background is drawn as stored. Below 4.5:1, its OKLCH lightness is mirrored (L → 1 − L) and its hue kept, then it is lifted only as far as 4.5:1 needs. A colour already on the light side is only lifted. Ratios are taken as quoted, to one decimal: pure red is 4.46:1 on the dark track, and the lifts below land between 4.48 and 4.52:1 once rounded to bytes. For example:
 
   | Stored | Drawn on dark |
   |---|---|

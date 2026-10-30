@@ -33,6 +33,8 @@ export interface ResolvedTrackBase<T extends Track, E extends MatchedEntry = Mat
 
 /** Colours and type the canvas needs, read from the --welllog-* tokens. */
 export interface Tokens {
+  /** The track background as `#RRGGBB`, which template colours are adapted against (ADR-0006). */
+  readonly bg: string;
   readonly grid: string;
   readonly gridMajor: string;
   readonly text: string;

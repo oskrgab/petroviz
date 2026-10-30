@@ -9,6 +9,7 @@ import type { Block } from "./geometry/blocks.ts";
 import type { FillPolygon } from "./geometry/fill.ts";
 import { depthGridlines, type Gridline } from "./geometry/grid.ts";
 import { pixelsPerUnit, type Frame } from "./geometry/polyline.ts";
+import { hexOf } from "./colour/contrast.ts";
 import { HATCHES, HATCH_TILE } from "./hatches.ts";
 import type { Tokens } from "./kinds/types.ts";
 import type { CodeStyle, Dash, Fill } from "./template/types.ts";
@@ -195,11 +196,30 @@ export function fillDiscreteBlocks(
   }
 }
 
+/**
+ * Any CSS colour as `#RRGGBB`, by painting a pixel with it, so a host's
+ * override may be written in any syntax. Alpha is dropped; an invalid,
+ * empty or fully transparent value gives `fallback`.
+ */
+let pixel: CanvasRenderingContext2D | null = null;
+
+function opaqueHex(value: string, fallback: string): string {
+  pixel ??= document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  if (!pixel || !value) return fallback;
+  pixel.fillStyle = fallback;
+  pixel.fillStyle = value;
+  pixel.clearRect(0, 0, 1, 1);
+  pixel.fillRect(0, 0, 1, 1);
+  const [r, g, b, alpha] = pixel.getImageData(0, 0, 1, 1).data;
+  return alpha === 0 ? fallback : hexOf({ r, g, b });
+}
+
 /** The tokens the canvas draws with, as resolved on the log view's element. */
 export function readTokens(element: Element): Tokens {
   const style = getComputedStyle(element);
   const token = (name: string) => style.getPropertyValue(`--welllog-${name}`).trim();
   return {
+    bg: opaqueHex(token("bg"), "#FFFFFF"),
     grid: token("grid"),
     gridMajor: token("grid-major"),
     text: token("text"),

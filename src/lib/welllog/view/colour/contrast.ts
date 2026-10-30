@@ -4,7 +4,7 @@
  */
 
 export interface Rgb {
-  /** 0–255 each. */
+  /** 0–255 each; unrounded where a colour is being computed. */
   readonly r: number;
   readonly g: number;
   readonly b: number;
@@ -23,7 +23,13 @@ export function parseHex(hex: string): Rgb {
   };
 }
 
-const linear = (channel: number) => {
+/** `#RRGGBB`, each channel rounded to a byte. */
+export function hexOf({ r, g, b }: Rgb): string {
+  return `#${[r, g, b].map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+}
+
+/** A 0–255 sRGB channel, linearised to 0–1. */
+export const linear = (channel: number) => {
   const c = channel / 255;
   return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 };

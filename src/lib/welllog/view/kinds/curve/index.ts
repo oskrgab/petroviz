@@ -11,6 +11,7 @@ import { scaleGridlines } from "../../geometry/grid.ts";
 import { curvePolyline, wrappedPolyline } from "../../geometry/polyline.ts";
 import { fractionOf, mappingOf, type ResolvedScale } from "../../geometry/scale.ts";
 import { DASHES, fillPolygonPaths, strokeDepthGrid, strokePolyline, strokeVerticalGrid } from "../../canvas.ts";
+import { adaptFill, adaptStroke } from "../../colour/adapt.ts";
 import { GAP, formatReading } from "../../format.ts";
 import { matchEntries } from "../../match.ts";
 import { resolveScale } from "../../scaleEnds.ts";
@@ -105,14 +106,21 @@ export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
 
     // Fills sit on the gridlines and under the curves; their colours carry
     // alpha, so both read through. They follow each curve's clipped
-    // position, so neither the clip below nor wrapping moves them.
+    // position, so neither the clip below nor wrapping moves them. On a dark
+    // track, near-neutral ones have their lightness mirrored (ADR-0006).
     for (const { fill, a, b } of resolved.fills) {
-      fillPolygonPaths(ctx, fillPolygons(log.md, boundaryPlacement(a), boundaryPlacement(b), frame), fill);
+      const drawn = {
+        ...fill,
+        colourWhereALeft: adaptFill(fill.colourWhereALeft, tokens.bg),
+        colourWhereARight: adaptFill(fill.colourWhereARight, tokens.bg),
+      };
+      fillPolygonPaths(ctx, fillPolygons(log.md, boundaryPlacement(a), boundaryPlacement(b), frame), drawn);
     }
 
     // Off-scale stretches run out of the track and are cut here, never pinned;
     // a wrap entry draws them again, shifted back, lighter. Colours are drawn
-    // as stored; adapting them on a dark track is #54.
+    // as stored on a light track and adapted on a dark one (ADR-0006); the
+    // wrapped segments take the adapted colour at their lighter alpha.
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, frame.width, frame.height);
@@ -124,7 +132,7 @@ export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
       const mapping = mappingOf(scale);
       const { colour, width, dash } = entry.style;
       const inset = (width * dpr) / 2;
-      ctx.strokeStyle = colour;
+      ctx.strokeStyle = adaptStroke(colour, tokens.bg);
       ctx.lineWidth = width * dpr;
       ctx.setLineDash(DASHES[dash].map((d) => d * width * dpr));
       strokePolyline(ctx, curvePolyline(log.md, source, mapping, frame, inset));

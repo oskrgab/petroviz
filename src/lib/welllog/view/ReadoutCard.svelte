@@ -49,7 +49,7 @@
     {#each groups as rows}
       <dl>
         {#each rows as { label, value, unit, colour }}
-          <dt style:color={colour}>{label}</dt>
+          <dt style:color={colour && view.strokeColour(colour)}>{label}</dt>
           <dd class:none={!hasValue(value)}>
             {value}{#if unit && hasValue(value)}<span class="unit">{unit}</span>{/if}
           </dd>

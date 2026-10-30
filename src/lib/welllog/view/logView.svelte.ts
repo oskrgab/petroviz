@@ -13,6 +13,7 @@
 import { getContext, setContext } from "svelte";
 import type { WellLog } from "../core/index.ts";
 import { FrameScheduler } from "./canvas.ts";
+import { adaptStroke } from "./colour/adapt.ts";
 import type { Tokens } from "./kinds/types.ts";
 import { wholeWell, type DepthInterval, type DepthRef } from "./interval.ts";
 import { effectiveInterval } from "./navigation.ts";
@@ -45,6 +46,15 @@ export class LogViewState {
 
   /** Read from the --welllog-* tokens once mounted, and again whenever the scheme changes. */
   tokens = $state.raw<Tokens | null>(null);
+
+  /**
+   * A template stroke colour as drawn on this view's track background: as
+   * stored on light, adapted on dark (ADR-0006). For the header and card
+   * text drawn in a curve's colour; reactive on the tokens.
+   */
+  strokeColour(stored: string): string {
+    return this.tokens ? adaptStroke(stored, this.tokens.bg) : stored;
+  }
 
   /** `props` must read each prop through its own getter. */
   constructor(props: LogViewProps, writeInterval: (interval: DepthInterval) => void) {

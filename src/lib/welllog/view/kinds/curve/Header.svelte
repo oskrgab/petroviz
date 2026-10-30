@@ -3,7 +3,8 @@
    * A curve track's header: one scale bar per curve, with its mnemonic,
    * unit, left and right values, and a sample of its line. While the depth
    * cursor is over the tracks, its value there replaces the unit. An entry
-   * that matched nothing stays, struck through. Colours as stored until #54.
+   * that matched nothing stays, struck through. The mnemonic, scale ends and
+   * sample take the curve's colour as drawn: adapted on a dark track.
    */
 
   import { DASHES } from "../../canvas.ts";
@@ -22,7 +23,7 @@
 <div class="curve-header">
   {#each resolved.entries as { entry, curve, scale }, i (entry.id)}
     {#if curve && scale}
-      <div class="scale-bar" style:--curve={entry.style.colour} title={curve.description || curve.key}>
+      <div class="scale-bar" style:--curve={view.strokeColour(entry.style.colour)} title={curve.description || curve.key}>
         <div class="labels">
           <span class="end">{formatScaleEnd(scale.left)}</span>
           <span class="name">
