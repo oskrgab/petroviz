@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
-   * A depth track's header: the depth reference it shows, and the depth unit.
+   * A depth track's header: the depth reference it shows, and the depth
+   * unit, or the depth at the cursor while it is over the tracks.
    */
 
   import { getLogView } from "../../logView.svelte.ts";
@@ -10,11 +11,16 @@
 
   const view = getLogView();
   const ref = $derived(depthTrackRef(resolved.track, view.effectiveDepthRef));
+  const reading = $derived(view.readingOf(resolved.track.id)?.[0]);
 </script>
 
 <div class="depth-header">
   <span class="ref">{ref === "md" ? "MD" : "TVDSS"}</span>
-  <span class="unit">{view.log.depthUnit}</span>
+  {#if reading}
+    <span class="value">{reading}</span>
+  {:else}
+    <span class="unit">{view.log.depthUnit}</span>
+  {/if}
 </div>
 
 <style>
@@ -35,5 +41,9 @@
 
   .unit {
     color: var(--welllog-text-muted);
+  }
+
+  .value {
+    font-variant-numeric: tabular-nums;
   }
 </style>

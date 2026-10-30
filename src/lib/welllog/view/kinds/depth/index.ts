@@ -6,6 +6,7 @@
 import { depthStep, depthsEvery } from "../../geometry/grid.ts";
 import { pixelsPerUnit, visibleRows } from "../../geometry/polyline.ts";
 import { crisp, hairline } from "../../canvas.ts";
+import { formatDepth } from "../../format.ts";
 import type { DepthRef } from "../../interval.ts";
 import type { DepthTrack } from "../../template/types.ts";
 import type { ResolvedTrackBase, TrackKind } from "../types.ts";
@@ -23,6 +24,10 @@ const LABEL_SPACING = 40;
 export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
   resolve(track) {
     return { kind: "depth", track, entries: [] };
+  },
+
+  read(resolved, { md, tvdss, depthRef }) {
+    return [formatDepth(depthTrackRef(resolved.track, depthRef) === "md" ? md : tvdss)];
   },
 
   draw(ctx, resolved, { log, frame, dpr, tokens, depthRef }) {

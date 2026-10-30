@@ -9,6 +9,7 @@ import type { Zone, ZoneSet } from "../../../core/index.ts";
 import { crisp, hairline } from "../../canvas.ts";
 import { zoneColours } from "../../colour/categorical.ts";
 import { labelColour } from "../../colour/contrast.ts";
+import { NO_VALUE } from "../../format.ts";
 import { pixelsPerUnit } from "../../geometry/polyline.ts";
 import type { ZoneTrack } from "../../template/types.ts";
 import type { ResolvedTrackBase, TrackKind } from "../types.ts";
@@ -27,6 +28,12 @@ export function zoneAt(zones: readonly Zone[], md: number): number | null {
   return i === -1 ? null : i;
 }
 
+/** The name of the zone holding `md`, or "—". */
+export function zoneNameAt(zones: readonly Zone[], md: number): string {
+  const i = zoneAt(zones, md);
+  return i === null ? NO_VALUE : zones[i].name;
+}
+
 /** A label is drawn only in a zone at least this many CSS px tall. */
 const MIN_LABEL_HEIGHT = 14;
 
@@ -39,6 +46,11 @@ export const zoneKind: TrackKind<ZoneTrack, ResolvedZoneTrack> = {
 
   hit(resolved, md) {
     return resolved.zoneSet ? zoneAt(resolved.zoneSet.zones, md) : null;
+  },
+
+  /** The zone's name; a gap doesn't break a zone, so it reads there too. */
+  read(resolved, { md }) {
+    return [resolved.zoneSet ? zoneNameAt(resolved.zoneSet.zones, md) : null];
   },
 
   draw(ctx, resolved, { frame, dpr, tokens, hovered }) {

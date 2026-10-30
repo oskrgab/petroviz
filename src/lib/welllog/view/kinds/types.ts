@@ -52,6 +52,25 @@ export interface DrawInput {
   readonly hovered: number | null;
 }
 
+/** The depth cursor's place in the well log, for a kind's `read`. */
+export interface ReadInput {
+  readonly log: WellLog;
+  /** The cursor's MD. */
+  readonly md: number;
+  /** TVDSS at `md` (core's tvdssAt); NaN where the well log has none. */
+  readonly tvdss: number;
+  /** Whether `md` lies in a gap: no curve has a value there. */
+  readonly gap: boolean;
+  /** The depth reference the view shows, after what the well log has. */
+  readonly depthRef: DepthRef;
+}
+
+/**
+ * What a track reads at the depth cursor: one text per entry for curve
+ * tracks, one for every other kind. Null for an entry that matched nothing.
+ */
+export type TrackReading = readonly (string | null)[];
+
 export interface TrackKind<T extends Track, R> {
   resolve(track: T, log: WellLog): R;
   /** Draws the whole track into a cleared canvas sized to `input.frame`. */
@@ -61,4 +80,6 @@ export interface TrackKind<T extends Track, R> {
    * under the pointer. The track redraws only when the item changes.
    */
   hit?(resolved: R, md: number): number | null;
+  /** The track's reading at the depth cursor, for its header and the floating card. */
+  read(resolved: R, at: ReadInput): TrackReading;
 }

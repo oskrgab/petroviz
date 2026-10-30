@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { indexAtDepth, valueAt } from "./depth.ts";
+import { indexAtDepth, tvdssAt, valueAt } from "./depth.ts";
 import type { Curve, WellLog } from "./wellLog.ts";
 
 const gr: Curve = {
@@ -57,4 +57,18 @@ test("valueAt is NaN in a gap and outside the well log", () => {
   assert.ok(Number.isNaN(valueAt(log, gr, 120)));
   assert.ok(Number.isNaN(valueAt(log, gr, 99)));
   assert.ok(Number.isNaN(valueAt(log, gr, 151)));
+});
+
+test("TVDSS at an MD interpolates between the valid samples around it, across a NaN row", () => {
+  const withTvdss: WellLog = { ...log, tvdss: new Float64Array([NaN, 80, NaN, 120, 120.2]) };
+  assert.equal(tvdssAt(withTvdss, 100.2), 80);
+  assert.ok(Math.abs(tvdssAt(withTvdss, 125.1) - 100) < 1e-9);
+  assert.ok(Math.abs(tvdssAt(withTvdss, 150.1) - 120.1) < 1e-9);
+});
+
+test("TVDSS is never extrapolated: NaN above the first valid sample, below the last, or without TVDSS", () => {
+  const withTvdss: WellLog = { ...log, tvdss: new Float64Array([NaN, 80, NaN, 120, 120.2]) };
+  assert.ok(Number.isNaN(tvdssAt(withTvdss, 100.1)));
+  assert.ok(Number.isNaN(tvdssAt(withTvdss, 150.3)));
+  assert.ok(Number.isNaN(tvdssAt(log, 100.2)));
 });

@@ -19,8 +19,8 @@ const CLICK_SLOP_PX = 4;
 /** Two fingers closer than this don't zoom further, so a pinch can't run away. */
 const MIN_PINCH_PX = 20;
 
-/** Marks a track body in LogView, with its track's id, for the zone a click lands on. */
-const TRACK_BODY = "data-track-body";
+/** Marks a track body in LogView, with its track's id: for the zone a click lands on, and the depth cursor. */
+export const TRACK_BODY = "data-track-body";
 
 interface Point {
   x: number;

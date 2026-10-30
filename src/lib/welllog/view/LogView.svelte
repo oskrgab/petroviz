@@ -15,12 +15,18 @@
    * scrolling sideways past the overview when they can't fit. Wheel, drag
    * and pinch on the tracks move the interval (gestures.ts).
    *
+   * Over the tracks, a depth cursor line follows the pointer (cursor.ts),
+   * moved by a CSS transform so it redraws no canvas, and the headers read
+   * every track at its depth. A top bar toggle, not kept, adds the floating
+   * readout card beside the pointer.
+   *
    * Colours come in as --welllog-* custom properties. Their light and dark
    * values are set here per `scheme`, and a host may override any of them.
    */
 
   import type { WellLog } from "../core/index.ts";
   import { readTokens } from "./canvas.ts";
+  import { depthCursor } from "./cursor.ts";
   import { depthGestures } from "./gestures.ts";
   import IntervalInput from "./IntervalInput.svelte";
   import type { DepthInterval, DepthRef } from "./interval.ts";
@@ -29,6 +35,7 @@
   import { LogViewState, setLogView } from "./logView.svelte.ts";
   import { overviewCurve } from "./navigation.ts";
   import Overview from "./Overview.svelte";
+  import ReadoutCard from "./ReadoutCard.svelte";
   import { defaultTemplate } from "./template/defaults.ts";
   import type { Template } from "./template/types.ts";
   import TrackCanvas from "./TrackCanvas.svelte";
@@ -74,6 +81,7 @@
 
   let root: HTMLDivElement;
   let panelOpen = $state(false);
+  let cardOn = $state(false);
   /** The overview strip's width, in CSS px. */
   const OVERVIEW_PX = 56;
   const cautions = $derived(cautionCount(log));
@@ -100,7 +108,7 @@
   <div class="top-bar">
     <button
       type="button"
-      class="well-control"
+      class="bar-button well-control"
       aria-expanded={panelOpen}
       aria-controls={panelId}
       onclick={() => (panelOpen = !panelOpen)}
@@ -120,10 +128,24 @@
       <WellPanel {log} id={panelId} onclose={() => (panelOpen = false)} />
     {/if}
     <IntervalInput />
+    <button
+      type="button"
+      class="bar-button card-toggle"
+      aria-pressed={cardOn}
+      title="Show the depth cursor's readout beside the pointer"
+      onclick={() => (cardOn = !cardOn)}
+    >
+      Readout card
+    </button>
   </div>
 
   <div class="tracks">
-    <div class="track-grid" style:grid-template-columns={columns} {@attach depthGestures(view)}>
+    <div
+      class="track-grid"
+      style:grid-template-columns={columns}
+      {@attach depthGestures(view)}
+      {@attach depthCursor(view)}
+    >
       <div class="overview-header" title="Overview of the whole well">{overviewLabel}</div>
       <div class="overview-body">
         <Overview />
@@ -142,8 +164,17 @@
           <TrackCanvas {resolved} />
         </div>
       {/each}
+      <div
+        class="cursor"
+        aria-hidden="true"
+        hidden={!view.pointer}
+        style:transform="translateY({view.pointer?.y ?? 0}px)"
+      ></div>
     </div>
   </div>
+  {#if cardOn}
+    <ReadoutCard />
+  {/if}
 </div>
 
 <style>
@@ -209,7 +240,7 @@
     border-radius: 6px 6px 0 0;
   }
 
-  .well-control {
+  .bar-button {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -224,12 +255,17 @@
     cursor: pointer;
   }
 
-  .well-control:hover,
+  .bar-button:hover,
   .well-control[aria-expanded="true"] {
     border-color: var(--welllog-accent);
   }
 
-  .well-control:focus-visible {
+  .card-toggle[aria-pressed="true"] {
+    border-color: var(--welllog-accent);
+    color: var(--welllog-accent);
+  }
+
+  .bar-button:focus-visible {
     outline: 2px solid var(--welllog-accent);
     outline-offset: 1px;
   }
@@ -262,6 +298,7 @@
 
   /* Column-major: each track is a header over a body. */
   .track-grid {
+    position: relative;
     display: grid;
     grid-auto-flow: column;
     grid-template-rows: auto minmax(0, 1fr);
@@ -332,5 +369,28 @@
 
   .track-body.depth {
     background: var(--welllog-depth-bg);
+  }
+
+  /*
+   * Out of flow, so it takes no grid cell, with the track bodies' area as
+   * its containing block: it spans every track and passes under the sticky
+   * overview when they scroll sideways.
+   */
+  .cursor {
+    position: absolute;
+    grid-row: 2;
+    grid-column: 2 / -1;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    margin-top: -0.5px;
+    background: var(--welllog-cursor);
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .cursor[hidden] {
+    display: none;
   }
 </style>

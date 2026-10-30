@@ -31,3 +31,22 @@ export function valueAt(log: WellLog, curve: Curve, depth: number): number {
   const i = indexAtDepth(log, depth);
   return i === -1 ? NaN : curve.values[i];
 }
+
+/**
+ * TVDSS at `depth` (MD), linear between the valid samples on either side
+ * of it; NaN outside them, never extrapolated, and NaN without TVDSS.
+ */
+export function tvdssAt(log: WellLog, depth: number): number {
+  const { md, tvdss } = log;
+  if (!tvdss) return NaN;
+  const row = indexAtDepth(log, depth);
+  if (row === -1) return NaN;
+  let above = row;
+  while (above >= 0 && Number.isNaN(tvdss[above])) above--;
+  if (above === -1) return NaN;
+  if (md[above] === depth) return tvdss[above];
+  let below = row + 1;
+  while (below < md.length && Number.isNaN(tvdss[below])) below++;
+  if (below === md.length) return NaN;
+  return tvdss[above] + ((depth - md[above]) / (md[below] - md[above])) * (tvdss[below] - tvdss[above]);
+}

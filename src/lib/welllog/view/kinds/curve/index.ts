@@ -4,13 +4,14 @@
  * track's first curve scale.
  */
 
-import type { Curve } from "../../../core/index.ts";
+import { valueAt, type Curve } from "../../../core/index.ts";
 import { fillPolygons, type BoundaryPlacement } from "../../geometry/fill.ts";
 import { scaleSource } from "../../geometry/log10.ts";
 import { scaleGridlines } from "../../geometry/grid.ts";
 import { curvePolyline, wrappedPolyline } from "../../geometry/polyline.ts";
 import { fractionOf, mappingOf, type ResolvedScale } from "../../geometry/scale.ts";
 import { DASHES, fillPolygonPaths, strokeDepthGrid, strokePolyline, strokeVerticalGrid } from "../../canvas.ts";
+import { GAP, formatReading } from "../../format.ts";
 import { matchEntries } from "../../match.ts";
 import { resolveScale } from "../../scaleEnds.ts";
 import type { CurveTrack, Fill, FillBoundary } from "../../template/types.ts";
@@ -89,6 +90,13 @@ export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
     });
     const fills = (track.fills ?? []).flatMap((fill) => resolveFill(fill, entries) ?? []);
     return { kind: "curve", track, grid: gridScale(entries[0]), entries, fills };
+  },
+
+  read(resolved, { log, md, gap }) {
+    return resolved.entries.map(({ curve }) => {
+      if (!curve) return null;
+      return gap ? GAP : formatReading(valueAt(log, curve, md));
+    });
   },
 
   draw(ctx, resolved, { log, frame, dpr, tokens }) {

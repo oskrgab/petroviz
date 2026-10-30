@@ -9,7 +9,7 @@ import type { Track, TrackKindName } from "../template/types.ts";
 import { curveKind, type ResolvedCurveTrack } from "./curve/index.ts";
 import { depthKind, type ResolvedDepthTrack } from "./depth/index.ts";
 import { discreteKind, type ResolvedDiscreteTrack } from "./discrete/index.ts";
-import type { DrawInput, TrackKind } from "./types.ts";
+import type { DrawInput, ReadInput, TrackKind, TrackReading } from "./types.ts";
 import { zoneKind, type ResolvedZoneTrack } from "./zone/index.ts";
 
 interface ResolvedTracks {
@@ -54,5 +54,10 @@ export function hitTrack(resolved: ResolvedTrack, md: number): number | null {
   return (kinds[resolved.kind] as AnyKind).hit?.(resolved, md) ?? null;
 }
 
-export type { DrawInput, MatchedEntry, ResolvedEntry, Tokens } from "./types.ts";
+/** The track's reading at the depth cursor. */
+export function readTrack(resolved: ResolvedTrack, at: ReadInput): TrackReading {
+  return (kinds[resolved.kind] as AnyKind).read(resolved, at);
+}
+
+export type { DrawInput, MatchedEntry, ReadInput, ResolvedEntry, Tokens, TrackReading } from "./types.ts";
 export type { ResolvedCurveTrack, ResolvedDepthTrack, ResolvedDiscreteTrack, ResolvedZoneTrack };

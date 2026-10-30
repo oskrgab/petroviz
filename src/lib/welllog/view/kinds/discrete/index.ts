@@ -4,18 +4,32 @@
  * stored in both themes (#37).
  */
 
-import type { Curve } from "../../../core/index.ts";
+import { valueAt, type Curve, type WellLog } from "../../../core/index.ts";
 import { fillDiscreteBlocks } from "../../canvas.ts";
 import { unknownCodeColours } from "../../colour/categorical.ts";
+import { GAP, NO_VALUE } from "../../format.ts";
 import { discreteBlocks } from "../../geometry/blocks.ts";
 import { matchEntries } from "../../match.ts";
 import { discreteFamilyDefaults } from "../../template/defaults.ts";
+import { familyLabel } from "../../template/label.ts";
 import type { CodeStyle, DiscreteEntry, DiscreteTrack } from "../../template/types.ts";
 import type { MatchedEntry, ResolvedTrackBase, TrackKind } from "../types.ts";
 
 export interface ResolvedDiscreteTrack extends ResolvedTrackBase<DiscreteTrack, MatchedEntry<DiscreteEntry>> {
   /** Every code in the matched curve → how it is drawn; empty when nothing matched. */
   readonly styles: ReadonlyMap<number, CodeStyle>;
+}
+
+/** A discrete curve's name: its family label, or its mnemonic when the family has none. */
+export function discreteCurveName(curve: Curve): string {
+  return curve.family === "unknown" ? curve.mnemonic : familyLabel(curve.family);
+}
+
+/** A discrete curve's reading at `md`: "gap", "—", or its code's label, else the raw code. */
+export function codeLabelAt(log: WellLog, curve: Curve, md: number, gap: boolean): string {
+  if (gap) return GAP;
+  const code = valueAt(log, curve, md);
+  return Number.isNaN(code) ? NO_VALUE : (curve.codes?.[String(code)] ?? String(code));
 }
 
 /**
@@ -53,6 +67,11 @@ export const discreteKind: TrackKind<DiscreteTrack, ResolvedDiscreteTrack> = {
       entries: [{ entry: track.curve, curve }],
       styles: curve ? codeStyles(curve, track.curve.codes) : new Map(),
     };
+  },
+
+  read(resolved, { log, md, gap }) {
+    const [{ curve }] = resolved.entries;
+    return [curve ? codeLabelAt(log, curve, md, gap) : null];
   },
 
   draw(ctx, resolved, { log, frame, dpr }) {

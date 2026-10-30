@@ -1,29 +1,37 @@
 <script lang="ts">
   /**
    * A curve track's header: one scale bar per curve, with its mnemonic,
-   * unit, left and right values, and a sample of its line. An entry that
-   * matched nothing stays, struck through. Colours as stored until #54.
+   * unit, left and right values, and a sample of its line. While the depth
+   * cursor is over the tracks, its value there replaces the unit. An entry
+   * that matched nothing stays, struck through. Colours as stored until #54.
    */
 
   import { DASHES } from "../../canvas.ts";
-  import { formatScaleEnd } from "../../format.ts";
+  import { formatScaleEnd, hasValue } from "../../format.ts";
+  import { getLogView } from "../../logView.svelte.ts";
   import { entryLabel } from "../../template/label.ts";
   import type { ResolvedCurveTrack } from "./index.ts";
 
   let { resolved }: { resolved: ResolvedCurveTrack } = $props();
 
+  const view = getLogView();
   const empty = $derived(resolved.entries.every((e) => !e.curve));
+  const reading = $derived(view.readingOf(resolved.track.id));
 </script>
 
 <div class="curve-header">
-  {#each resolved.entries as { entry, curve, scale } (entry.id)}
+  {#each resolved.entries as { entry, curve, scale }, i (entry.id)}
     {#if curve && scale}
       <div class="scale-bar" style:--curve={entry.style.colour} title={curve.description || curve.key}>
         <div class="labels">
           <span class="end">{formatScaleEnd(scale.left)}</span>
           <span class="name">
             <span class="mnemonic">{curve.mnemonic}</span>
-            {#if curve.unit}<span class="unit">{curve.unit}</span>{/if}
+            {#if reading}
+              <span class="value" class:none={!hasValue(reading[i])}>{reading[i]}</span>
+            {:else if curve.unit}
+              <span class="unit">{curve.unit}</span>
+            {/if}
           </span>
           <span class="end">{formatScaleEnd(scale.right)}</span>
         </div>
@@ -83,8 +91,13 @@
     font-weight: 600;
   }
 
-  .unit {
+  .unit,
+  .value.none {
     color: var(--welllog-text-muted);
+  }
+
+  .value {
+    color: var(--welllog-text);
   }
 
   .sample {

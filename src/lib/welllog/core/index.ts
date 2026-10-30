@@ -12,5 +12,5 @@ export {
   type LoadWarningCode,
   type Severity,
 } from "./warnings.ts";
-export { indexAtDepth, valueAt } from "./depth.ts";
+export { indexAtDepth, tvdssAt, valueAt } from "./depth.ts";
 export { checkWellLog, type Violation, type ViolationRule } from "./check.ts";
