@@ -18,10 +18,12 @@
     anchor: HTMLElement;
     label: string;
     onclose: () => void;
+    /** A CSS width. */
+    width?: string;
     children: Snippet;
   }
 
-  let { anchor, label, onclose, children }: Props = $props();
+  let { anchor, label, onclose, width = "17rem", children }: Props = $props();
 
   let popup: HTMLElement;
   let place = $state.raw({ left: 0, top: 0 });
@@ -78,6 +80,7 @@
   aria-label={label}
   tabindex="-1"
   bind:this={popup}
+  style:width={width}
   style:left="{place.left}px"
   style:top="{place.top}px"
   {onkeydown}
@@ -90,7 +93,6 @@
     position: fixed;
     inset: auto;
     margin: 0;
-    width: 17rem;
     max-height: calc(100vh - 16px);
     overflow-y: auto;
     padding: 0;

@@ -1,7 +1,8 @@
 <script lang="ts">
   /**
    * A depth track's header: the depth reference it shows, and the depth
-   * unit, or the depth at the cursor while it is over the tracks.
+   * unit, or the depth at the cursor while it is over the tracks. A fixed
+   * TVDSS track on a well log without TVDSS is greyed, and says so.
    */
 
   import { getLogView } from "../../logView.svelte.ts";
@@ -14,9 +15,11 @@
   const reading = $derived(view.readingOf(resolved.track.id)?.[0]);
 </script>
 
-<div class="depth-header">
+<div class="depth-header" class:missing={!resolved.shown}>
   <span class="ref">{ref === "md" ? "MD" : "TVDSS"}</span>
-  {#if reading}
+  {#if !resolved.shown}
+    <span class="unit">not in this well log</span>
+  {:else if reading}
     <span class="value">{reading}</span>
   {:else}
     <span class="unit">{view.log.depthUnit}</span>
@@ -37,6 +40,11 @@
 
   .ref {
     font-weight: 600;
+  }
+
+  .missing {
+    color: var(--welllog-text-muted);
+    text-align: center;
   }
 
   .unit {

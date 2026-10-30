@@ -20,20 +20,27 @@
    * every track at its depth. A top bar toggle, not kept, adds the floating
    * readout card beside the pointer.
    *
-   * The current template is edited in place, with no edit mode (#30, #55):
-   * a click on a scale bar opens that curve's editor, and the ＋ that shows
-   * on a curve track under the pointer opens its add-curve picker. Only one
-   * of them is open at a time (view.popup).
+   * The current template is edited in place, with no edit mode (#30, #55,
+   * #56): a click on a scale bar opens that curve's editor, and the ＋ that
+   * shows on a curve track under the pointer opens its add-curve picker.
+   * With a mouse, a header dragged sideways reorders its track and a
+   * track's right border resizes it (double-click resets it); × removes the
+   * track. The ⋯ menu moves tracks on touch, and opens a curve track's
+   * fills. The ＋ after the tracks adds one. Only one of these popups
+   * is open at a time (view.popup). The Tracks control in the top bar opens
+   * the track list panel, which edits the same current template.
    *
    * Colours come in as --welllog-* custom properties. Their light and dark
    * values are set here per `scheme`, and a host may override any of them.
    */
 
   import type { WellLog } from "../core/index.ts";
+  import AddTrackMenu from "./AddTrackMenu.svelte";
   import { readTokens } from "./canvas.ts";
   import CurveEditor from "./CurveEditor.svelte";
   import CurvePicker from "./CurvePicker.svelte";
   import { depthCursor } from "./cursor.ts";
+  import FillEditor from "./FillEditor.svelte";
   import { depthGestures } from "./gestures.ts";
   import IntervalInput from "./IntervalInput.svelte";
   import type { DepthInterval, DepthRef } from "./interval.ts";
@@ -43,10 +50,13 @@
   import { overviewCurve } from "./navigation.ts";
   import Overview from "./Overview.svelte";
   import Popup from "./Popup.svelte";
+  import { borderResize, headerDrag } from "./rearrange.ts";
   import ReadoutCard from "./ReadoutCard.svelte";
   import { defaultTemplate } from "./template/defaults.ts";
   import type { Template } from "./template/types.ts";
   import TrackCanvas from "./TrackCanvas.svelte";
+  import TrackList from "./TrackList.svelte";
+  import TrackMenu from "./TrackMenu.svelte";
   import WellPanel from "./WellPanel.svelte";
   import { cautionCount } from "./wellPanel.ts";
 
@@ -91,25 +101,37 @@
   );
 
   let root: HTMLDivElement;
-  let panelOpen = $state(false);
+  let tracksRow: HTMLDivElement;
+  /** The panel open below the top bar, if any: the well panel or the track list. */
+  let panel = $state<"well" | "tracks" | null>(null);
   let cardOn = $state(false);
-  /** The overview strip's width, in CSS px. */
+  /** The overview strip's width, and that of the ＋ after the tracks, in CSS px. */
   const OVERVIEW_PX = 56;
+  const ADD_TRACK_PX = 28;
   const cautions = $derived(cautionCount(log));
-  const columns = $derived(`${OVERVIEW_PX}px ${trackColumns(template.tracks)}`);
+  /** A border being dragged shows its width before the template takes it. */
+  const widths = $derived(
+    template.tracks.map((track) => (view.resizing?.trackId === track.id ? view.resizing : track)),
+  );
+  const columns = $derived(`${OVERVIEW_PX}px ${trackColumns(widths)} ${ADD_TRACK_PX}px`);
+  /** The room the tracks have, for a border drag. */
+  const available = () => tracksRow.clientWidth - OVERVIEW_PX - ADD_TRACK_PX;
   const overviewLabel = $derived([overviewCurve(log)?.mnemonic, log.zoneSets[0]?.name].filter(Boolean).join(" · "));
   const panelId = $props.id();
+  const trackListId = `${panelId}-tracks`;
   /** The track under the pointer, header or body, whose ＋ shows. */
   let hoveredTrack = $state<string | null>(null);
 
   // An entry or track removed while its popup is open takes the popup with it.
   $effect(() => {
     const popup = view.popup;
-    if (!popup) return;
+    if (!popup || popup.kind === "add-track") return;
     const gone =
       popup.kind === "editor" ? !view.editing : !view.resolved.tracks.some((t) => t.track.id === popup.trackId);
     if (gone) view.popup = null;
   });
+
+  const togglePanel = (which: "well" | "tracks") => (panel = panel === which ? null : which);
 
   const hover = (trackId: string) => ({
     onpointerenter: () => (hoveredTrack = trackId),
@@ -127,7 +149,7 @@
   $effect(() => () => view.destroy());
 
   function onkeydown(event: KeyboardEvent) {
-    if (event.key === "Escape" && panelOpen) panelOpen = false;
+    if (event.key === "Escape" && panel) panel = null;
   }
 </script>
 
@@ -138,9 +160,9 @@
     <button
       type="button"
       class="bar-button well-control"
-      aria-expanded={panelOpen}
+      aria-expanded={panel === "well"}
       aria-controls={panelId}
-      onclick={() => (panelOpen = !panelOpen)}
+      onclick={() => togglePanel("well")}
     >
       <svg viewBox="0 0 16 16" aria-hidden="true">
         <path
@@ -153,8 +175,8 @@
         <span class="badge" aria-label={`${cautions} ${cautions === 1 ? "caution" : "cautions"}`}>{cautions}</span>
       {/if}
     </button>
-    {#if panelOpen}
-      <WellPanel {log} id={panelId} onclose={() => (panelOpen = false)} />
+    {#if panel === "well"}
+      <WellPanel {log} id={panelId} onclose={() => (panel = null)} />
     {/if}
     <IntervalInput />
     <button
@@ -166,14 +188,28 @@
     >
       Readout card
     </button>
+    <button
+      type="button"
+      class="bar-button tracks-control"
+      aria-expanded={panel === "tracks"}
+      aria-controls={trackListId}
+      title="List the tracks, to reorder, resize, remove or edit them"
+      onclick={() => togglePanel("tracks")}
+    >
+      Tracks
+    </button>
+    {#if panel === "tracks"}
+      <TrackList id={trackListId} onclose={() => (panel = null)} />
+    {/if}
   </div>
 
-  <div class="tracks">
+  <div class="tracks" bind:this={tracksRow}>
     <div
       class="track-grid"
       style:grid-template-columns={columns}
       {@attach depthGestures(view)}
       {@attach depthCursor(view)}
+      {@attach headerDrag(view)}
     >
       <div class="overview-header" title="Overview of the whole well">{overviewLabel}</div>
       <div class="overview-body">
@@ -182,22 +218,57 @@
       {#each view.resolved.tracks as resolved (resolved.track.id)}
         {@const Header = headerFor(resolved)}
         {@const trackId = resolved.track.id}
-        <div class="track-header" class:depth={resolved.kind === "depth"} {...hover(trackId)}>
+        {@const dragged = view.dragging?.trackId === trackId ? view.dragging : null}
+        {@const popupHere = view.popup && "trackId" in view.popup && view.popup.trackId === trackId}
+        <div
+          class="track-header"
+          class:depth={resolved.kind === "depth"}
+          class:dragged
+          style:transform={dragged ? `translateX(${dragged.dx}px)` : undefined}
+          data-track-header={trackId}
+          {...hover(trackId)}
+        >
           <Header {resolved} />
-          {#if resolved.kind === "curve"}
+          <div class="track-controls" class:shown={hoveredTrack === trackId || popupHere} data-no-header-drag>
+            {#if resolved.kind === "curve"}
+              <button
+                type="button"
+                aria-label="Add a curve to this track"
+                aria-haspopup="dialog"
+                title="Add a curve"
+                data-popup-anchor
+                onclick={(event) => view.togglePopup({ kind: "picker", trackId, anchor: event.currentTarget })}
+              >
+                ＋
+              </button>
+            {/if}
             <button
               type="button"
-              class="add-curve"
-              class:shown={hoveredTrack === trackId || (view.popup?.kind === "picker" && view.popup.trackId === trackId)}
-              aria-label="Add a curve to this track"
+              aria-label="Track menu"
               aria-haspopup="dialog"
-              title="Add a curve"
+              title="Move, reset or remove this track{resolved.kind === 'curve' ? ', or edit its fills' : ''}"
               data-popup-anchor
-              onclick={(event) => view.togglePopup({ kind: "picker", trackId, anchor: event.currentTarget })}
+              onclick={(event) => view.togglePopup({ kind: "track-menu", trackId, anchor: event.currentTarget })}
             >
-              ＋
+              ⋯
             </button>
-          {/if}
+            <button
+              type="button"
+              class="remove-track"
+              aria-label="Remove this track"
+              title="Remove this track"
+              onclick={() => view.edit({ kind: "remove-track", trackId })}
+            >
+              ×
+            </button>
+          </div>
+          <div
+            class="border-handle"
+            title="Drag to resize; double-click to reset"
+            aria-hidden="true"
+            data-no-header-drag
+            {@attach borderResize(view, trackId, available)}
+          ></div>
         </div>
         <div
           class="track-body"
@@ -209,6 +280,21 @@
           <TrackCanvas {resolved} />
         </div>
       {/each}
+      <div class="add-track">
+        <button
+          type="button"
+          aria-label="Add a track"
+          aria-haspopup="dialog"
+          title="Add a track"
+          data-popup-anchor
+          onclick={(event) => view.togglePopup({ kind: "add-track", anchor: event.currentTarget })}
+        >
+          ＋
+        </button>
+      </div>
+      {#if view.dragging && view.dragging.to !== template.tracks.findIndex((t) => t.id === view.dragging?.trackId)}
+        <div class="drop-edge" aria-hidden="true" style:left="{view.dragging.edge}px"></div>
+      {/if}
       <div
         class="cursor"
         aria-hidden="true"
@@ -231,6 +317,18 @@
       {:else if popup.kind === "picker"}
         <Popup anchor={popup.anchor} label="Add a curve" {onclose}>
           <CurvePicker trackId={popup.trackId} {onclose} />
+        </Popup>
+      {:else if popup.kind === "track-menu"}
+        <Popup anchor={popup.anchor} label="Track menu" width="12rem" {onclose}>
+          <TrackMenu trackId={popup.trackId} anchor={popup.anchor} {onclose} />
+        </Popup>
+      {:else if popup.kind === "fills"}
+        <Popup anchor={popup.anchor} label="Fills" width="20rem" {onclose}>
+          <FillEditor trackId={popup.trackId} {onclose} />
+        </Popup>
+      {:else if popup.kind === "add-track"}
+        <Popup anchor={popup.anchor} label="Add a track" width="14rem" {onclose}>
+          <AddTrackMenu {onclose} />
         </Popup>
       {/if}
     {/key}
@@ -369,6 +467,7 @@
 
   .track-header {
     position: relative;
+    min-height: 1.5rem;
     background: var(--welllog-header-bg);
     border-bottom: 1px solid var(--welllog-border);
     min-width: 0;
@@ -379,11 +478,41 @@
     min-height: 0;
   }
 
-  /* Shows on the track under the pointer, on focus, and always on touch. */
-  .add-curve {
+  /* A header is dragged sideways to reorder its track; its labels aren't selected on the way. */
+  .track-header {
+    cursor: grab;
+    user-select: none;
+  }
+
+  .track-header.dragged {
+    z-index: 3;
+    opacity: 0.75;
+    cursor: grabbing;
+    box-shadow: 0 4px 12px rgb(15 23 42 / 0.25);
+  }
+
+  /*
+   * ＋ (curve tracks), ⋯ and ×: shown on the track under the pointer, and
+   * on focus. On touch, ＋ and ⋯ always show, and × is left to the ⋯ menu.
+   */
+  .track-controls {
     position: absolute;
     top: 2px;
-    right: 2px;
+    right: 4px;
+    z-index: 1;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    cursor: default;
+  }
+
+  .track-controls.shown,
+  .track-controls:focus-within {
+    opacity: 1;
+  }
+
+  .track-controls button,
+  .add-track button {
     width: 1.125rem;
     height: 1.125rem;
     padding: 0;
@@ -395,28 +524,71 @@
     border: 1px solid var(--welllog-border);
     border-radius: 3px;
     cursor: pointer;
-    opacity: 0;
   }
 
-  .add-curve.shown,
-  .add-curve:focus-visible {
-    opacity: 1;
-  }
-
-  .add-curve:hover {
+  .track-controls button:hover,
+  .add-track button:hover {
     color: var(--welllog-accent);
     border-color: var(--welllog-accent);
   }
 
-  .add-curve:focus-visible {
+  .track-controls .remove-track:hover {
+    color: var(--welllog-cursor);
+    border-color: var(--welllog-cursor);
+  }
+
+  .track-controls button:focus-visible,
+  .add-track button:focus-visible {
     outline: 2px solid var(--welllog-accent);
     outline-offset: 1px;
   }
 
   @media (hover: none) {
-    .add-curve {
+    .track-controls {
       opacity: 1;
     }
+
+    .track-controls .remove-track {
+      display: none;
+    }
+  }
+
+  /* On the track's right border, straddling it. */
+  .border-handle {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    bottom: 0;
+    z-index: 2;
+    width: 7px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .border-handle:hover {
+    background: linear-gradient(to right, transparent 3px, var(--welllog-accent) 3px, var(--welllog-accent) 4px, transparent 4px);
+  }
+
+  /* The ＋ after the tracks, over both rows. */
+  .add-track {
+    grid-row: 1 / span 2;
+    display: flex;
+    justify-content: center;
+    padding-top: 2px;
+    background: var(--welllog-header-bg);
+    border-left: 1px solid var(--welllog-border);
+  }
+
+  /* The border a dragged header would land on. */
+  .drop-edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 4;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--welllog-accent);
+    pointer-events: none;
   }
 
   /* Every track after the first; the overview's own border sets off the first. */
@@ -474,13 +646,13 @@
 
   /*
    * Out of flow, so it takes no grid cell, with the track bodies' area as
-   * its containing block: it spans every track and passes under the sticky
-   * overview when they scroll sideways.
+   * its containing block: it spans every track (not the ＋ after them) and
+   * passes under the sticky overview when they scroll sideways.
    */
   .cursor {
     position: absolute;
     grid-row: 2;
-    grid-column: 2 / -1;
+    grid-column: 2 / -2;
     top: 0;
     left: 0;
     right: 0;

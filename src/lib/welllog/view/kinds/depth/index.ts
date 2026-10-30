@@ -1,7 +1,8 @@
 /**
  * The depth track kind: round depths of the active depth reference, or of a
  * fixed `md` or `tvdss`, labelled down the track over the well log's gaps,
- * hatched.
+ * hatched. A fixed `tvdss` track on a well log without TVDSS keeps its
+ * place, greyed, with an empty body.
  */
 
 import { intervalSpans } from "../../geometry/blocks.ts";
@@ -14,7 +15,13 @@ import { gapsOf } from "../../quality.ts";
 import type { DepthTrack } from "../../template/types.ts";
 import type { ResolvedTrackBase, TrackKind } from "../types.ts";
 
-export type ResolvedDepthTrack = ResolvedTrackBase<DepthTrack>;
+export interface ResolvedDepthTrack extends ResolvedTrackBase<DepthTrack> {
+  /**
+   * Whether the well log has the depth reference the track shows. Only a
+   * fixed `tvdss` track can lack it: the active one falls back on MD.
+   */
+  readonly shown: boolean;
+}
 
 /** The depth reference a depth track shows: its fixed one, or the view's. */
 export function depthTrackRef(track: DepthTrack, viewRef: DepthRef): DepthRef {
@@ -25,8 +32,8 @@ export function depthTrackRef(track: DepthTrack, viewRef: DepthRef): DepthRef {
 const LABEL_SPACING = 40;
 
 export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
-  resolve(track) {
-    return { kind: "depth", track, entries: [] };
+  resolve(track, log) {
+    return { kind: "depth", track, entries: [], shown: track.ref !== "tvdss" || log.tvdss !== undefined };
   },
 
   read(resolved, { md, tvdss, depthRef }) {
@@ -34,6 +41,7 @@ export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
   },
 
   draw(ctx, resolved, { log, frame, dpr, tokens, depthRef }) {
+    if (!resolved.shown) return;
     const k = pixelsPerUnit(frame);
     const step = depthStep(k / dpr, LABEL_SPACING);
     const decimals = step < 1 ? 1 : 0;
@@ -63,14 +71,15 @@ export const depthKind: TrackKind<DepthTrack, ResolvedDepthTrack> = {
       for (const md of depthsEvery(step, frame.top, frame.base)) label(md, md);
       return;
     }
-    // TVDSS: a label where it crosses a round depth, at that row's MD.
+    // TVDSS: a label where it crosses a round depth, at that row's MD. A row
+    // without TVDSS breaks the run, so no label straddles it.
     const { tvdss, md } = log;
     if (!tvdss) return;
     const [start, end] = visibleRows(md, frame);
     let previous = NaN;
     for (let i = start; i < end; i++) {
       const band = Math.floor(tvdss[i] / step);
-      if (Number.isFinite(previous) && band !== previous) label(md[i], band * step);
+      if (Number.isFinite(band) && Number.isFinite(previous) && band !== previous) label(md[i], band * step);
       previous = band;
     }
   },

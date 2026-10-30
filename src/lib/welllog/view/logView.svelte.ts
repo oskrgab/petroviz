@@ -14,7 +14,7 @@
 import { getContext, setContext } from "svelte";
 import type { LoadWarning, WellLog } from "../core/index.ts";
 import { FrameScheduler } from "./canvas.ts";
-import { adaptStroke } from "./colour/adapt.ts";
+import { adaptFill, adaptStroke } from "./colour/adapt.ts";
 import type { Tokens } from "./kinds/types.ts";
 import { wholeWell, type DepthInterval, type DepthRef } from "./interval.ts";
 import { effectiveInterval } from "./navigation.ts";
@@ -40,12 +40,32 @@ export interface LogViewWriters {
 
 /**
  * The one popup open over the log view: a curve entry's editor, opened from
- * its scale bar, or a curve track's add-curve picker, opened from its ＋.
- * `anchor` is what opened it, which it sits beside.
+ * its scale bar; a curve track's add-curve picker, opened from its ＋; a
+ * track's ⋯ menu, or the fills of a curve track, opened from that menu; or
+ * the add-track menu, opened from the ＋ after the tracks. `anchor` is what opened it,
+ * which it sits beside.
  */
 export type Popup =
   | { readonly kind: "editor"; readonly trackId: string; readonly entryId: string; readonly anchor: HTMLElement }
-  | { readonly kind: "picker"; readonly trackId: string; readonly anchor: HTMLElement };
+  | { readonly kind: "picker" | "track-menu" | "fills"; readonly trackId: string; readonly anchor: HTMLElement }
+  | { readonly kind: "add-track"; readonly anchor: HTMLElement };
+
+/** A track header being dragged to reorder its track (#56). */
+export interface HeaderDrag {
+  readonly trackId: string;
+  /** How far the header has moved sideways, in CSS px. */
+  readonly dx: number;
+  /** The index the track takes if dropped now. */
+  readonly to: number;
+  /** The border it would land on, across the track grid, in CSS px. */
+  readonly edge: number;
+}
+
+/** A track border being dragged: the width it would set, shown before it is written on release. */
+export interface BorderDrag {
+  readonly trackId: string;
+  readonly width: number;
+}
 
 /** The pointer over the track bodies, for the depth cursor. */
 export interface CursorPointer {
@@ -72,6 +92,11 @@ export class LogViewState {
    */
   strokeColour(stored: string): string {
     return this.tokens ? adaptStroke(stored, this.tokens.bg) : stored;
+  }
+
+  /** A template fill colour as drawn on this view's track background (ADR-0006), for the fill editor. */
+  fillColour(stored: string): string {
+    return this.tokens ? adaptFill(stored, this.tokens.bg) : stored;
   }
 
   /** `props` must read each prop through its own getter. */
@@ -107,6 +132,12 @@ export class LogViewState {
     const track = this.resolved.tracks.find((t) => t.track.id === popup.trackId);
     return (track?.kind === "curve" && track.entries.find((e) => e.entry.id === popup.entryId)) || null;
   });
+
+  /** Written by the header drag (rearrange.ts) while a header is dragged. */
+  dragging = $state.raw<HeaderDrag | null>(null);
+
+  /** Written by the border drag (rearrange.ts) while a border is dragged. */
+  resizing = $state.raw<BorderDrag | null>(null);
 
   /** Opens a popup, or closes it when the same anchor opened the one open. */
   togglePopup(next: Popup) {

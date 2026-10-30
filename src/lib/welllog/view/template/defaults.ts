@@ -20,7 +20,15 @@ import type {
   Selector,
   Template,
   Track,
+  TrackKindName,
 } from "./types.ts";
+
+/**
+ * Each kind's relative width (1 is a standard track): what a new track
+ * takes, and what a reset returns a track to when the default template
+ * doesn't have it.
+ */
+export const STANDARD_WIDTHS: Readonly<Record<TrackKindName, number>> = { curve: 1, depth: 0.5, discrete: 0.4, zone: 0.6 };
 
 /** The default template's curve tracks, in display order. */
 type DefaultCurveTrack = "gr-caliper" | "resistivity" | "density-neutron" | "sonic" | "drilling";
@@ -142,7 +150,7 @@ const TRACKS: readonly ({ id: DefaultCurveTrack; width: number } | "depth")[] = 
 ];
 
 /** About 40% alpha, so curves and gridlines read through a fill. */
-const FILL_ALPHA = "66";
+export const FILL_ALPHA = "66";
 
 const curveBoundary = (id: string) => ({ kind: "curve", id }) as const;
 
@@ -189,9 +197,9 @@ const FILLS: Partial<Record<DefaultCurveTrack, readonly Fill[]>> = {
 
 /** After the curve tracks: lithology, then the two FORCE 2020 zone sets. */
 const DISCRETE_AND_ZONE_TRACKS: readonly Track[] = [
-  { id: "lithology", kind: "discrete", width: 0.4, curve: { id: "lithology", select: [{ by: "family", value: "lithology" }] } },
-  { id: "group", kind: "zone", width: 0.6, zoneSet: "GROUP" },
-  { id: "formation", kind: "zone", width: 0.6, zoneSet: "FORMATION" },
+  { id: "lithology", kind: "discrete", width: STANDARD_WIDTHS.discrete, curve: { id: "lithology", select: [{ by: "family", value: "lithology" }] } },
+  { id: "group", kind: "zone", width: STANDARD_WIDTHS.zone, zoneSet: "GROUP" },
+  { id: "formation", kind: "zone", width: STANDARD_WIDTHS.zone, zoneSet: "FORMATION" },
 ];
 
 function entry(id: string, defaults: CurveFamilyDefault, select: Selector[], dash?: Dash): CurveEntry {
@@ -220,7 +228,7 @@ function entriesFor(track: DefaultCurveTrack): CurveEntry[] {
 export function defaultTemplate(): Template {
   const tracks: Track[] = TRACKS.map((track) =>
     track === "depth"
-      ? { id: "depth", kind: "depth", width: 0.5, ref: "active" }
+      ? { id: "depth", kind: "depth", width: STANDARD_WIDTHS.depth, ref: "active" }
       : {
           id: track.id,
           kind: "curve",

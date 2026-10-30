@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { curveFamilyOf, type Curve, type WellLog, type ZoneSet } from "../core/index.ts";
 import { resolveTemplate } from "./resolve.ts";
 import { defaultTemplate } from "./template/defaults.ts";
-import { editTemplate, entryForCurve } from "./template/edit.ts";
+import { editTemplate, entryForCurve, newDepthTrack } from "./template/edit.ts";
 import { entryLabel } from "./template/label.ts";
 import type { CurveEntry, CurveScale, Fill, FillBoundary, Selector, Template } from "./template/types.ts";
 
@@ -632,4 +632,25 @@ test("a curve added by hand is shown, and leaves the curves not shown", () => {
   const added = editTemplate(t, { kind: "add-entry", trackId: "t0", entry: entryForCurve(t, log.curves[1]) });
   assert.deepEqual(resolveTemplate(added, log).unmatchedCurves, []);
   assert.deepEqual(matchedKeys(added, log), [["GR", "XYZ"]]);
+});
+
+test("a fixed TVDSS depth track keeps its place on a well log without TVDSS, greyed", () => {
+  let t = defaultTemplate();
+  t = editTemplate(t, { kind: "add-track", track: newDepthTrack(t, "tvdss"), at: 2 });
+  t = editTemplate(t, { kind: "add-track", track: newDepthTrack(t, "md"), at: 3 });
+  const depthTracks = (log: WellLog) =>
+    resolveTemplate(t, log).tracks.flatMap((r) => (r.kind === "depth" ? [[r.track.id, r.shown] as const] : []));
+
+  const withoutTvdss = wellLog([curve("GR", "gAPI")]);
+  assert.deepEqual(depthTracks(withoutTvdss), [
+    ["depth", true],
+    ["depth-tvdss", false],
+    ["depth-md", true],
+  ]);
+  const withTvdss = { ...withoutTvdss, tvdss: new Float64Array([80, 80.1]) };
+  assert.deepEqual(depthTracks(withTvdss), [
+    ["depth", true],
+    ["depth-tvdss", true],
+    ["depth-md", true],
+  ]);
 });

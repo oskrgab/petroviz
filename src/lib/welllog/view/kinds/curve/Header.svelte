@@ -94,7 +94,9 @@
       </div>
     {/if}
   {/each}
-  {#if empty}
+  {#if resolved.entries.length === 0}
+    <div class="empty">No curves yet: add one with ＋</div>
+  {:else if empty}
     <div class="empty">Nothing to draw in this well</div>
   {/if}
 </div>
