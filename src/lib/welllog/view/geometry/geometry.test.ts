@@ -2,7 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fractionOf, mappingOf, type ResolvedScale } from "./scale.ts";
 import { log10Values } from "./log10.ts";
-import { curvePolyline, END_TOLERANCE, firstRowAtOrBelow, visibleRows, wrappedPolyline, type Frame } from "./polyline.ts";
+import {
+  curvePolyline,
+  drawnRows,
+  END_TOLERANCE,
+  firstRowAtOrBelow,
+  visibleRows,
+  wrappedPolyline,
+  type Frame,
+} from "./polyline.ts";
 import { intervalSpans } from "./blocks.ts";
 import { depthGridlines, depthStep, depthsEvery, scaleGridlines } from "./grid.ts";
 
@@ -235,6 +243,21 @@ test("visible rows reach one row past each edge of the frame", () => {
   assert.deepEqual(visibleRows(md, { top: 0, base: 50, width: 1, height: 1 }), [0, 6]);
   // A row on the edge reaches it already.
   assert.deepEqual(visibleRows(md, { top: 20, base: 30, width: 1, height: 1 }), [1, 4]);
+});
+
+test("drawn rows are kept for the same depths, sources and frame, and worked out again for others", () => {
+  const md = Float64Array.from({ length: 6 }, (_, i) => i);
+  const a = new Float32Array([1, 2, NaN, 4, 5, 6]);
+  const b = new Float32Array([1, NaN, 3, 4, 5, 6]);
+  const frame: Frame = { top: 0, base: 5, width: 10, height: 100 };
+  const rows = drawnRows(md, [a], frame);
+  assert.deepEqual(Array.from(rows), [0, 1, -1, 3, 4, 5]);
+  assert.equal(drawnRows(md, [a], { ...frame }), rows, "the same frame, by value");
+  assert.deepEqual(Array.from(drawnRows(md, [a, b], frame)), [0, -1, 3, 4, 5]);
+  assert.deepEqual(Array.from(drawnRows(md, [a], { ...frame, top: 3.5 })), [3, 4, 5]);
+  assert.deepEqual(Array.from(drawnRows(md.map((d) => (d < 2 ? -Infinity : d)), [a], frame)), [3, 4, 5]);
+  // Changing the frame doesn't touch an answer already given.
+  assert.deepEqual(Array.from(rows), [0, 1, -1, 3, 4, 5]);
 });
 
 test("a linear scale has 10 divisions", () => {

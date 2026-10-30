@@ -35,7 +35,11 @@ export function curveWarnings(log: WellLog, curveKey: string): LoadWarning[] {
 
 /** Whether no curve, continuous or discrete, has a value in the row. */
 export function isGapRow(log: WellLog, row: number): boolean {
-  return row >= 0 && row < log.md.length && log.curves.every((curve) => Number.isNaN(curve.values[row]));
+  if (row < 0 || row >= log.md.length) return false;
+  // A loop, not every(): gapsOf asks this of every row in the well log.
+  const { curves } = log;
+  for (let c = 0; c < curves.length; c++) if (!Number.isNaN(curves[c].values[row])) return false;
+  return true;
 }
 
 const gaps = new WeakMap<WellLog, readonly DepthInterval[]>();

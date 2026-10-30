@@ -216,6 +216,8 @@
 	let reverting = false;
 	/** The well a pick just added a history entry for, until another navigation. */
 	let pushed: string | null = null;
+	/** A file on screen whose history entry isn't pushed yet (openFile waits a frame to push it). */
+	let unpushed: Shown | null = null;
 
 	function fail(id: string, error: unknown) {
 		const unknown = error instanceof ForceLoadError && error.kind === 'unknown-well';
@@ -244,8 +246,10 @@
 		reverting = true;
 		// A pick's own entry is stepped back over, so history doesn't name the well on screen twice.
 		if (pushed !== null && key === sourceKey({ kind: 'well', id: pushed })) history.back();
-		else writeUrl(linkTo(shown.source, interval), 'replace');
+		// A file never pushed takes an entry of its own: the URL's names what was on screen before it.
+		else writeUrl(linkTo(shown.source, interval), shown === unpushed ? 'push' : 'replace');
 		pushed = null;
+		unpushed = null;
 	}
 
 	/** The link to `source` at `at`, in the depth reference shown. */
@@ -354,12 +358,29 @@
 		// The link on screen asked for this file: it opens at the link's interval, in the link's entry.
 		const asked = key === fileKey && shown?.key !== fileKey;
 		// The URL names a well the read cut short: its entry becomes the file's.
-		const abandoned = !asked && shown !== null && key !== shown.key;
+		// A file still waiting for its entry isn't one: the URL's entry is real.
+		const abandoned = !asked && shown !== null && shown !== unpushed && key !== shown.key;
 		interval = asked ? link.interval : null;
-		shown = { source, key: fileKey, log, entry: lasEntry(log, file.name) };
+		const opened: Shown = { source, key: fileKey, log, entry: lasEntry(log, file.name) };
+		shown = opened;
 		if (asked) return;
+		unpushed = opened;
+		// Navigating reads the scroll position, which lays out the tracks just
+		// built for the file there and then, in the same task as building
+		// them. After the frame that lays them out, it is cheap.
+		const url = page.url.href;
+		await afterNextFrame();
+		// Something else took over meanwhile: a pick, Back or Forward, or another file.
+		if (shown !== opened || loading !== null || page.url.href !== url) return;
 		pushed = null;
-		writeUrl(linkTo(source, null), abandoned ? 'replace' : 'push');
+		unpushed = null;
+		// The interval is the whole well's unless the reader has moved since.
+		writeUrl(linkTo(source, interval), abandoned ? 'replace' : 'push');
+	}
+
+	/** Resolves once the next frame has been drawn. */
+	function afterNextFrame(): Promise<void> {
+		return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
 	}
 
 	let note = $state<string | null>(null);

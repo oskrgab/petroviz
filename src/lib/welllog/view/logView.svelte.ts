@@ -14,7 +14,7 @@
 import { getContext, setContext } from "svelte";
 import type { LoadWarning, WellLog } from "../core/index.ts";
 import { depthAxis, effectiveDepthRef, hasTvdss, intervalOnAxis, intervalToMd, toMd, type DepthAxis } from "./axis.ts";
-import { FrameScheduler } from "./canvas.ts";
+import { FrameScheduler } from "./scheduler.ts";
 import { adaptFill, adaptStroke } from "./colour/adapt.ts";
 import type { Tokens } from "./kinds/types.ts";
 import { wholeWell, type DepthInterval, type DepthRef } from "./interval.ts";

@@ -61,47 +61,108 @@ export const M4_THRESHOLD = 4;
  *
  * Each source is a curve's values, or their log10 on a log scale. A fill
  * passes both its curves, so its two boundaries share their rows.
+ *
+ * A curve's line, its wrapped line and the fills along it ask for the same
+ * rows in one redraw, so the last few answers per source are kept and
+ * returned as they are: callers must not change them.
  */
 export function drawnRows(depths: Float64Array, sources: readonly Float32Array[], frame: Frame): Int32Array {
+  if (sources.length === 0) return findDrawnRows(depths, sources, frame);
+  const recent = keptRows.get(sources[0]) ?? [];
+  const kept = recent.find(
+    (m) =>
+      m.depths === depths &&
+      m.top === frame.top &&
+      m.base === frame.base &&
+      m.height === frame.height &&
+      m.sources.length === sources.length &&
+      m.sources.every((source, s) => source === sources[s]),
+  );
+  if (kept) return kept.rows;
+  const rows = findDrawnRows(depths, sources, frame);
+  recent.unshift({ depths, sources: [...sources], top: frame.top, base: frame.base, height: frame.height, rows });
+  if (recent.length > KEPT_PER_SOURCE) recent.pop();
+  keptRows.set(sources[0], recent);
+  return rows;
+}
+
+/** One drawnRows answer, for the depths, sources and frame it was asked for. */
+interface KeptRows {
+  readonly depths: Float64Array;
+  readonly sources: readonly Float32Array[];
+  readonly top: number;
+  readonly base: number;
+  readonly height: number;
+  readonly rows: Int32Array;
+}
+
+/** drawnRows answers kept per first source, newest first. */
+const keptRows = new WeakMap<Float32Array, KeptRows[]>();
+const KEPT_PER_SOURCE = 4;
+
+/** findDrawnRows's working buffer, grown to the most rows asked for. */
+let scratch = new Int32Array(0);
+
+/** Whether the line breaks at row i: no place on the axis, or a source without a value. */
+function breaksAt(depths: Float64Array, sources: readonly Float32Array[], i: number): boolean {
+  if (!Number.isFinite(depths[i])) return true;
+  for (let s = 0; s < sources.length; s++) if (!Number.isFinite(sources[s][i])) return true;
+  return false;
+}
+
+/**
+ * drawnRows, worked out. It runs over every visible sample of every curve
+ * drawn, so it allocates nothing per sample, and works in one buffer kept
+ * between calls: each row adds at most one entry, a row or a break, which
+ * bounds the output. Only the answer is copied out.
+ */
+function findDrawnRows(depths: Float64Array, sources: readonly Float32Array[], frame: Frame): Int32Array {
   const [start, end] = visibleRows(depths, frame);
-  const out: number[] = [];
+  if (scratch.length < end - start) scratch = new Int32Array(end - start);
+  const out = scratch;
+  let length = 0;
   let broken = true;
-  const push = (i: number) => {
-    out.push(i);
-    broken = false;
-  };
-  const lineBreak = () => {
-    if (broken) return;
-    out.push(-1);
-    broken = true;
-  };
-  const isBreak = (i: number) =>
-    !Number.isFinite(depths[i]) || sources.some((source) => !Number.isFinite(source[i]));
 
   if (end - start <= frame.height * M4_THRESHOLD) {
     for (let i = start; i < end; i++) {
-      if (isBreak(i)) lineBreak();
-      else push(i);
+      if (!breaksAt(depths, sources, i)) {
+        out[length++] = i;
+        broken = false;
+      } else if (!broken) {
+        out[length++] = -1;
+        broken = true;
+      }
     }
-    return Int32Array.from(out);
+    return out.slice(0, length);
   }
 
+  const n = sources.length;
   const k = pixelsPerUnit(frame);
   let row = NaN;
   let first = -1;
   let last = -1;
-  const min = sources.map(() => -1);
-  const max = sources.map(() => -1);
+  const min = new Int32Array(n);
+  const max = new Int32Array(n);
+  // A pixel row's first, minima, maxima and last, sorted for drawing.
+  const picked = new Int32Array(2 + 2 * n);
   const flush = () => {
     if (first === -1) return;
-    const picked = [first, ...min, ...max, last].sort((p, q) => p - q);
-    for (let j = 0; j < picked.length; j++) if (j === 0 || picked[j] !== picked[j - 1]) push(picked[j]);
+    picked[0] = first;
+    picked.set(min, 1);
+    picked.set(max, 1 + n);
+    picked[picked.length - 1] = last;
+    picked.sort();
+    for (let j = 0; j < picked.length; j++) if (j === 0 || picked[j] !== picked[j - 1]) out[length++] = picked[j];
+    broken = false;
     first = -1;
   };
   for (let i = start; i < end; i++) {
-    if (isBreak(i)) {
+    if (breaksAt(depths, sources, i)) {
       flush();
-      lineBreak();
+      if (!broken) {
+        out[length++] = -1;
+        broken = true;
+      }
       continue;
     }
     const r = Math.floor((depths[i] - frame.top) * k);
@@ -114,15 +175,16 @@ export function drawnRows(depths: Float64Array, sources: readonly Float32Array[]
       min.fill(i);
       max.fill(i);
     } else {
-      sources.forEach((source, s) => {
+      for (let s = 0; s < n; s++) {
+        const source = sources[s];
         if (source[i] < source[min[s]]) min[s] = i;
         if (source[i] > source[max[s]]) max[s] = i;
-      });
+      }
     }
     last = i;
   }
   flush();
-  return Int32Array.from(out);
+  return out.slice(0, length);
 }
 
 /**

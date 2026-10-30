@@ -1,7 +1,7 @@
 /**
  * The thin canvas layer: sizing a track canvas for the device pixel ratio,
- * stroking the pure geometry, reading the --welllog-* tokens, and one
- * requestAnimationFrame per frame for every track that asked to redraw.
+ * stroking the pure geometry, and reading the --welllog-* tokens. Frames
+ * are scheduled in scheduler.ts.
  * Not unit-tested: it is checked by running the app.
  */
 
@@ -264,34 +264,4 @@ export function readTokens(element: Element): Tokens {
     gapHatch: token("gap-hatch"),
     font: style.fontFamily,
   };
-}
-
-/**
- * Coalesces redraw requests into one requestAnimationFrame. A later request
- * for the same key replaces an earlier one within a frame.
- */
-export class FrameScheduler {
-  #pending = new Map<object, () => void>();
-  #frame = 0;
-
-  request(key: object, draw: () => void) {
-    this.#pending.set(key, draw);
-    if (this.#frame) return;
-    this.#frame = requestAnimationFrame(() => {
-      this.#frame = 0;
-      const draws = [...this.#pending.values()];
-      this.#pending.clear();
-      for (const draw of draws) draw();
-    });
-  }
-
-  cancel(key: object) {
-    this.#pending.delete(key);
-  }
-
-  destroy() {
-    cancelAnimationFrame(this.#frame);
-    this.#frame = 0;
-    this.#pending.clear();
-  }
 }

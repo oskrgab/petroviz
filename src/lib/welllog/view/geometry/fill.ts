@@ -68,32 +68,41 @@ export function fillPolygons(depths: Float64Array, a: BoundaryPlacement, b: Boun
     side = 0;
   };
 
-  let prev: { xa: number; xb: number; y: number } | null = null;
+  // The previous row's point, while there is one before this row (no break between).
+  let havePrev = false;
+  let prevXa = 0;
+  let prevXb = 0;
+  let prevY = 0;
   for (const i of rows) {
     if (i < 0) {
       close();
-      prev = null;
+      havePrev = false;
       continue;
     }
-    const point = { xa: xa(i), xb: xb(i), y: (depths[i] - frame.top) * k };
-    const sign = Math.sign(point.xa - point.xb);
-    if (sign !== 0 && side !== 0 && sign !== side && prev) {
+    const rowXa = xa(i);
+    const rowXb = xb(i);
+    const rowY = (depths[i] - frame.top) * k;
+    const sign = Math.sign(rowXa - rowXb);
+    if (sign !== 0 && side !== 0 && sign !== side && havePrev) {
       // They cross between the previous row and this one: end the polygon
       // there and start the next from the same point.
-      const before = prev.xa - prev.xb;
-      const t = before / (before - (point.xa - point.xb));
-      const x = prev.xa + t * (point.xa - prev.xa);
-      const y = prev.y + t * (point.y - prev.y);
-      aSide.push(x, y);
-      bSide.push(x, y);
+      const before = prevXa - prevXb;
+      const t = before / (before - (rowXa - rowXb));
+      const crossX = prevXa + t * (rowXa - prevXa);
+      const crossY = prevY + t * (rowY - prevY);
+      aSide.push(crossX, crossY);
+      bSide.push(crossX, crossY);
       close();
-      aSide.push(x, y);
-      bSide.push(x, y);
+      aSide.push(crossX, crossY);
+      bSide.push(crossX, crossY);
     }
     if (sign !== 0) side = sign;
-    aSide.push(point.xa, point.y);
-    bSide.push(point.xb, point.y);
-    prev = point;
+    aSide.push(rowXa, rowY);
+    bSide.push(rowXb, rowY);
+    havePrev = true;
+    prevXa = rowXa;
+    prevXb = rowXb;
+    prevY = rowY;
   }
   close();
   return polygons;
