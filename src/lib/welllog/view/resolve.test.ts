@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { curveFamilyOf, type Curve, type WellLog, type ZoneSet } from "../core/index.ts";
 import { resolveTemplate } from "./resolve.ts";
 import { defaultTemplate } from "./template/defaults.ts";
+import { editTemplate, entryForCurve } from "./template/edit.ts";
 import { entryLabel } from "./template/label.ts";
 import type { CurveEntry, CurveScale, Fill, FillBoundary, Selector, Template } from "./template/types.ts";
 
@@ -110,6 +111,26 @@ test("the family skip spares curves another entry matched only by family", () =>
   // Neither entry names a curve here, so both fall back on the one micro curve.
   const log = wellLog([curve("MSFL", "ohm·m")]);
   assert.deepEqual(matchedKeys(template(microPair()), log), [["MSFL", "MSFL"]]);
+});
+
+test("a curve picked by hand into a track that already shows it draws twice, with the first entry's fills", () => {
+  const log = wellLog([curve("GR", "gAPI"), curve("CALI", "in")]);
+  const t = defaultTemplate();
+  const added = editTemplate(t, { kind: "add-entry", trackId: "gr-caliper", entry: entryForCurve(t, log.curves[0]) });
+  const grCaliper = resolveTemplate(added, log).tracks[0];
+  assert.deepEqual(
+    grCaliper.entries.filter((e) => e.curve?.key === "GR").map((e) => e.entry.id),
+    ["gamma-ray", "gr"],
+  );
+  assert.ok(grCaliper.kind === "curve" && grCaliper.fills.some((f) => f.fill.id === "gr-sand"));
+});
+
+test("a curve picked by hand never makes a family entry skip, on its own well or another", () => {
+  const picked = entry("picked", select(["key", "GR:2"], ["mnemonic", "GR"], ["family", "gamma-ray"]));
+  const t = template([entry("family", select(["family", "gamma-ray"])), picked]);
+  assert.deepEqual(matchedKeys(t, wellLog([curve("GR", "gAPI"), curve("GR:2", "gAPI")])), [["GR", "GR:2"]]);
+  // Fallen back on its mnemonic, it still leaves the family entry its curve.
+  assert.deepEqual(matchedKeys(t, wellLog([curve("GR", "gAPI")])), [["GR", "GR"]]);
 });
 
 test("two entries may show the same curve", () => {
@@ -592,4 +613,23 @@ test("the default template's fills all resolve on a FORCE-shaped well log, and d
   ]);
   // A LAS well log with no bit size and no neutron keeps only the GR fills.
   assert.deepEqual(ids(wellLog([curve("GR", "GAPI"), curve("CALI", "IN"), curve("RHOB", "G/C3")])), ["gr-sand", "gr-shale"]);
+});
+
+test("a hand-picked entry falls back on another well log, first by mnemonic, then by family", () => {
+  const picked = entryForCurve(template([]), curve("GR:2", "gAPI"));
+  const t = template([picked]);
+  // On the well log it was picked on, its key; elsewhere the first GR; then any gamma ray.
+  assert.deepEqual(matchedKeys(t, wellLog([curve("GR", "gAPI"), curve("GR:2", "gAPI")])), [["GR:2"]]);
+  assert.deepEqual(matchedKeys(t, wellLog([curve("RHOB", "g/cm3"), curve("GR", "gAPI")])), [["GR"]]);
+  assert.deepEqual(matchedKeys(t, wellLog([curve("RHOB", "g/cm3"), curve("GRC", "gAPI")])), [["GRC"]]);
+  assert.deepEqual(matchedKeys(t, wellLog([curve("RHOB", "g/cm3")])), [[null]]);
+});
+
+test("a curve added by hand is shown, and leaves the curves not shown", () => {
+  const log = wellLog([curve("GR", "gAPI"), curve("XYZ")]);
+  const t = template([entry("gr", select(["mnemonic", "GR"]))]);
+  assert.deepEqual(resolveTemplate(t, log).unmatchedCurves.map((c) => c.key), ["XYZ"]);
+  const added = editTemplate(t, { kind: "add-entry", trackId: "t0", entry: entryForCurve(t, log.curves[1]) });
+  assert.deepEqual(resolveTemplate(added, log).unmatchedCurves, []);
+  assert.deepEqual(matchedKeys(added, log), [["GR", "XYZ"]]);
 });

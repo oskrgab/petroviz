@@ -24,6 +24,15 @@ export function curveCautions(log: WellLog): Map<string, LoadWarning[]> {
   return byCurve;
 }
 
+/**
+ * Every load warning on one curve, notes included, cautions first: what the
+ * curve editor lists at its top.
+ */
+export function curveWarnings(log: WellLog, curveKey: string): LoadWarning[] {
+  const own = log.warnings.filter((w) => w.curveKey === curveKey);
+  return [...own.filter((w) => severityOf(w.code) === "caution"), ...own.filter((w) => severityOf(w.code) === "note")];
+}
+
 /** Whether no curve, continuous or discrete, has a value in the row. */
 export function isGapRow(log: WellLog, row: number): boolean {
   return row >= 0 && row < log.md.length && log.curves.every((curve) => Number.isNaN(curve.values[row]));
@@ -70,4 +79,33 @@ export function hasValueIn(md: Float64Array, values: Float32Array, interval: Dep
   if (end > start || start === 0 || end === md.length) return false;
   // No row inside: a line from the row above to the row below crosses it.
   return !Number.isNaN(values[start - 1]) && !Number.isNaN(values[end]);
+}
+
+/** Where a curve has values, for the curve editor and the add-curve picker (#34). */
+export interface Coverage {
+  /** The MD of its first value and of its last. */
+  readonly top: number;
+  readonly base: number;
+  /** The share of [top, base], by depth, where it has no value: 0–1. */
+  readonly missing: number;
+}
+
+/**
+ * A curve's range, from its first value to its last, and how much of it is
+ * missing. As in gapsOf, a row stands for the interval down to the next
+ * row's MD, so a row without a value counts for all of that interval, however
+ * long. Null for a curve with no value, which a well log never holds.
+ */
+export function curveCoverage(md: Float64Array, values: Float32Array): Coverage | null {
+  let first = 0;
+  while (first < values.length && Number.isNaN(values[first])) first++;
+  if (first === values.length) return null;
+  let last = values.length - 1;
+  while (Number.isNaN(values[last])) last--;
+  let missing = 0;
+  for (let i = first; i < last; i++) {
+    if (Number.isNaN(values[i])) missing += md[i + 1] - md[i];
+  }
+  const span = md[last] - md[first];
+  return { top: md[first], base: md[last], missing: span > 0 ? missing / span : 0 };
 }

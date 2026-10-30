@@ -3,8 +3,9 @@
  * context, never a module-level singleton. It reads the bound props through
  * getters, one per prop, so each derivation follows only the props it reads
  * (panning never re-resolves the template). It derives everything drawn
- * from them, and writes the bound interval only through `navigate`, which
- * gestures and controls call on a user action.
+ * from them, and writes the bound interval only through `navigate`, and the
+ * bound template only through `edit`, which gestures and controls call on a
+ * user action.
  *
  * Glue only: the logic it calls (resolveTemplate, geometry) is pure and
  * tested on its own.
@@ -18,9 +19,10 @@ import type { Tokens } from "./kinds/types.ts";
 import { wholeWell, type DepthInterval, type DepthRef } from "./interval.ts";
 import { effectiveInterval } from "./navigation.ts";
 import { curveCautions } from "./quality.ts";
-import type { TrackReading } from "./kinds/index.ts";
+import type { ResolvedEntry, TrackReading } from "./kinds/index.ts";
 import { readoutAt, type CursorReadout } from "./readout.ts";
 import { resolveTemplate } from "./resolve.ts";
+import { editTemplate, type TemplateEdit } from "./template/edit.ts";
 import type { Template } from "./template/types.ts";
 
 export interface LogViewProps {
@@ -29,6 +31,21 @@ export interface LogViewProps {
   readonly interval: DepthInterval | null;
   readonly depthRef: DepthRef;
 }
+
+/** Writes the bound props; for user actions only. */
+export interface LogViewWriters {
+  readonly interval: (interval: DepthInterval) => void;
+  readonly template: (template: Template) => void;
+}
+
+/**
+ * The one popup open over the log view: a curve entry's editor, opened from
+ * its scale bar, or a curve track's add-curve picker, opened from its ＋.
+ * `anchor` is what opened it, which it sits beside.
+ */
+export type Popup =
+  | { readonly kind: "editor"; readonly trackId: string; readonly entryId: string; readonly anchor: HTMLElement }
+  | { readonly kind: "picker"; readonly trackId: string; readonly anchor: HTMLElement };
 
 /** The pointer over the track bodies, for the depth cursor. */
 export interface CursorPointer {
@@ -42,7 +59,7 @@ export interface CursorPointer {
 
 export class LogViewState {
   readonly #props: LogViewProps;
-  readonly #writeInterval: (interval: DepthInterval) => void;
+  readonly #write: LogViewWriters;
   readonly #scheduler = new FrameScheduler();
 
   /** Read from the --welllog-* tokens once mounted, and again whenever the scheme changes. */
@@ -58,13 +75,42 @@ export class LogViewState {
   }
 
   /** `props` must read each prop through its own getter. */
-  constructor(props: LogViewProps, writeInterval: (interval: DepthInterval) => void) {
+  constructor(props: LogViewProps, write: LogViewWriters) {
     this.#props = props;
-    this.#writeInterval = writeInterval;
+    this.#write = write;
   }
 
   get log(): WellLog {
     return this.#props.log;
+  }
+
+  get template(): Template {
+    return this.#props.template;
+  }
+
+  /**
+   * Applies a template operation and writes the bound template; for user
+   * actions only. The host keeps it, so edits outlive the well log.
+   */
+  edit(change: TemplateEdit) {
+    const template = this.#props.template;
+    const next = editTemplate(template, change);
+    if (next !== template) this.#write.template(next);
+  }
+
+  popup = $state.raw<Popup | null>(null);
+
+  /** The entry the curve editor is open on, while the current template has it. */
+  editing: ResolvedEntry | null = $derived.by(() => {
+    const popup = this.popup;
+    if (popup?.kind !== "editor") return null;
+    const track = this.resolved.tracks.find((t) => t.track.id === popup.trackId);
+    return (track?.kind === "curve" && track.entries.find((e) => e.entry.id === popup.entryId)) || null;
+  });
+
+  /** Opens a popup, or closes it when the same anchor opened the one open. */
+  togglePopup(next: Popup) {
+    this.popup = this.popup?.anchor === next.anchor ? null : next;
   }
 
   resolved = $derived.by(() => resolveTemplate(this.#props.template, this.#props.log));
@@ -86,7 +132,7 @@ export class LogViewState {
   navigate(interval: DepthInterval) {
     const shown = this.effectiveInterval;
     if (interval.top === shown.top && interval.base === shown.base) return;
-    this.#writeInterval(interval);
+    this.#write.interval(interval);
   }
 
   /** MD for now; TVDSS joins with the depth reference toggle (#48). */

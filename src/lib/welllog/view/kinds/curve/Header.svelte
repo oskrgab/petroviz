@@ -9,6 +9,10 @@
    * A curve with cautions carries a ⚠ after its mnemonic (#34). A curve with
    * no value in the visible interval dims its scale bar and says "no data in
    * view" in place of its unit; the cursor's reading still replaces it.
+   *
+   * A click or tap anywhere on a scale bar, or on an unmatched entry's line,
+   * opens that entry's curve editor (#55); its mnemonic is the button that
+   * does so from the keyboard.
    */
 
   import { DASHES } from "../../canvas.ts";
@@ -24,6 +28,15 @@
   const view = getLogView();
   const empty = $derived(resolved.entries.every((e) => !e.curve));
   const reading = $derived(view.readingOf(resolved.track.id));
+  function edit(event: MouseEvent, entryId: string) {
+    view.togglePopup({
+      kind: "editor",
+      trackId: resolved.track.id,
+      entryId,
+      anchor: event.currentTarget as HTMLElement,
+    });
+  }
+
   const inView = $derived(
     resolved.entries.map(({ curve }) => !curve || hasValueIn(view.log.md, curve.values, view.effectiveInterval)),
   );
@@ -33,16 +46,22 @@
   {#each resolved.entries as { entry, curve, scale }, i (entry.id)}
     {#if curve && scale}
       {@const cautions = view.cautions.get(curve.key)}
+      <!-- The mnemonic is the keyboard's way in; the whole bar is the pointer's. -->
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <div
         class="scale-bar"
         class:no-data={!inView[i]}
         style:--curve={inView[i] ? view.strokeColour(entry.style.colour) : "var(--welllog-no-data)"}
         title={curve.description || curve.key}
+        data-popup-anchor
+        onclick={(event) => edit(event, entry.id)}
       >
         <div class="labels">
           <span class="end">{formatScaleEnd(scale.left)}</span>
           <span class="name">
-            <span class="mnemonic">{curve.mnemonic}</span>
+            <button type="button" class="mnemonic" aria-label="Edit {curve.mnemonic}" aria-haspopup="dialog">
+              {curve.mnemonic}
+            </button>
             {#if cautions}
               <CautionMark {cautions} />
             {/if}
@@ -68,7 +87,11 @@
         </svg>
       </div>
     {:else}
-      <div class="unmatched"><s>{entryLabel(entry)}</s> — not in this well</div>
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <div class="unmatched" data-popup-anchor onclick={(event) => edit(event, entry.id)}>
+        <button type="button" class="mnemonic" aria-haspopup="dialog"><s>{entryLabel(entry)}</s></button> — not in this
+        well
+      </div>
     {/if}
   {/each}
   {#if empty}
@@ -90,6 +113,17 @@
 
   .scale-bar {
     color: var(--curve);
+  }
+
+  .scale-bar,
+  .unmatched {
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .scale-bar:hover,
+  .unmatched:hover {
+    background: color-mix(in srgb, var(--welllog-text) 6%, transparent);
   }
 
   /* Dimmed, in --welllog-no-data, but not the ⚠ or the note saying why. */
@@ -124,7 +158,23 @@
   }
 
   .mnemonic {
+    padding: 0;
+    font: inherit;
     font-weight: 600;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .unmatched .mnemonic {
+    font-weight: inherit;
+  }
+
+  .mnemonic:focus-visible {
+    outline: 2px solid var(--welllog-accent);
+    outline-offset: 1px;
   }
 
   .unit,

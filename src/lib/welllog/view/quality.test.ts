@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Curve, LoadWarning, WellLog } from "../core/index.ts";
-import { curveCautions, gapsOf, hasValueIn, isGapRow } from "./quality.ts";
+import { curveCautions, curveCoverage, curveWarnings, gapsOf, hasValueIn, isGapRow } from "./quality.ts";
 
 function curve(key: string, values: number[], kind: Curve["kind"] = "continuous"): Curve {
   return {
@@ -106,4 +106,38 @@ test("a line crossing the whole interval between two rows counts as data in view
   const md = Float64Array.from([100, 110]);
   assert.equal(hasValueIn(md, Float32Array.from([1, 2]), { top: 102, base: 104 }), true);
   assert.equal(hasValueIn(md, Float32Array.from([1, NaN]), { top: 102, base: 104 }), false);
+});
+
+test("a curve's coverage runs from its first value to its last", () => {
+  const md = Float64Array.from([100, 101, 102, 103, 104, 105]);
+  assert.deepEqual(curveCoverage(md, Float32Array.from([NaN, 1, 2, 3, 4, NaN])), { top: 101, base: 104, missing: 0 });
+  assert.deepEqual(curveCoverage(md, Float32Array.from([1, 2, 3, 4, 5, 6])), { top: 100, base: 105, missing: 0 });
+});
+
+test("% missing is the share of the range, by depth, whose rows have no value", () => {
+  // 100–110 m, with 102–106 m missing: 4 m of 10.
+  const md = Float64Array.from([100, 102, 104, 106, 110]);
+  assert.deepEqual(curveCoverage(md, Float32Array.from([1, NaN, NaN, 4, 5])), { top: 100, base: 110, missing: 0.4 });
+  // A row without a value counts down to the next row, however far that is.
+  const gapped = Float64Array.from([100, 101, 102, 150, 151]);
+  const coverage = curveCoverage(gapped, Float32Array.from([1, 2, NaN, 4, 5]));
+  assert.equal(coverage?.missing, 48 / 51);
+});
+
+test("a curve with one value covers a single depth, none of it missing", () => {
+  const md = Float64Array.from([100, 101, 102]);
+  assert.deepEqual(curveCoverage(md, Float32Array.from([NaN, 7, NaN])), { top: 101, base: 101, missing: 0 });
+  assert.equal(curveCoverage(md, Float32Array.from([NaN, NaN, NaN])), null);
+});
+
+test("a curve's warnings are all of its load warnings, cautions first, notes included", () => {
+  const note: LoadWarning = { code: "sentinel-replaced", curveKey: "GR", count: 10, message: "10 missing values replaced" };
+  const caution: LoadWarning = { code: "value-unreadable", curveKey: "GR", count: 3, message: "3 values couldn't be read" };
+  const log = wellLog(
+    [0],
+    [curve("GR", [1])],
+    [note, { code: "sentinel-replaced", curveKey: "RHOB", message: "other curve" }, { code: "depth-sorted", message: "well" }, caution],
+  );
+  assert.deepEqual(curveWarnings(log, "GR"), [caution, note]);
+  assert.deepEqual(curveWarnings(log, "NPHI"), []);
 });

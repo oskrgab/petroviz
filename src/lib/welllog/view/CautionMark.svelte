@@ -5,6 +5,10 @@
    * the top layer (a manual popover), so the header's overflow can't cut
    * them off and a dimmed scale bar doesn't dim them; the ⚠ carries an
    * empty title so the scale bar's own tooltip doesn't show over them.
+   *
+   * It is a button with no action of its own: in a scale bar its click
+   * reaches the bar, which opens the curve editor, so on touch the messages
+   * are a tap away there.
    */
 
   import type { LoadWarning } from "../core/index.ts";
@@ -13,7 +17,7 @@
   let { cautions }: { cautions: readonly LoadWarning[] } = $props();
 
   const id = $props.id();
-  let mark: HTMLElement;
+  let mark: HTMLButtonElement;
   let tip: HTMLElement;
   let place = $state.raw({ left: 0, top: 0 });
 
@@ -37,20 +41,18 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-<span
+<button
+  type="button"
   class="caution"
-  role="img"
   aria-label={cautions.length === 1 ? "Caution" : `${cautions.length} cautions`}
   aria-describedby={id}
   title=""
-  tabindex="0"
   bind:this={mark}
   onpointerenter={show}
   onpointerleave={hide}
   onfocus={show}
   onblur={hide}
-  {onkeydown}>⚠</span
+  {onkeydown}>⚠</button
 >
 <div class="caution-tip" popover="manual" role="tooltip" {id} bind:this={tip} style:left="{place.left}px" style:top="{place.top}px">
   {#each cautions as caution, i (i)}
@@ -60,10 +62,15 @@
 
 <style>
   .caution {
-    color: var(--welllog-caution);
+    padding: 0;
+    font: inherit;
     font-weight: 400;
-    cursor: help;
+    line-height: inherit;
+    color: var(--welllog-caution);
+    background: none;
+    border: 0;
     border-radius: 2px;
+    cursor: help;
   }
 
   .caution:focus-visible {

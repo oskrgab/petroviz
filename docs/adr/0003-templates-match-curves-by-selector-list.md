@@ -16,6 +16,7 @@ Each curve entry in a template finds its curve through an **ordered list of sele
 - Fills refer to curve entries by a stable `id` within the template, never by mnemonic or position.
 - Mnemonic selectors match case-insensitively and take the first curve in well log order.
 - A family selector skips any curve that another entry in the same track matches by key or mnemonic. Without this, `[mnemonic RXO, family micro]` and `[mnemonic RMIC, family micro]` would draw RMIC twice in a well that has no RXO. Deliberate duplicates (GR on two scales) use key or mnemonic selectors, so they still work. Added by [#29](https://github.com/oskrgab/petroviz/issues/29).
+- A curve picked by hand, whose list starts with a `key` selector, never makes a family selector skip, on the well it was picked on or on another where it falls back on its mnemonic. Most default entries are family-only, so without this, picking GR again into the track that shows it (to see it on a second scale) took GR away from the default entry, along with its fills. Amended by [#55](https://github.com/oskrgab/petroviz/issues/55).
 
 ## Considered options
 

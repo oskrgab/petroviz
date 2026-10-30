@@ -12,6 +12,10 @@
  *   ahead of the entry's first family selector. Those never depend on
  *   another entry, so the rule can't go circular. Every real list has that
  *   shape: `[key, mnemonic, family]`, `[mnemonic, family]` or `[family]`.
+ * - A curve picked by hand (a list that starts with a key selector) never
+ *   makes another entry skip its curve, on the well it was picked on or any
+ *   other. Picking a curve that a family entry in the track already shows,
+ *   to see it on a second scale, then draws it twice, as asked (#55).
  * - Entries don't otherwise claim curves: two may show the same one.
  */
 
@@ -44,7 +48,7 @@ export function matchEntries(
     }
     return null;
   });
-  const named = new Set(byName.filter((curve) => curve !== null));
+  const named = new Set(byName.filter((curve, i) => curve !== null && entries[i].select[0]?.by !== "key"));
 
   return entries.map((entry, i) => {
     if (byName[i]) return byName[i];

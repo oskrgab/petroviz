@@ -20,12 +20,19 @@
    * every track at its depth. A top bar toggle, not kept, adds the floating
    * readout card beside the pointer.
    *
+   * The current template is edited in place, with no edit mode (#30, #55):
+   * a click on a scale bar opens that curve's editor, and the ＋ that shows
+   * on a curve track under the pointer opens its add-curve picker. Only one
+   * of them is open at a time (view.popup).
+   *
    * Colours come in as --welllog-* custom properties. Their light and dark
    * values are set here per `scheme`, and a host may override any of them.
    */
 
   import type { WellLog } from "../core/index.ts";
   import { readTokens } from "./canvas.ts";
+  import CurveEditor from "./CurveEditor.svelte";
+  import CurvePicker from "./CurvePicker.svelte";
   import { depthCursor } from "./cursor.ts";
   import { depthGestures } from "./gestures.ts";
   import IntervalInput from "./IntervalInput.svelte";
@@ -35,6 +42,7 @@
   import { LogViewState, setLogView } from "./logView.svelte.ts";
   import { overviewCurve } from "./navigation.ts";
   import Overview from "./Overview.svelte";
+  import Popup from "./Popup.svelte";
   import ReadoutCard from "./ReadoutCard.svelte";
   import { defaultTemplate } from "./template/defaults.ts";
   import type { Template } from "./template/types.ts";
@@ -75,7 +83,10 @@
           return depthRef;
         },
       },
-      (next) => (interval = next),
+      {
+        interval: (next) => (interval = next),
+        template: (next) => (template = next),
+      },
     ),
   );
 
@@ -88,6 +99,24 @@
   const columns = $derived(`${OVERVIEW_PX}px ${trackColumns(template.tracks)}`);
   const overviewLabel = $derived([overviewCurve(log)?.mnemonic, log.zoneSets[0]?.name].filter(Boolean).join(" · "));
   const panelId = $props.id();
+  /** The track under the pointer, header or body, whose ＋ shows. */
+  let hoveredTrack = $state<string | null>(null);
+
+  // An entry or track removed while its popup is open takes the popup with it.
+  $effect(() => {
+    const popup = view.popup;
+    if (!popup) return;
+    const gone =
+      popup.kind === "editor" ? !view.editing : !view.resolved.tracks.some((t) => t.track.id === popup.trackId);
+    if (gone) view.popup = null;
+  });
+
+  const hover = (trackId: string) => ({
+    onpointerenter: () => (hoveredTrack = trackId),
+    onpointerleave: () => {
+      if (hoveredTrack === trackId) hoveredTrack = null;
+    },
+  });
 
   // The tokens resolve per scheme, so read them again when it changes.
   $effect(() => {
@@ -152,14 +181,30 @@
       </div>
       {#each view.resolved.tracks as resolved (resolved.track.id)}
         {@const Header = headerFor(resolved)}
-        <div class="track-header" class:depth={resolved.kind === "depth"}>
+        {@const trackId = resolved.track.id}
+        <div class="track-header" class:depth={resolved.kind === "depth"} {...hover(trackId)}>
           <Header {resolved} />
+          {#if resolved.kind === "curve"}
+            <button
+              type="button"
+              class="add-curve"
+              class:shown={hoveredTrack === trackId || (view.popup?.kind === "picker" && view.popup.trackId === trackId)}
+              aria-label="Add a curve to this track"
+              aria-haspopup="dialog"
+              title="Add a curve"
+              data-popup-anchor
+              onclick={(event) => view.togglePopup({ kind: "picker", trackId, anchor: event.currentTarget })}
+            >
+              ＋
+            </button>
+          {/if}
         </div>
         <div
           class="track-body"
           class:depth={resolved.kind === "depth"}
           class:zone={resolved.kind === "zone"}
-          data-track-body={resolved.track.id}
+          data-track-body={trackId}
+          {...hover(trackId)}
         >
           <TrackCanvas {resolved} />
         </div>
@@ -174,6 +219,21 @@
   </div>
   {#if cardOn}
     <ReadoutCard />
+  {/if}
+  {#if view.popup}
+    {#key view.popup}
+      {@const popup = view.popup}
+      {@const onclose = () => (view.popup = null)}
+      {#if popup.kind === "editor" && view.editing}
+        <Popup anchor={popup.anchor} label="Edit {view.editing.curve?.mnemonic ?? 'curve'}" {onclose}>
+          <CurveEditor trackId={popup.trackId} resolved={view.editing} {onclose} />
+        </Popup>
+      {:else if popup.kind === "picker"}
+        <Popup anchor={popup.anchor} label="Add a curve" {onclose}>
+          <CurvePicker trackId={popup.trackId} {onclose} />
+        </Popup>
+      {/if}
+    {/key}
   {/if}
 </div>
 
@@ -308,6 +368,7 @@
   }
 
   .track-header {
+    position: relative;
     background: var(--welllog-header-bg);
     border-bottom: 1px solid var(--welllog-border);
     min-width: 0;
@@ -316,6 +377,46 @@
   .track-body {
     min-width: 0;
     min-height: 0;
+  }
+
+  /* Shows on the track under the pointer, on focus, and always on touch. */
+  .add-curve {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 1.125rem;
+    height: 1.125rem;
+    padding: 0;
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--welllog-text-muted);
+    background: var(--welllog-header-bg);
+    border: 1px solid var(--welllog-border);
+    border-radius: 3px;
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .add-curve.shown,
+  .add-curve:focus-visible {
+    opacity: 1;
+  }
+
+  .add-curve:hover {
+    color: var(--welllog-accent);
+    border-color: var(--welllog-accent);
+  }
+
+  .add-curve:focus-visible {
+    outline: 2px solid var(--welllog-accent);
+    outline-offset: 1px;
+  }
+
+  @media (hover: none) {
+    .add-curve {
+      opacity: 1;
+    }
   }
 
   /* Every track after the first; the overview's own border sets off the first. */
