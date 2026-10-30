@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { wellName } from "../../lib/sources/force2020/wellId.ts";
-import { filterWells, groupByQuadrant, isUnlisted, sortWells, type WellEntry, type WellList } from "./wells.ts";
+import type { WellLog } from "../../lib/welllog/core/index.ts";
+import { entryName, filterWells, groupByQuadrant, isUnlisted, lasEntry, skippedNote, sortWells, type WellEntry, type WellList } from "./wells.ts";
 
 const well = (id: string): WellEntry => ({ id, name: wellName(id) });
 const ids = (wells: readonly WellEntry[]) => wells.map((w) => w.id);
@@ -58,4 +59,27 @@ test("a well is unlisted only when the list is read and lacks it", () => {
   assert.equal(isUnlisted(list, "35-11-12"), true);
   assert.equal(isUnlisted({ kind: "loading" }, "35-11-12"), false);
   assert.equal(isUnlisted({ kind: "error" }, "35-11-12"), false);
+});
+
+test("a LAS file's well is named by its WELL item, or not at all when that's empty", () => {
+  const log = (header: { mnemonic: string; value: string }[]) =>
+    ({ header: header.map((h) => ({ ...h, unit: "", description: "" })) }) as unknown as WellLog;
+  assert.deepEqual(lasEntry(log([{ mnemonic: "STRT", value: "100" }, { mnemonic: "WELL", value: " WELL-A " }]), "well_a.las"), {
+    fileName: "well_a.las",
+    name: "WELL-A",
+  });
+  assert.deepEqual(lasEntry(log([{ mnemonic: "well", value: "WELL-B" }]), "b.las").name, "WELL-B");
+  assert.equal(lasEntry(log([{ mnemonic: "WELL", value: "  " }]), "well_a.las").name, null);
+  assert.equal(lasEntry(log([]), "well_a.las").name, null);
+});
+
+test("an entry's name is the well's, else the LAS file's", () => {
+  assert.equal(entryName(well("34-10-16_R")), "34/10-16 R");
+  assert.equal(entryName({ fileName: "well_a.las", name: "WELL-A" }), "WELL-A");
+  assert.equal(entryName({ fileName: "well_a.las", name: null }), "well_a.las");
+});
+
+test("a drop of several files says how many were skipped", () => {
+  assert.equal(skippedNote("a.las", 1), "Only a.las is opened, the first file dropped: the other file was skipped.");
+  assert.equal(skippedNote("a.las", 3), "Only a.las is opened, the first file dropped: the 3 other files were skipped.");
 });

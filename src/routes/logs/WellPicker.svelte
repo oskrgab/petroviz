@@ -8,16 +8,18 @@
    * punctuation; the arrow keys move through it and Enter opens the well.
    * The list is the host's to load, so the picker only shows its state:
    * loading, failed with Retry, or ready. It stays usable while a well loads.
+   * With a LAS file's well on screen the button names it, `📄 WELL-A
+   * (well_a.las)`, and the list still offers the FORCE 2020 wells.
    */
 
   import { tick, untrack } from "svelte";
-  import { filterWells, groupByQuadrant, type WellEntry, type WellList } from "./wells.ts";
+  import { filterWells, groupByQuadrant, type PickerCurrent, type WellEntry, type WellList } from "./wells.ts";
 
   interface Props {
     /** Sorted, as sortWells leaves them. */
     list: WellList;
     /** The well the button names, or null before one is chosen. */
-    current: WellEntry | null;
+    current: PickerCurrent | null;
     open?: boolean;
     onpick: (id: string) => void;
     onretry: () => void;
@@ -40,6 +42,14 @@
   const matches = $derived(list.kind === "ready" ? filterWells(list.wells, query) : []);
   const groups = $derived(groupByQuadrant(matches));
   const activeWell = $derived(matches[active] as WellEntry | undefined);
+  /** The FORCE 2020 well on the button, if it names one: the list starts on it. */
+  const currentId = $derived(current && "id" in current ? current.id : null);
+  const title = $derived.by(() => {
+    if (!current) return "Choose a well";
+    if ("id" in current) return `Well ${current.name}. Choose another well`;
+    const well = current.name === null ? current.fileName : `${current.name}, from ${current.fileName}`;
+    return `${well}. Choose a FORCE 2020 well`;
+  });
 
   // Each opening starts from an empty search, on the current well, with the
   // search box focused: by the button, or by the host after a failed load.
@@ -51,7 +61,7 @@
     if (ready) {
       untrack(() => {
         query = "";
-        const at = current ? matches.findIndex((well) => well.id === current.id) : -1;
+        const at = matches.findIndex((well) => well.id === currentId);
         active = Math.max(at, 0);
       });
     }
@@ -146,12 +156,22 @@
     class="trigger"
     aria-haspopup="dialog"
     aria-expanded={open}
-    title={current ? `Well ${current.name}. Choose another well` : "Choose a well"}
+    {title}
     bind:this={trigger}
     onclick={() => (open = !open)}
     onkeydown={ontriggerkeydown}
   >
-    <span class="label">{current?.name ?? "Choose a well"}</span>
+    <span class="label">
+      {#if !current}
+        Choose a well
+      {:else if "id" in current}
+        {current.name}
+      {:else}
+        <span aria-hidden="true">📄</span>
+        {current.name ?? current.fileName}
+        {#if current.name !== null}<span class="file">({current.fileName})</span>{/if}
+      {/if}
+    </span>
     <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true">
       <path fill="currentColor" d="M4.2 6.2a.75.75 0 0 1 1.06 0L8 8.94l2.74-2.74a.75.75 0 1 1 1.06 1.06l-3.27 3.27a.75.75 0 0 1-1.06 0L4.2 7.26a.75.75 0 0 1 0-1.06Z" />
     </svg>
@@ -194,7 +214,7 @@
                   class:active={well === activeWell}
                   role="option"
                   tabindex="-1"
-                  aria-selected={well.id === current?.id}
+                  aria-selected={well.id === currentId}
                   onpointerdown={(event) => event.preventDefault()}
                   onpointermove={() => (active = matches.indexOf(well))}
                   onclick={() => pick(well)}
@@ -255,6 +275,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .file {
+    font-weight: 400;
+    color: var(--color-text-muted);
   }
 
   .chevron {

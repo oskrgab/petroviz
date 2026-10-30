@@ -1,13 +1,31 @@
 /**
  * The well picker's pure rules: the order the FORCE 2020 wells are listed
- * in, their quadrant groups, and the search. Kept apart from the component
+ * in, their quadrant groups, the search, and how a LAS file's well is named.
+ * Also the page's note about skipped files. Kept apart from the components
  * so they run under node --test.
  */
 
 import type { ForceWell } from "../../lib/sources/force2020/wellId.ts";
+import type { WellLog } from "../../lib/welllog/core/index.ts";
 
 /** One well the picker can open: its file stem and display name. */
 export type WellEntry = ForceWell;
+
+/** A LAS file's well, as the picker names it: `📄 WELL-A (well_a.las)`. */
+export interface LasEntry {
+  readonly fileName: string;
+  /** The file's WELL item; null when it is empty, or not yet read. */
+  readonly name: string | null;
+}
+
+/** What the picker's button names: a FORCE 2020 well or a LAS file's well. */
+export type PickerCurrent = WellEntry | LasEntry;
+
+/** The picker's name for a well log read from `fileName`. */
+export function lasEntry(log: WellLog, fileName: string): LasEntry {
+  const item = log.header.find((h) => h.mnemonic.toUpperCase() === "WELL");
+  return { fileName, name: item?.value.trim() || null };
+}
 
 /** The well list as the picker shows it; the host loads it. */
 export type WellList =
@@ -91,4 +109,15 @@ export function filterWells(wells: readonly WellEntry[], query: string): WellEnt
  */
 export function isUnlisted(list: WellList, id: string): boolean {
   return list.kind === "ready" && !list.wells.some((well) => well.id === id);
+}
+
+/** What the page calls the well an entry names: its name, else the LAS file's. */
+export function entryName(entry: PickerCurrent): string {
+  return "id" in entry ? entry.name : (entry.name ?? entry.fileName);
+}
+
+/** What the page says when a drop held more files than the one it opens. */
+export function skippedNote(first: string, skipped: number): string {
+  const others = skipped === 1 ? "the other file was" : `the ${skipped} other files were`;
+  return `Only ${first} is opened, the first file dropped: ${others} skipped.`;
 }

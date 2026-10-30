@@ -32,6 +32,24 @@ export interface LogLink {
 const DEPTH = String.raw`-?\d+(?:\.\d+)?`;
 const MD = new RegExp(`^(${DEPTH})-(${DEPTH})$`);
 
+/**
+ * One string per thing a link can open, so the host can tell whether the
+ * URL still names what is on screen. A link naming neither opens the
+ * default well, and has its key.
+ */
+export function sourceKey(source: LinkSource): string {
+  switch (source.kind) {
+    case "none":
+      return `well:${DEFAULT_WELL}`;
+    case "well":
+      return `well:${source.id}`;
+    case "unknown-well":
+      return `well:${source.name}`;
+    case "las":
+      return `las:${source.fileName}`;
+  }
+}
+
 /** MD rounded to 0.1, never -0. */
 export function roundMd(md: number): number {
   return Math.round(md * 10) / 10 + 0;

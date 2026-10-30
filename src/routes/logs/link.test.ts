@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_WELL, parseLink, roundMd, writeLink, type LogLink } from "./link.ts";
+import { DEFAULT_WELL, parseLink, roundMd, sourceKey, writeLink, type LogLink } from "./link.ts";
 
 const parse = (search: string) => parseLink(new URLSearchParams(search));
 const write = (link: LogLink) => writeLink(link).toString();
@@ -90,4 +90,12 @@ test("an md above the surface parses, negative ends included", () => {
 
 test("an interval outside the well is passed through for the log view to clamp", () => {
   assert.deepEqual(parse("well=35-11-11&md=90000.0-99000.0").interval, { top: 90000, base: 99000 });
+});
+
+test("a source's key tells wells and LAS files apart, and names the well a bare link opens", () => {
+  assert.equal(sourceKey({ kind: "well", id: "35-11-11" }), "well:35-11-11");
+  assert.equal(sourceKey({ kind: "none" }), "well:35-11-11");
+  assert.equal(sourceKey({ kind: "unknown-well", name: "../secret" }), "well:../secret");
+  assert.equal(sourceKey({ kind: "las", fileName: "35-11-11" }), "las:35-11-11");
+  assert.notEqual(sourceKey({ kind: "las", fileName: "a.las" }), sourceKey({ kind: "las", fileName: "b.las" }));
 });

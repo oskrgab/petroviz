@@ -22,6 +22,7 @@ Nothing under `welllog/` imports `$app/*`, `$lib/` outside `welllog/`, DuckDB, o
 
 ## Consequences
 
+- The LAS log adapter's `readLas(file)` runs its pipeline in a module worker it starts itself ([#35](https://github.com/oskrgab/petroviz/issues/35)). That is parsing, not loading: the host still picks the file, calls `readLas`, and owns the loading UI.
 - The log view accepts a `WellLog` and nothing else. The host renders the loading, error and empty states.
 - The log view writes a bound prop only on a user action. The interval clamped to the well, and the depth reference the well actually has, are derived values. So a TVDSS preference survives a well without TVDSS.
 - Template file parsing and validation are pure functions in `view`. The host wires up the file picker and `localStorage` and uses the same parser for both.

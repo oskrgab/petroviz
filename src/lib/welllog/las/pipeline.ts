@@ -1,6 +1,6 @@
 /**
  * The LAS log adapter's pipeline: bytes and a file name in, a well log out
- * (#32, #35). Pure and DOM-free, so the worker that `readLas` will own runs
+ * (#32, #35). Pure and DOM-free, so the worker that `readLas` owns runs
  * it unchanged, and Node runs it in tests.
  */
 
