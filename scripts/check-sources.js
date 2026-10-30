@@ -10,7 +10,7 @@
  * build does (from the environment, then .env), prints one line per source
  * and exits non-zero if any fails.
  *
- * Standalone Node 20 script with no dependencies.
+ * Standalone Node script with no dependencies.
  */
 
 import { existsSync } from "node:fs";
@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { resolveSources } from "../src/lib/config/sources.js";
 
 /** @typedef {import("../src/lib/config/sources.js").Source} Source */
+/** @typedef {import("../src/lib/config/sources.js").SourceSettings} SourceSettings */
 
 /**
  * @typedef {object} CheckResult
@@ -172,7 +173,10 @@ async function main() {
   const envFile = fileURLToPath(new URL("../.env", import.meta.url));
   if (existsSync(envFile)) process.loadEnvFile(envFile);
 
-  const failures = report(await checkSources(resolveSources(process.env)));
+  // ProcessEnv declares none of SourceSettings' keys by name, so TypeScript's
+  // weak-type check needs telling that the environment is where they live.
+  const env = /** @type {SourceSettings} */ (process.env);
+  const failures = report(await checkSources(resolveSources(env)));
   if (failures > 0) {
     console.error(`\n${failures} source(s) failed.`);
     process.exitCode = 1;

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "test": "node --test src/lib/config/sources.test.js scripts/check-sources.test.js",
+    "test": "node --test \"src/**/*.test.{js,ts}\" \"scripts/**/*.test.js\"",
     "check:sources": "node scripts/check-sources.js"
   },
   "devDependencies": {
@@ -18,7 +18,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
-    "typescript": "^5.0.0",
+    "typescript": "^5.8.0",
     "vite": "^6.0.0"
   },
   "dependencies": {

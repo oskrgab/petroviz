@@ -9,7 +9,11 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    // welllog/ modules import each other by relative path with the .ts
+    // extension, so Node 24 runs their tests with no build step (ADR-0004).
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   },
   // Overriding `include` replaces SvelteKit's list, so repeat it (from
   // .svelte-kit/tsconfig.json) and add the standalone Node scripts.
