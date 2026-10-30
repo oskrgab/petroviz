@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { wellName } from "../../lib/sources/force2020/wellId.ts";
-import { filterWells, groupByQuadrant, sortWells, type WellEntry } from "./wells.ts";
+import { filterWells, groupByQuadrant, isUnlisted, sortWells, type WellEntry, type WellList } from "./wells.ts";
 
 const well = (id: string): WellEntry => ({ id, name: wellName(id) });
 const ids = (wells: readonly WellEntry[]) => wells.map((w) => w.id);
@@ -50,4 +50,12 @@ test("an empty or punctuation-only query keeps every well", () => {
 
 test("a query matching nothing keeps nothing", () => {
   assert.deepEqual(filterWells(["35-11-11"].map(well), "99"), []);
+});
+
+test("a well is unlisted only when the list is read and lacks it", () => {
+  const list: WellList = { kind: "ready", wells: ["35-11-11", "7-1-1"].map(well) };
+  assert.equal(isUnlisted(list, "35-11-11"), false);
+  assert.equal(isUnlisted(list, "35-11-12"), true);
+  assert.equal(isUnlisted({ kind: "loading" }, "35-11-12"), false);
+  assert.equal(isUnlisted({ kind: "error" }, "35-11-12"), false);
 });

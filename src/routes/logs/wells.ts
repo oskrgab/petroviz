@@ -84,3 +84,11 @@ export function filterWells(wells: readonly WellEntry[], query: string): WellEnt
   if (needle === "") return [...wells];
   return wells.filter((well) => searchable(well.name).includes(needle));
 }
+
+/**
+ * Whether the well list, once read, lacks `id`: such a well is unknown
+ * without asking the Data host. While the list loads or failed, nothing is.
+ */
+export function isUnlisted(list: WellList, id: string): boolean {
+  return list.kind === "ready" && !list.wells.some((well) => well.id === id);
+}

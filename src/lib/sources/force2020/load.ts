@@ -43,6 +43,11 @@ export class ForceLoadError extends Error {
   }
 }
 
+/** The error for a well the dataset doesn't have, or a name that can't be one. */
+export function unknownWellError(id: string): ForceLoadError {
+  return new ForceLoadError("unknown-well", `No FORCE 2020 well named ${id}.`);
+}
+
 interface ForceSchema {
   tables: { wells: { columns: { name: string; unit: string | null }[] } };
   lithology_labels?: Record<string, string>;
@@ -165,7 +170,7 @@ async function cachedCopies(cache: Cache, url: string): Promise<readonly Request
 async function download(url: string, id: string, signal?: AbortSignal): Promise<ArrayBuffer> {
   const response = await get(url, `well ${id}`, signal);
   if (response.status === 404) {
-    throw new ForceLoadError("unknown-well", `No FORCE 2020 well named ${id}.`);
+    throw unknownWellError(id);
   }
   if (!response.ok) {
     // Worth retrying, like a dropped connection.
@@ -213,7 +218,7 @@ export async function loadWell(id: string, options: LoadWellOptions): Promise<We
   const { signal, ...hosts } = options;
   signal?.throwIfAborted();
   if (!isWellId(id)) {
-    throw new ForceLoadError("unknown-well", `No FORCE 2020 well named ${id}.`);
+    throw unknownWellError(id);
   }
   const url = `${wellsUrl(hosts)}/${id}.parquet`;
 
