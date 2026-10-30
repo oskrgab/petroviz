@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { curveFamilyOf, type Curve, type WellLog } from "../core/index.ts";
+import { curveFamilyOf, type Curve, type WellLog, type ZoneSet } from "../core/index.ts";
 import { resolveTemplate } from "./resolve.ts";
 import { defaultTemplate } from "./template/defaults.ts";
 import { entryLabel } from "./template/label.ts";
@@ -18,14 +18,14 @@ function curve(key: string, unit = "", mnemonic = key.replace(/:\d+$/, "")): Cur
   };
 }
 
-function wellLog(curves: Curve[]): WellLog {
+function wellLog(curves: Curve[], zoneSets: ZoneSet[] = []): WellLog {
   return {
     well: { id: "w", name: "W" },
     source: "test",
     depthUnit: "m",
     md: new Float64Array([100, 100.152]),
     curves,
-    zoneSets: [],
+    zoneSets,
     header: [],
     warnings: [],
   };
@@ -143,6 +143,7 @@ test("a matched entry gets its fixed curve scale; an unmatched one gets none", (
   const log = wellLog([curve("GR", "gAPI")]);
   const t = template([entry("gr", select(["mnemonic", "GR"])), entry("x", select(["mnemonic", "X"]))]);
   const [track] = resolveTemplate(t, log).tracks;
+  assert.ok(track.kind === "curve");
   assert.deepEqual(track.entries[0].scale, { left: 0, right: 150, type: "linear" });
   assert.equal(track.entries[1].scale, null);
 });
@@ -204,11 +205,14 @@ test("the default template on a FORCE-shaped well log", () => {
     "density-neutron": ["RHOB", "NPHI", "PEF"],
     sonic: ["DTC", "DTS"],
     drilling: ["ROP", "ROPA"],
+    lithology: ["FORCE_2020_LITHOFACIES_LITHOLOGY"],
+    group: [],
+    formation: [],
   });
-  // SP and mud weight join with computed scales (#43), lithology with its track (#45).
+  // SP and mud weight join with computed scales (#43).
   assert.deepEqual(
     resolveTemplate(defaultTemplate(), log).unmatchedCurves.map((c) => c.key),
-    ["SP", "DCAL", "DRHO", "MUDWEIGHT", "FORCE_2020_LITHOFACIES_LITHOLOGY"],
+    ["SP", "DCAL", "DRHO", "MUDWEIGHT"],
   );
 });
 
@@ -221,7 +225,7 @@ test("a FORCE 2020 well with no drilling curves keeps its drilling track, empty"
   const resolved = resolveTemplate(defaultTemplate(), log);
   assert.deepEqual(
     resolved.tracks.map((t) => t.track.id),
-    ["gr-caliper", "depth", "resistivity", "density-neutron", "sonic", "drilling"],
+    ["gr-caliper", "depth", "resistivity", "density-neutron", "sonic", "drilling", "lithology", "group", "formation"],
   );
   const drilling = resolved.tracks.find((t) => t.track.id === "drilling")!;
   assert.deepEqual(
@@ -253,6 +257,9 @@ test("the default template on a LAS-shaped well log matches by curve family", ()
     "density-neutron": ["RHOB", "NPHI", null],
     sonic: ["DT", null],
     drilling: [null, null],
+    lithology: [null],
+    group: [],
+    formation: [],
   });
   assert.deepEqual(
     resolveTemplate(defaultTemplate(), log).unmatchedCurves.map((c) => c.key),
@@ -266,4 +273,75 @@ test("an entry's label is its key, else its mnemonic, else its family's short na
   assert.equal(entryLabel(entry("a", select(["family", "spectral-gamma-ray"]))), "SGR");
   assert.equal(entryLabel(entry("a", select(["family", "no-such-family"]))), "no-such-family");
   assert.equal(entryLabel(entry("gr-2", [])), "gr-2");
+});
+
+const zoneSet = (name: string, ...names: string[]): ZoneSet => ({
+  name,
+  zones: names.map((zone, i) => ({ name: zone, top: 100 + i, base: 101 + i })),
+});
+
+test("the default template's zone tracks show the FORCE 2020 zone sets by name", () => {
+  const log = wellLog([lithology], [zoneSet("GROUP", "VIKING GP.", "BAAT GP."), zoneSet("FORMATION", "Ness Fm.")]);
+  const resolved = resolveTemplate(defaultTemplate(), log);
+  const zones = resolved.tracks.flatMap((t) => (t.kind === "zone" ? [[t.track.id, t.zoneSet?.zones.map((z) => z.name)]] : []));
+  assert.deepEqual(zones, [
+    ["group", ["VIKING GP.", "BAAT GP."]],
+    ["formation", ["Ness Fm."]],
+  ]);
+  assert.deepEqual(resolved.unmatchedZoneSets, []);
+  const group = resolved.tracks.find((t) => t.kind === "zone")!;
+  assert.ok(group.kind === "zone");
+  assert.equal(group.colours.length, 2);
+  assert.equal(group.labelInks.length, 2);
+});
+
+test("a LAS-shaped well log with no zone sets keeps its zone tracks, flagged as unmatched", () => {
+  const log = wellLog([curve("GR", "GAPI"), curve("ILD", "OHMM")]);
+  const resolved = resolveTemplate(defaultTemplate(), log);
+  assert.deepEqual(
+    resolved.tracks.slice(-3).map((t) => [t.track.id, t.kind]),
+    [
+      ["lithology", "discrete"],
+      ["group", "zone"],
+      ["formation", "zone"],
+    ],
+  );
+  for (const track of resolved.tracks) if (track.kind === "zone") assert.equal(track.zoneSet, null);
+  assert.deepEqual(resolved.unmatchedZoneSets, [
+    { trackId: "group", zoneSet: "GROUP" },
+    { trackId: "formation", zoneSet: "FORMATION" },
+  ]);
+  // The lithology entry is unmatched too, and keeps its track.
+  assert.ok(resolved.unmatchedEntries.some(({ trackId, entry }) => trackId === "lithology" && entry.id === "lithology"));
+});
+
+test("zone sets match by their exact name", () => {
+  const t: Template = { name: "Z", tracks: [{ id: "z", kind: "zone", width: 0.6, zoneSet: "GROUP" }] };
+  const [track] = resolveTemplate(t, wellLog([], [zoneSet("Group", "A")])).tracks;
+  assert.ok(track.kind === "zone" && track.zoneSet === null);
+});
+
+test("a discrete entry matches discrete curves only, and a curve entry continuous ones only", () => {
+  const continuousLith = { ...curve("LITH"), family: "lithology" as const };
+  const discreteLith: Curve = { ...curve("LITH:2"), family: "lithology", kind: "discrete" };
+  const t: Template = {
+    name: "D",
+    tracks: [
+      { id: "d", kind: "discrete", width: 0.4, curve: { id: "lith", select: select(["family", "lithology"]) } },
+      { id: "c", kind: "curve", width: 1, curves: [entry("lith-line", select(["family", "lithology"]))] },
+    ],
+  };
+  assert.deepEqual(matchedKeys(t, wellLog([continuousLith, discreteLith])), [["LITH:2"], ["LITH"]]);
+  assert.deepEqual(matchedKeys(t, wellLog([continuousLith])), [[null], ["LITH"]]);
+});
+
+test("a discrete track resolves a style for every code in its curve", () => {
+  const lith: Curve = { ...lithology, values: Float32Array.from([65000, 90000, NaN, 4]) };
+  const [track] = resolveTemplate(
+    { name: "D", tracks: [defaultTemplate().tracks.find((t) => t.kind === "discrete")!] },
+    wellLog([lith]),
+  ).tracks;
+  assert.ok(track.kind === "discrete");
+  assert.deepEqual([...track.styles.keys()].sort((a, b) => a - b), [4, 65000, 90000]);
+  assert.equal(track.styles.get(4)?.pattern, undefined);
 });

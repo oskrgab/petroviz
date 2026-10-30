@@ -5,10 +5,12 @@
  * Not unit-tested: it is checked by running the app.
  */
 
+import type { Block } from "./geometry/blocks.ts";
 import { depthGridlines, type Gridline } from "./geometry/grid.ts";
 import { pixelsPerUnit, type Frame } from "./geometry/polyline.ts";
+import { HATCHES, HATCH_TILE } from "./hatches.ts";
 import type { Tokens } from "./kinds/types.ts";
-import type { Dash } from "./template/types.ts";
+import type { CodeStyle, Dash } from "./template/types.ts";
 
 /** Dash patterns in CSS px, for a 1 px line. */
 export const DASHES: Readonly<Record<Dash, readonly number[]>> = {
@@ -99,6 +101,74 @@ export function strokeDepthGrid(ctx: CanvasRenderingContext2D, frame: Frame, dpr
   }
 }
 
+/** FGDC hatches are black, softened so the colour beneath still reads. */
+const HATCH_INK = "rgba(0, 0, 0, 0.55)";
+
+const hatchTiles = new Map<string, HTMLCanvasElement>();
+
+/** A repeating tile of the style's colour with its pattern's marks, at this dpr. */
+function hatchTile(style: CodeStyle & { pattern: NonNullable<CodeStyle["pattern"]> }, dpr: number) {
+  const key = `${style.colour} ${style.pattern} ${dpr}`;
+  let tile = hatchTiles.get(key);
+  if (tile) return tile;
+  const size = Math.max(HATCH_TILE, Math.round(HATCH_TILE * dpr));
+  const unit = size / HATCH_TILE;
+  tile = document.createElement("canvas");
+  tile.width = tile.height = size;
+  const g = tile.getContext("2d");
+  if (g) {
+    g.fillStyle = style.colour;
+    g.fillRect(0, 0, size, size);
+    const { lines, dots } = HATCHES[style.pattern];
+    g.strokeStyle = g.fillStyle = HATCH_INK;
+    g.lineWidth = Math.max(1, 0.9 * dpr);
+    for (const line of lines) {
+      g.beginPath();
+      g.moveTo(line[0] * unit, line[1] * unit);
+      for (let j = 2; j < line.length; j += 2) g.lineTo(line[j] * unit, line[j + 1] * unit);
+      g.stroke();
+    }
+    for (const [x, y] of dots) g.fillRect(x * unit, y * unit, 1.3 * unit, 1.3 * unit);
+  }
+  hatchTiles.set(key, tile);
+  return tile;
+}
+
+/**
+ * Fills each block across the track in its code's colour and pattern. Edges
+ * snap to whole device px so neighbours meet without a seam, and a block
+ * thinner than a pixel still shows as one.
+ */
+export function fillDiscreteBlocks(
+  ctx: CanvasRenderingContext2D,
+  blocks: readonly Block[],
+  styles: ReadonlyMap<number, CodeStyle>,
+  frame: Frame,
+  dpr: number,
+) {
+  const fills = new Map<number, string | CanvasPattern>();
+  const fillOf = (code: number) => {
+    let fill = fills.get(code);
+    if (fill === undefined) {
+      const style = styles.get(code);
+      if (!style) return undefined;
+      const pattern = style.pattern ? ctx.createPattern(hatchTile({ ...style, pattern: style.pattern }, dpr), "repeat") : null;
+      fill = pattern ?? style.colour;
+      fills.set(code, fill);
+    }
+    return fill;
+  };
+  for (const { code, y0, y1 } of blocks) {
+    const fill = fillOf(code);
+    if (!fill) continue;
+    const top = Math.max(0, Math.round(y0));
+    const bottom = Math.min(frame.height, Math.max(Math.round(y1), top + 1));
+    if (bottom <= top) continue;
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, top, frame.width, bottom - top);
+  }
+}
+
 /** The tokens the canvas draws with, as resolved on the log view's element. */
 export function readTokens(element: Element): Tokens {
   const style = getComputedStyle(element);
@@ -108,6 +178,7 @@ export function readTokens(element: Element): Tokens {
     gridMajor: token("grid-major"),
     text: token("text"),
     textMuted: token("text-muted"),
+    zoneLine: token("zone-line"),
     font: style.fontFamily,
   };
 }

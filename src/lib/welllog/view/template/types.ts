@@ -3,8 +3,8 @@
  * well log. It is the layout model itself: what is drawn is derived from the
  * current template and the well log by `resolveTemplate`, never stored.
  *
- * Curve and depth tracks so far. Discrete and zone tracks, fills and computed
- * curve scales join in their own tickets.
+ * Curve, depth, discrete and zone tracks so far. Fills and computed curve
+ * scales join in their own tickets.
  */
 
 import type { DepthRef } from "../interval.ts";
@@ -79,8 +79,51 @@ export interface DepthTrack extends TrackBase {
   readonly ref: DepthTrackRef;
 }
 
+/**
+ * The FGDC-STD-013-2006 lithologic patterns petroviz draws, by pattern
+ * number, as simple canvas hatches. 658 (coal) is drawn solid.
+ */
+export const FGDC_PATTERNS = [607, 620, 623, 626, 627, 642, 658, 667, 668, 670, 711, 718] as const;
+
+export type FgdcPattern = (typeof FGDC_PATTERNS)[number];
+
+/** How one discrete code is drawn. Opaque, and as stored in both themes (#37). */
+export interface CodeStyle {
+  /** `#RRGGBB`. */
+  readonly colour: string;
+  /** No pattern draws the colour alone. */
+  readonly pattern?: FgdcPattern;
+}
+
+/** A discrete track's one curve entry. */
+export interface DiscreteEntry {
+  /** Stable and unique within the template. */
+  readonly id: string;
+  /** Matches discrete curves only. */
+  readonly select: readonly Selector[];
+  /** Code (as a string) → style, replacing the curve family default for that code. */
+  readonly codes?: Readonly<Record<string, CodeStyle>>;
+}
+
+/** Any track's curve entry. */
+export type Entry = CurveEntry | DiscreteEntry;
+
+/** One discrete curve drawn as blocks of colour, such as lithology. */
+export interface DiscreteTrack extends TrackBase {
+  readonly kind: "discrete";
+  readonly curve: DiscreteEntry;
+}
+
+/** One zone set, matched by its name. */
+export interface ZoneTrack extends TrackBase {
+  readonly kind: "zone";
+  readonly zoneSet: string;
+  /** Zone name → `#RRGGBB`; other names take a hashed categorical colour. */
+  readonly colours?: Readonly<Record<string, string>>;
+}
+
 /** A closed union: the track kind registry is checked against it. */
-export type Track = CurveTrack | DepthTrack;
+export type Track = CurveTrack | DepthTrack | DiscreteTrack | ZoneTrack;
 
 export type TrackKindName = Track["kind"];
 

@@ -442,6 +442,32 @@ exports[`the built default template matches its snapshot 1`] = `
           }
         }
       ]
+    },
+    {
+      "id": "lithology",
+      "kind": "discrete",
+      "width": 0.4,
+      "curve": {
+        "id": "lithology",
+        "select": [
+          {
+            "by": "family",
+            "value": "lithology"
+          }
+        ]
+      }
+    },
+    {
+      "id": "group",
+      "kind": "zone",
+      "width": 0.6,
+      "zoneSet": "GROUP"
+    },
+    {
+      "id": "formation",
+      "kind": "zone",
+      "width": 0.6,
+      "zoneSet": "FORMATION"
     }
   ]
 }

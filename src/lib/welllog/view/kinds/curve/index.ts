@@ -10,9 +10,9 @@ import { mappingOf, type ResolvedScale } from "../../geometry/scale.ts";
 import { DASHES, strokeDepthGrid, strokePolyline, strokeVerticalGrid } from "../../canvas.ts";
 import { matchEntries } from "../../match.ts";
 import type { CurveScale, CurveTrack } from "../../template/types.ts";
-import type { ResolvedTrackBase, TrackKind } from "../types.ts";
+import type { ResolvedEntry, ResolvedTrackBase, TrackKind } from "../types.ts";
 
-export interface ResolvedCurveTrack extends ResolvedTrackBase<CurveTrack> {
+export interface ResolvedCurveTrack extends ResolvedTrackBase<CurveTrack, ResolvedEntry> {
   /** The track's first curve scale, matched or not, which its gridlines follow. */
   readonly grid: ResolvedScale | null;
 }
@@ -24,7 +24,7 @@ function resolveScale(scale: CurveScale): ResolvedScale {
 
 export const curveKind: TrackKind<CurveTrack, ResolvedCurveTrack> = {
   resolve(track, log) {
-    const curves = matchEntries(track.curves, log.curves);
+    const curves = matchEntries(track.curves, log.curves.filter((c) => c.kind === "continuous"));
     const [first] = track.curves;
     return {
       kind: "curve",

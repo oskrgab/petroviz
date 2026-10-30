@@ -5,12 +5,21 @@
  * branch); colours are written for a light background (ADR-0006).
  *
  * SP, mud weight, unknown-depth resistivity and `unknown` have computed curve
- * scales and join with them (#43). Lithology joins with the discrete track
- * (#45).
+ * scales and join with them (#43).
  */
 
 import type { CurveFamily } from "../../core/index.ts";
-import type { CurveEntry, CurveScale, CurveStyle, Dash, OffScale, Selector, Template, Track } from "./types.ts";
+import type {
+  CodeStyle,
+  CurveEntry,
+  CurveScale,
+  CurveStyle,
+  Dash,
+  OffScale,
+  Selector,
+  Template,
+  Track,
+} from "./types.ts";
 
 /** The default template's curve tracks, in display order. */
 type DefaultCurveTrack = "gr-caliper" | "resistivity" | "density-neutron" | "sonic" | "drilling";
@@ -64,6 +73,40 @@ export const curveFamilyDefaults: Readonly<Partial<Record<CurveFamily, CurveFami
   rop: family("ROP", "drilling", [100, 0, "m/h", "linear"], "clip", "#000000", "solid"),
 };
 
+export interface DiscreteFamilyDefault {
+  /** A short name for the family: the discrete track's header, struck through when nothing matches. */
+  readonly label: string;
+  /** Code (as a string) → style. Codes not listed take a hashed colour and no pattern. */
+  readonly codes: Readonly<Record<string, CodeStyle>>;
+}
+
+/**
+ * Discrete curve families. Lithology uses the Kansas Geological Survey
+ * colours with FGDC pattern numbers, for every FORCE 2020 code. Limestone
+ * and chalk share a colour and differ by pattern. FGDC has no anhydrite
+ * pattern, so it takes 667 (gypsum), the nearest evaporite. Basement takes
+ * intrusive igneous rock (718), a guess for crystalline basement.
+ */
+export const discreteFamilyDefaults: Readonly<Partial<Record<CurveFamily, DiscreteFamilyDefault>>> = {
+  lithology: {
+    label: "Lithology",
+    codes: {
+      "30000": { colour: "#FFFF00", pattern: 607 }, // sandstone
+      "65030": { colour: "#FFE119", pattern: 670 }, // sandstone/shale
+      "65000": { colour: "#BEBEBE", pattern: 620 }, // shale
+      "80000": { colour: "#7CFC00", pattern: 623 }, // marl
+      "74000": { colour: "#8080FF", pattern: 642 }, // dolomite
+      "70000": { colour: "#80FFFF", pattern: 627 }, // limestone
+      "70032": { colour: "#80FFFF", pattern: 626 }, // chalk
+      "88000": { colour: "#7FFFD4", pattern: 668 }, // halite
+      "86000": { colour: "#FF80FF", pattern: 667 }, // anhydrite
+      "99000": { colour: "#FF8C00", pattern: 711 }, // tuff
+      "90000": { colour: "#000000", pattern: 658 }, // coal
+      "93000": { colour: "#FF1493", pattern: 718 }, // basement
+    },
+  },
+};
+
 /**
  * The two families FORCE 2020 carries as mnemonic pairs. Each gets one entry
  * per mnemonic, so a well with both draws both and a well with one draws it
@@ -82,6 +125,13 @@ const TRACKS: readonly ({ id: DefaultCurveTrack; width: number } | "depth")[] = 
   { id: "density-neutron", width: 1 },
   { id: "sonic", width: 1 },
   { id: "drilling", width: 0.75 },
+];
+
+/** After the curve tracks: lithology, then the two FORCE 2020 zone sets. */
+const DISCRETE_AND_ZONE_TRACKS: readonly Track[] = [
+  { id: "lithology", kind: "discrete", width: 0.4, curve: { id: "lithology", select: [{ by: "family", value: "lithology" }] } },
+  { id: "group", kind: "zone", width: 0.6, zoneSet: "GROUP" },
+  { id: "formation", kind: "zone", width: 0.6, zoneSet: "FORMATION" },
 ];
 
 function entry(id: string, defaults: CurveFamilyDefault, select: Selector[], dash?: Dash): CurveEntry {
@@ -113,5 +163,5 @@ export function defaultTemplate(): Template {
       ? { id: "depth", kind: "depth", width: 0.5, ref: "active" }
       : { id: track.id, kind: "curve", width: track.width, curves: entriesFor(track.id) },
   );
-  return { name: "Default", tracks };
+  return { name: "Default", tracks: [...tracks, ...DISCRETE_AND_ZONE_TRACKS] };
 }
