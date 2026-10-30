@@ -14,6 +14,7 @@ import type {
   CurveScale,
   CurveStyle,
   Dash,
+  Fill,
   OffScale,
   ScaleType,
   Selector,
@@ -140,6 +141,52 @@ const TRACKS: readonly ({ id: DefaultCurveTrack; width: number } | "depth")[] = 
   { id: "drilling", width: 0.75 },
 ];
 
+/** About 40% alpha, so curves and gridlines read through a fill. */
+const FILL_ALPHA = "66";
+
+const curveBoundary = (id: string) => ({ kind: "curve", id }) as const;
+
+/**
+ * The fills that are on (#29). The resistivity and PEF cut-offs need a value
+ * chosen per well, so they stay off. Each GR fill has only one side that can
+ * occur (GR never passes an edge), so the other is transparent.
+ */
+const FILLS: Partial<Record<DefaultCurveTrack, readonly Fill[]>> = {
+  "gr-caliper": [
+    {
+      id: "gr-sand",
+      a: curveBoundary("gamma-ray"),
+      b: { kind: "edge", edge: "right" },
+      colourWhereALeft: `#FFFF00${FILL_ALPHA}`,
+      colourWhereARight: "#00000000",
+    },
+    {
+      id: "gr-shale",
+      a: { kind: "edge", edge: "left" },
+      b: curveBoundary("gamma-ray"),
+      colourWhereALeft: `#BEBEBE${FILL_ALPHA}`,
+      colourWhereARight: "#00000000",
+    },
+    {
+      // Caliper and bit size share a scale, so larger is further right.
+      id: "caliper-bit-size",
+      a: curveBoundary("caliper"),
+      b: curveBoundary("bit-size"),
+      colourWhereALeft: `#8FBC8F${FILL_ALPHA}`,
+      colourWhereARight: `#FFA500${FILL_ALPHA}`,
+    },
+  ],
+  "density-neutron": [
+    {
+      id: "density-neutron-crossover",
+      a: curveBoundary("bulk-density"),
+      b: curveBoundary("neutron-porosity"),
+      colourWhereALeft: `#FFFF00${FILL_ALPHA}`,
+      colourWhereARight: `#BEBEBE${FILL_ALPHA}`,
+    },
+  ],
+};
+
 /** After the curve tracks: lithology, then the two FORCE 2020 zone sets. */
 const DISCRETE_AND_ZONE_TRACKS: readonly Track[] = [
   { id: "lithology", kind: "discrete", width: 0.4, curve: { id: "lithology", select: [{ by: "family", value: "lithology" }] } },
@@ -174,7 +221,13 @@ export function defaultTemplate(): Template {
   const tracks: Track[] = TRACKS.map((track) =>
     track === "depth"
       ? { id: "depth", kind: "depth", width: 0.5, ref: "active" }
-      : { id: track.id, kind: "curve", width: track.width, curves: entriesFor(track.id) },
+      : {
+          id: track.id,
+          kind: "curve",
+          width: track.width,
+          curves: entriesFor(track.id),
+          ...(FILLS[track.id] && { fills: FILLS[track.id] }),
+        },
   );
   return { name: "Default", tracks: [...tracks, ...DISCRETE_AND_ZONE_TRACKS] };
 }

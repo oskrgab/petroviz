@@ -126,6 +126,47 @@ exports[`the built default template matches its snapshot 1`] = `
             "dash": "dotted"
           }
         }
+      ],
+      "fills": [
+        {
+          "id": "gr-sand",
+          "a": {
+            "kind": "curve",
+            "id": "gamma-ray"
+          },
+          "b": {
+            "kind": "edge",
+            "edge": "right"
+          },
+          "colourWhereALeft": "#FFFF0066",
+          "colourWhereARight": "#00000000"
+        },
+        {
+          "id": "gr-shale",
+          "a": {
+            "kind": "edge",
+            "edge": "left"
+          },
+          "b": {
+            "kind": "curve",
+            "id": "gamma-ray"
+          },
+          "colourWhereALeft": "#BEBEBE66",
+          "colourWhereARight": "#00000000"
+        },
+        {
+          "id": "caliper-bit-size",
+          "a": {
+            "kind": "curve",
+            "id": "caliper"
+          },
+          "b": {
+            "kind": "curve",
+            "id": "bit-size"
+          },
+          "colourWhereALeft": "#8FBC8F66",
+          "colourWhereARight": "#FFA50066"
+        }
       ]
     },
     {
@@ -369,6 +410,21 @@ exports[`the built default template matches its snapshot 1`] = `
             "width": 1,
             "dash": "solid"
           }
+        }
+      ],
+      "fills": [
+        {
+          "id": "density-neutron-crossover",
+          "a": {
+            "kind": "curve",
+            "id": "bulk-density"
+          },
+          "b": {
+            "kind": "curve",
+            "id": "neutron-porosity"
+          },
+          "colourWhereALeft": "#FFFF0066",
+          "colourWhereARight": "#BEBEBE66"
         }
       ]
     },

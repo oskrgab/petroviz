@@ -6,11 +6,12 @@
  */
 
 import type { Block } from "./geometry/blocks.ts";
+import type { FillPolygon } from "./geometry/fill.ts";
 import { depthGridlines, type Gridline } from "./geometry/grid.ts";
 import { pixelsPerUnit, type Frame } from "./geometry/polyline.ts";
 import { HATCHES, HATCH_TILE } from "./hatches.ts";
 import type { Tokens } from "./kinds/types.ts";
-import type { CodeStyle, Dash } from "./template/types.ts";
+import type { CodeStyle, Dash, Fill } from "./template/types.ts";
 
 /** Dash patterns in CSS px, for a 1 px line. */
 export const DASHES: Readonly<Record<Dash, readonly number[]>> = {
@@ -49,6 +50,25 @@ export function strokePolyline(ctx: CanvasRenderingContext2D, line: Float32Array
     }
   }
   ctx.stroke();
+}
+
+/** Fills a fill's polygons, one Path2D per side, in that side's colour. */
+export function fillPolygonPaths(ctx: CanvasRenderingContext2D, polygons: readonly FillPolygon[], fill: Fill) {
+  for (const aLeft of [true, false]) {
+    const path = new Path2D();
+    let empty = true;
+    for (const polygon of polygons) {
+      if (polygon.aLeft !== aLeft) continue;
+      const { points } = polygon;
+      path.moveTo(points[0], points[1]);
+      for (let j = 2; j < points.length; j += 2) path.lineTo(points[j], points[j + 1]);
+      path.closePath();
+      empty = false;
+    }
+    if (empty) continue;
+    ctx.fillStyle = aLeft ? fill.colourWhereALeft : fill.colourWhereARight;
+    ctx.fill(path);
+  }
 }
 
 /** A 1 CSS px line's width in whole device px. */

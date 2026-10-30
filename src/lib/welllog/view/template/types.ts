@@ -3,8 +3,7 @@
  * well log. It is the layout model itself: what is drawn is derived from the
  * current template and the well log by `resolveTemplate`, never stored.
  *
- * Curve, depth, discrete and zone tracks so far. Fills join in their own
- * ticket.
+ * Curve tracks with their fills, depth, discrete and zone tracks.
  */
 
 import type { DepthRef } from "../interval.ts";
@@ -101,9 +100,37 @@ interface TrackBase {
   readonly width: number;
 }
 
+/**
+ * One side of a fill: a curve entry in the same track (by its `id`), a value
+ * on the other boundary's curve scale, or a track edge. A value needs the
+ * other boundary to be a curve.
+ */
+export type FillBoundary =
+  | { readonly kind: "curve"; readonly id: string }
+  | { readonly kind: "value"; readonly value: number }
+  | { readonly kind: "edge"; readonly edge: "left" | "right" };
+
+/**
+ * The area between two boundaries, coloured by which of them lies to the
+ * left on screen. A curve boundary sits at its clipped position: an off-scale
+ * value is at the track edge, and a wrapped line never moves it.
+ */
+export interface Fill {
+  /** Stable and unique within the template. */
+  readonly id: string;
+  readonly a: FillBoundary;
+  readonly b: FillBoundary;
+  /** `#RRGGBBAA`, where `a` lies left of `b`. */
+  readonly colourWhereALeft: string;
+  /** `#RRGGBBAA`, where `a` lies right of `b`. */
+  readonly colourWhereARight: string;
+}
+
 export interface CurveTrack extends TrackBase {
   readonly kind: "curve";
   readonly curves: readonly CurveEntry[];
+  /** Drawn beneath the curves, in order. */
+  readonly fills?: readonly Fill[];
 }
 
 /** `active` follows the log view's depth reference; `md` and `tvdss` are fixed. */

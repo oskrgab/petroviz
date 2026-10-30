@@ -1,7 +1,7 @@
 /**
  * A curve's line across a track, in device pixels, decimated with M4 when
  * there are more visible samples than the track has pixel rows to show, and
- * the wrapped line of an off-scale curve.
+ * the wrapped line of an off-scale curve. Fills (fill.ts) share the rows.
  */
 
 import type { Mapping } from "./scale.ts";
@@ -44,13 +44,15 @@ export const M4_THRESHOLD = 4;
 
 /**
  * The rows a line is drawn through, in order, with -1 wherever it breaks.
- * Every row with no value breaks it, so it never joins across a gap or a
- * missing value. Above M4_THRESHOLD samples per pixel row, each row keeps
- * only its first, minimum, maximum and last sample (M4).
+ * Every row where a source has no value breaks it, so it never joins across
+ * a gap or a missing value. Above M4_THRESHOLD samples per pixel row, each
+ * row keeps only its first and last sample, and each source's minimum and
+ * maximum (M4).
  *
- * `source` is the curve's values, or their log10 on a log scale.
+ * Each source is a curve's values, or their log10 on a log scale. A fill
+ * passes both its curves, so its two boundaries share their rows.
  */
-function drawnRows(md: Float64Array, source: Float32Array, frame: Frame): Int32Array {
+export function drawnRows(md: Float64Array, sources: readonly Float32Array[], frame: Frame): Int32Array {
   const [start, end] = visibleRows(md, frame);
   const out: number[] = [];
   let broken = true;
@@ -63,7 +65,7 @@ function drawnRows(md: Float64Array, source: Float32Array, frame: Frame): Int32A
     out.push(-1);
     broken = true;
   };
-  const isBreak = (i: number) => !Number.isFinite(source[i]);
+  const isBreak = (i: number) => sources.some((source) => !Number.isFinite(source[i]));
 
   if (end - start <= frame.height * M4_THRESHOLD) {
     for (let i = start; i < end; i++) {
@@ -76,12 +78,12 @@ function drawnRows(md: Float64Array, source: Float32Array, frame: Frame): Int32A
   const k = pixelsPerUnit(frame);
   let row = NaN;
   let first = -1;
-  let min = -1;
-  let max = -1;
   let last = -1;
+  const min = sources.map(() => -1);
+  const max = sources.map(() => -1);
   const flush = () => {
     if (first === -1) return;
-    const picked = [first, min, max, last].sort((p, q) => p - q);
+    const picked = [first, ...min, ...max, last].sort((p, q) => p - q);
     for (let j = 0; j < picked.length; j++) if (j === 0 || picked[j] !== picked[j - 1]) push(picked[j]);
     first = -1;
   };
@@ -97,10 +99,14 @@ function drawnRows(md: Float64Array, source: Float32Array, frame: Frame): Int32A
       row = r;
     }
     if (first === -1) {
-      first = min = max = i;
+      first = i;
+      min.fill(i);
+      max.fill(i);
     } else {
-      if (source[i] < source[min]) min = i;
-      if (source[i] > source[max]) max = i;
+      sources.forEach((source, s) => {
+        if (source[i] < source[min[s]]) min[s] = i;
+        if (source[i] > source[max[s]]) max[s] = i;
+      });
     }
     last = i;
   }
@@ -154,7 +160,7 @@ export function curvePolyline(
   frame: Frame,
   inset = 0,
 ): Float32Array {
-  const rows = drawnRows(md, source, frame);
+  const rows = drawnRows(md, [source], frame);
   const { fraction, x } = placement(mapping, frame, inset);
   const k = pixelsPerUnit(frame);
   const out = new Float32Array(rows.length * 2);
@@ -180,7 +186,7 @@ export function wrappedPolyline(
   frame: Frame,
   inset = 0,
 ): Float32Array {
-  const rows = drawnRows(md, source, frame);
+  const rows = drawnRows(md, [source], frame);
   const { fraction, x } = placement(mapping, frame, inset);
   const k = pixelsPerUnit(frame);
   const out: number[] = [];

@@ -4,7 +4,7 @@ import { curveFamilyOf, type Curve, type WellLog, type ZoneSet } from "../core/i
 import { resolveTemplate } from "./resolve.ts";
 import { defaultTemplate } from "./template/defaults.ts";
 import { entryLabel } from "./template/label.ts";
-import type { CurveEntry, CurveScale, Selector, Template } from "./template/types.ts";
+import type { CurveEntry, CurveScale, Fill, FillBoundary, Selector, Template } from "./template/types.ts";
 
 function curve(key: string, unit = "", mnemonic = key.replace(/:\d+$/, "")): Curve {
   return {
@@ -488,4 +488,108 @@ test("a discrete track resolves a style for every code in its curve", () => {
   assert.ok(track.kind === "discrete");
   assert.deepEqual([...track.styles.keys()].sort((a, b) => a - b), [4, 65000, 90000]);
   assert.equal(track.styles.get(4)?.pattern, undefined);
+});
+
+const fill = (id: string, a: FillBoundary, b: FillBoundary): Fill => ({
+  id,
+  a,
+  b,
+  colourWhereALeft: "#FFFF0066",
+  colourWhereARight: "#BEBEBE66",
+});
+
+const rdep: CurveEntry = {
+  ...entry("rdep", select(["mnemonic", "RDEP"])),
+  scale: { type: "log", ends: { kind: "fixed", left: 0.2, right: 2000, unit: "ohm·m" } },
+};
+
+/** Fill ids that resolved in the template's first track. */
+function resolvedFills(t: Template, log: WellLog) {
+  const [track] = resolveTemplate(t, log).tracks;
+  assert.ok(track.kind === "curve");
+  return track.fills.map((f) => f.fill.id);
+}
+
+test("a fill naming an unmatched entry is skipped, and the track still draws", () => {
+  const t: Template = {
+    name: "F",
+    tracks: [
+      {
+        id: "t",
+        kind: "curve",
+        width: 1,
+        curves: [entry("gr", select(["mnemonic", "GR"])), entry("sgr", select(["mnemonic", "SGR"]))],
+        fills: [
+          fill("gr-sgr", { kind: "curve", id: "gr" }, { kind: "curve", id: "sgr" }),
+          fill("gr-edge", { kind: "curve", id: "gr" }, { kind: "edge", edge: "right" }),
+          fill("sgr-edge", { kind: "edge", edge: "left" }, { kind: "curve", id: "sgr" }),
+        ],
+      },
+    ],
+  };
+  const log = wellLog([curve("GR", "gAPI")]);
+  assert.deepEqual(resolvedFills(t, log), ["gr-edge"]);
+  assert.deepEqual(matchedKeys(t, log), [["GR", null]]);
+  assert.deepEqual(resolvedFills(t, wellLog([curve("GR", "gAPI"), curve("SGR", "gAPI")])), ["gr-sgr", "gr-edge", "sgr-edge"]);
+});
+
+test("fill boundaries resolve to a curve on its scale, or a fixed position across the track", () => {
+  const t: Template = {
+    name: "F",
+    tracks: [
+      {
+        id: "t",
+        kind: "curve",
+        width: 1,
+        curves: [rdep],
+        fills: [
+          fill("cut-off", { kind: "curve", id: "rdep" }, { kind: "value", value: 20 }),
+          fill("edges", { kind: "edge", edge: "left" }, { kind: "curve", id: "rdep" }),
+        ],
+      },
+    ],
+  };
+  const [track] = resolveTemplate(t, wellLog([curve("RDEP", "ohm·m")])).tracks;
+  assert.ok(track.kind === "curve");
+  const [cutOff, edges] = track.fills;
+  assert.ok("curve" in cutOff.a && cutOff.a.curve.key === "RDEP");
+  assert.deepEqual(cutOff.a.scale, { left: 0.2, right: 2000, type: "log" });
+  assert.ok("fraction" in cutOff.b);
+  assert.ok(Math.abs(cutOff.b.fraction - 0.5) < 1e-12, "20 ohm·m is halfway on 0.2–2000, log");
+  assert.deepEqual(edges.a, { fraction: 0 });
+});
+
+test("fills that can't be placed are skipped: another track's entry, no curve, a value off a log scale", () => {
+  const t: Template = {
+    name: "F",
+    tracks: [
+      {
+        id: "t",
+        kind: "curve",
+        width: 1,
+        curves: [rdep],
+        fills: [
+          fill("elsewhere", { kind: "curve", id: "gr" }, { kind: "curve", id: "rdep" }),
+          fill("edges", { kind: "edge", edge: "left" }, { kind: "edge", edge: "right" }),
+          fill("value-edge", { kind: "value", value: 1 }, { kind: "edge", edge: "right" }),
+          fill("negative", { kind: "curve", id: "rdep" }, { kind: "value", value: -1 }),
+        ],
+      },
+      { id: "u", kind: "curve", width: 1, curves: [entry("gr", select(["mnemonic", "GR"]))] },
+    ],
+  };
+  assert.deepEqual(resolvedFills(t, wellLog([curve("RDEP", "ohm·m"), curve("GR", "gAPI")])), []);
+});
+
+test("the default template's fills all resolve on a FORCE-shaped well log, and drop with their curves", () => {
+  const ids = (log: WellLog) =>
+    resolveTemplate(defaultTemplate(), log).tracks.flatMap((t) => (t.kind === "curve" ? t.fills.map((f) => f.fill.id) : []));
+  assert.deepEqual(ids(wellLog(FORCE_COLUMNS.map(([name, unit]) => curve(name, unit)))), [
+    "gr-sand",
+    "gr-shale",
+    "caliper-bit-size",
+    "density-neutron-crossover",
+  ]);
+  // A LAS well log with no bit size and no neutron keeps only the GR fills.
+  assert.deepEqual(ids(wellLog([curve("GR", "GAPI"), curve("CALI", "IN"), curve("RHOB", "G/C3")])), ["gr-sand", "gr-shale"]);
 });

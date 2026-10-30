@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CURVE_FAMILIES } from "../../core/index.ts";
 import { curveFamilyDefaults, defaultTemplate } from "./defaults.ts";
+import type { FillBoundary } from "./types.ts";
 
 // Node 24 has t.assert.snapshot; the @types/node installed (20, through vite) predates it.
 type SnapshotContext = { assert: { snapshot(value: unknown): void } };
@@ -15,12 +16,36 @@ test("every call builds the same template", () => {
   assert.deepEqual(defaultTemplate(), defaultTemplate());
 });
 
-test("ids are unique across tracks and across curve entries", () => {
+test("ids are unique across tracks, across curve entries and across fills", () => {
   const { tracks } = defaultTemplate();
   const trackIds = tracks.map((t) => t.id);
   const entryIds = tracks.flatMap((t) => (t.kind === "curve" ? t.curves.map((c) => c.id) : []));
+  const fillIds = tracks.flatMap((t) => (t.kind === "curve" ? (t.fills ?? []).map((f) => f.id) : []));
   assert.equal(new Set(trackIds).size, trackIds.length);
   assert.equal(new Set(entryIds).size, entryIds.length);
+  assert.equal(new Set(fillIds).size, fillIds.length);
+});
+
+test("the default fills: crossover, GR sand/shale and caliper vs bit size, at about 40% alpha", () => {
+  const fills = defaultTemplate().tracks.flatMap((t) => (t.kind === "curve" ? (t.fills ?? []).map((f) => [t.id, f] as const) : []));
+  const side = (b: FillBoundary) => (b.kind === "curve" ? b.id : b.kind === "edge" ? `${b.edge} edge` : `${b.value}`);
+  assert.deepEqual(
+    fills.map(([track, f]) => [track, side(f.a), side(f.b), f.colourWhereALeft, f.colourWhereARight]),
+    [
+      ["gr-caliper", "gamma-ray", "right edge", "#FFFF0066", "#00000000"],
+      ["gr-caliper", "left edge", "gamma-ray", "#BEBEBE66", "#00000000"],
+      ["gr-caliper", "caliper", "bit-size", "#8FBC8F66", "#FFA50066"],
+      ["density-neutron", "bulk-density", "neutron-porosity", "#FFFF0066", "#BEBEBE66"],
+    ],
+  );
+  // Every curve boundary names an entry in its own track.
+  for (const track of defaultTemplate().tracks) {
+    if (track.kind !== "curve") continue;
+    const ids = new Set(track.curves.map((c) => c.id));
+    for (const f of track.fills ?? []) for (const b of [f.a, f.b]) if (b.kind === "curve") assert.ok(ids.has(b.id), b.id);
+  }
+  // No resistivity or PEF cut-off.
+  assert.ok(!fills.some(([, f]) => f.a.kind === "value" || f.b.kind === "value"));
 });
 
 test("curve family defaults key on real curve families", () => {
