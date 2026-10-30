@@ -11,13 +11,9 @@
   import { slide } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { MediaQuery } from "svelte/reactivity";
-  import ThemeToggle from "./ThemeToggle.svelte";
-  import TabNavigation from "./TabNavigation.svelte";
+  import AppHeader from "./AppHeader.svelte";
 
   interface Props {
-    title?: string;
-    activeSection?: string;
-    onSectionChange?: (sectionId: string) => void;
     sidebar?: Snippet;
     mainChart?: Snippet;
     rangeSelector?: Snippet;
@@ -26,9 +22,6 @@
   }
 
   let {
-    title = "Volve Explorer",
-    activeSection = "dashboards",
-    onSectionChange,
     sidebar,
     mainChart,
     rangeSelector,
@@ -99,17 +92,6 @@
     // { id: 'filter1' as const, label: 'Date Filter', icon: 'calendar', disabled: true },
     // { id: 'filter2' as const, label: 'Parameters', icon: 'settings', disabled: true },
   ];
-
-  // Dataset sections
-  const sections = [
-    { id: "dashboards", label: "DASHBOARDS" },
-    { id: "analysis", label: "ANALYSIS", disabled: true },
-    { id: "export", label: "EXPORT", disabled: true },
-  ];
-
-  function handleSectionChange(sectionId: string) {
-    onSectionChange?.(sectionId);
-  }
 </script>
 
 <div class="dashboard" class:compact-mode={isCompactMode.current}>
@@ -148,56 +130,7 @@
     {/if}
   {/if}
 
-  <header class="dashboard-header">
-    <div class="header-left">
-      <div class="logo-section">
-        <!-- Oil drop icon -->
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12 2C12 2 5 10 5 15C5 18.866 8.134 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2ZM12 20C9.239 20 7 17.761 7 15C7 11.512 11 5.695 12 4.357C13 5.695 17 11.512 17 15C17 17.761 14.761 20 12 20Z"
-            />
-            <ellipse
-              cx="12"
-              cy="15"
-              rx="4"
-              ry="5"
-              fill="currentColor"
-              opacity="0.3"
-            />
-          </svg>
-        </div>
-        <h1 class="title">{title}</h1>
-      </div>
-      <div class="nav-section">
-        <TabNavigation
-          tabs={sections}
-          activeTab={activeSection}
-          onTabChange={handleSectionChange}
-        />
-      </div>
-    </div>
-
-    <div class="header-right">
-      <a
-        href="https://github.com/oskrgab/petroviz"
-        class="github-link"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="View on GitHub"
-        title="View on GitHub"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"
-          />
-        </svg>
-      </a>
-      <ThemeToggle />
-    </div>
-  </header>
+  <AppHeader />
 
   <div class="dashboard-content">
     <!-- Traditional sidebar (desktop only) -->
@@ -370,113 +303,6 @@
     border-radius: var(--radius-lg);
   }
 
-  /* ==================== HEADER ==================== */
-  .dashboard-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--spacing-sm) 0;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
-    flex-shrink: 0;
-    gap: var(--spacing-sm);
-    min-height: 60px;
-  }
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .logo-section {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    flex-shrink: 0;
-  }
-
-  .logo-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(
-      135deg,
-      var(--color-oil) 0%,
-      var(--color-oil-soft) 100%
-    );
-    border-radius: var(--radius-lg);
-    color: white;
-    box-shadow: var(--shadow-md);
-    flex-shrink: 0;
-  }
-
-  .logo-icon svg {
-    width: 26px;
-    height: 26px;
-  }
-
-  .title {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    margin: 0;
-    background: linear-gradient(
-      135deg,
-      var(--color-text) 0%,
-      var(--color-text-secondary) 100%
-    );
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    white-space: nowrap;
-  }
-
-  .nav-section {
-    display: flex;
-    align-items: center;
-    padding-left: var(--spacing-md);
-    border-left: 1px solid var(--color-border);
-    flex: 1;
-    min-width: 0;
-    overflow: visible;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    flex-shrink: 0;
-  }
-
-  .github-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    color: var(--color-text-muted);
-    border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
-    flex-shrink: 0;
-  }
-
-  .github-link:hover {
-    color: var(--color-text);
-    background: var(--color-accent-soft);
-  }
-
-  .github-link svg {
-    width: 20px;
-    height: 20px;
-  }
-
   .author-credit {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
@@ -613,10 +439,6 @@
       padding-left: calc(var(--spacing-md) + 36px);
     }
 
-    .header-left {
-      gap: var(--spacing-md);
-    }
-
     .flyout-panel {
       left: calc(36px + var(--spacing-xs));
       width: min(300px, calc(100vw - 60px));
@@ -633,14 +455,6 @@
       padding-left: calc(var(--spacing-sm) + 32px);
     }
 
-    .header-left {
-      gap: var(--spacing-sm);
-    }
-
-    .logo-section {
-      gap: var(--spacing-sm);
-    }
-
     .bottom-charts {
       grid-template-columns: 1fr;
     }
@@ -652,20 +466,6 @@
     .pie-chart,
     .bar-chart {
       min-height: 300px;
-    }
-
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-    }
-
-    .logo-icon svg {
-      width: 22px;
-      height: 22px;
-    }
-
-    .title {
-      font-size: var(--font-size-lg);
     }
 
     .footer-text,
@@ -703,43 +503,6 @@
 
     .range-selector {
       padding: var(--spacing-sm) var(--spacing-md);
-    }
-
-    .title {
-      font-size: var(--font-size-md);
-    }
-
-    .header-left {
-      gap: var(--spacing-xs);
-    }
-
-    .nav-section {
-      padding-left: var(--spacing-xs);
-      border-left: none;
-    }
-
-    .logo-section {
-      gap: var(--spacing-xs);
-    }
-
-    .logo-icon {
-      width: 32px;
-      height: 32px;
-    }
-
-    .logo-icon svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .github-link {
-      width: 28px;
-      height: 28px;
-    }
-
-    .github-link svg {
-      width: 16px;
-      height: 16px;
     }
   }
 </style>
