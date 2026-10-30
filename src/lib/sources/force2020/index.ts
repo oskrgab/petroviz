@@ -4,5 +4,5 @@
  * hyparquet and fzstd.
  */
 
-export { loadWell, ForceLoadError, type ForceHosts, type ForceLoadErrorKind, type LoadWellOptions } from "./load.ts";
-export { isWellId } from "./wellId.ts";
+export { listWells, loadWell, ForceLoadError, type ForceHosts, type ForceLoadErrorKind, type LoadWellOptions } from "./load.ts";
+export { isWellId, wellName, type ForceWell } from "./wellId.ts";

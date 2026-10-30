@@ -9,7 +9,7 @@
  *   commit (`X-Repo-Commit`), so a new petrodb commit is fetched afresh.
  *   Only `_files.json`'s final response carries that header (the parquet
  *   files redirect to a CDN that drops it), so the commit is read from there,
- *   once per page.
+ *   once per page. The same response is the well list.
  * - Units and lithology labels come from the dataset's `schema.json` on the
  *   Schema host, also read once per page.
  */
@@ -17,7 +17,7 @@
 import type { WellLog } from "../../welllog/core/index.ts";
 import { build } from "./build.ts";
 import { decode } from "./decode.ts";
-import { isWellId } from "./wellId.ts";
+import { isWellId, wellsIn, type ForceWell } from "./wellId.ts";
 
 export interface ForceHosts {
   /** Data host base URL, without a trailing slash. */
@@ -58,8 +58,11 @@ const COMMIT_PARAM = "petroviz-commit";
 
 const wellsUrl = (hosts: ForceHosts) => `${hosts.dataHost}/force_2020/wells`;
 
-/** Once per page and host, retried after a failure. */
-function memo<T>(load: (hosts: ForceHosts) => Promise<T>): (hosts: ForceHosts) => Promise<T> {
+/** Once per page and host, asked again after a failure or a result `keep` refuses. */
+function memo<T>(
+  load: (hosts: ForceHosts) => Promise<T>,
+  keep: (result: T) => boolean = () => true,
+): (hosts: ForceHosts) => Promise<T> {
   const results = new Map<string, Promise<T>>();
   return (hosts) => {
     const key = `${hosts.dataHost} ${hosts.schemaHost}`;
@@ -67,7 +70,10 @@ function memo<T>(load: (hosts: ForceHosts) => Promise<T>): (hosts: ForceHosts) =
     if (!result) {
       result = load(hosts);
       results.set(key, result);
-      result.catch(() => results.delete(key));
+      result.then(
+        (value) => keep(value) || results.delete(key),
+        () => results.delete(key),
+      );
     }
     return result;
   };
@@ -93,17 +99,50 @@ const schemaInfo = memo(async (hosts): Promise<SchemaInfo> => {
   return { units, lithologyLabels: schema.lithology_labels ?? {} };
 });
 
+interface Manifest {
+  /** The dataset commit the Data host serves now, if it said. */
+  readonly commit: string | null;
+  readonly wells: readonly ForceWell[];
+}
+
+const UNREADABLE_LIST = "The FORCE 2020 well list couldn't be read.";
+
 /**
- * The dataset commit the Data host serves now. Shared by every load, so it
- * is never aborted, and it throws when the host can't say, so the next load
- * asks again.
+ * The dataset's `_files.json`, read once per page and shared by the well
+ * list and every load, so it is never aborted. A response without a commit
+ * is used but not kept, so the next load asks again.
  */
-const currentCommit = memo(async (hosts): Promise<string> => {
-  const response = await fetch(`${wellsUrl(hosts)}/_files.json`);
-  const commit = response.ok ? response.headers.get("X-Repo-Commit") : null;
-  if (!commit) throw new Error(`The Data host gave no commit (HTTP ${response.status})`);
-  return commit;
-});
+const manifest = memo(async (hosts): Promise<Manifest> => {
+  const response = await get(`${wellsUrl(hosts)}/_files.json`, "the FORCE 2020 well list");
+  if (!response.ok) {
+    throw new ForceLoadError("network", `The FORCE 2020 well list couldn't be read (HTTP ${response.status}).`);
+  }
+  let files: unknown;
+  try {
+    files = await response.json();
+  } catch (cause) {
+    throw new ForceLoadError("data", UNREADABLE_LIST, { cause });
+  }
+  if (!Array.isArray(files)) throw new ForceLoadError("data", UNREADABLE_LIST);
+  return { commit: response.headers.get("X-Repo-Commit"), wells: wellsIn(files) };
+}, (result) => result.commit !== null);
+
+/** The commit the Data host serves now, or null when it can't say (offline). */
+async function currentCommit(hosts: ForceHosts): Promise<string | null> {
+  try {
+    return (await manifest(hosts)).commit;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Every FORCE 2020 well the Data host lists, in the manifest's order.
+ * Rejects with a ForceLoadError; a later call asks again.
+ */
+export async function listWells(hosts: ForceHosts): Promise<readonly ForceWell[]> {
+  return (await manifest(hosts)).wells;
+}
 
 async function openCache(): Promise<Cache | null> {
   try {
@@ -150,7 +189,7 @@ async function store(cache: Cache, url: string, bytes: ArrayBuffer, commit: Prom
  * copy the download starts at once, without waiting for the commit.
  */
 async function wellBytes(url: string, id: string, hosts: ForceHosts, signal?: AbortSignal): Promise<ArrayBuffer> {
-  const commit = currentCommit(hosts).catch(() => null);
+  const commit = currentCommit(hosts);
   const cache = await openCache();
   const copies = cache ? await cachedCopies(cache, url) : [];
 
