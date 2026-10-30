@@ -56,6 +56,29 @@ exports[`the built default template matches its snapshot 1`] = `
           }
         },
         {
+          "id": "sp",
+          "select": [
+            {
+              "by": "family",
+              "value": "sp"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "centredOnMedian",
+              "width": 100,
+              "reversed": false
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#0000FF",
+            "width": 1,
+            "dash": "solid"
+          }
+        },
+        {
           "id": "caliper",
           "select": [
             {
@@ -242,6 +265,30 @@ exports[`the built default template matches its snapshot 1`] = `
             "colour": "#0000CC",
             "width": 1,
             "dash": "dotted"
+          }
+        },
+        {
+          "id": "resistivity-unknown-depth",
+          "select": [
+            {
+              "by": "family",
+              "value": "resistivity-unknown-depth"
+            }
+          ],
+          "scale": {
+            "type": "log",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.2,
+              "right": 2000,
+              "unit": "ohm·m"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#808080",
+            "width": 1,
+            "dash": "solid"
           }
         }
       ]
@@ -439,6 +486,30 @@ exports[`the built default template matches its snapshot 1`] = `
             "colour": "#000000",
             "width": 1,
             "dash": "dashed"
+          }
+        },
+        {
+          "id": "mud-weight",
+          "select": [
+            {
+              "by": "family",
+              "value": "mud-weight"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "percentile",
+              "lo": 1,
+              "hi": 99,
+              "reversed": false
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#8B4513",
+            "width": 1,
+            "dash": "solid"
           }
         }
       ]

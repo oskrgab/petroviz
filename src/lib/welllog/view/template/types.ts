@@ -3,8 +3,8 @@
  * well log. It is the layout model itself: what is drawn is derived from the
  * current template and the well log by `resolveTemplate`, never stored.
  *
- * Curve, depth, discrete and zone tracks so far. Fills and computed curve
- * scales join in their own tickets.
+ * Curve, depth, discrete and zone tracks so far. Fills join in their own
+ * ticket.
  */
 
 import type { DepthRef } from "../interval.ts";
@@ -21,7 +21,12 @@ export interface Selector {
 
 export type ScaleType = "linear" | "log";
 
-/** Fixed scale ends, in the unit they were written for. */
+/**
+ * Fixed scale ends, in the unit they were written for. `left` may be larger
+ * than `right`, which runs the scale reversed. Against a curve in another
+ * unit the ends convert by a known factor, or else fall back on
+ * `percentile [1, 99]` in the same direction.
+ */
 export interface FixedEnds {
   readonly kind: "fixed";
   readonly left: number;
@@ -30,14 +35,44 @@ export interface FixedEnds {
 }
 
 /**
- * How a curve's values map across its track. `left` may be larger than
- * `right`, which runs the scale reversed.
+ * Ends `width` apart, centred on the curve's median over the whole well (SP).
+ * On a log scale the median is taken of log10 and `width` is in decades.
  */
-export interface CurveScale {
-  readonly type: ScaleType;
-  readonly ends: FixedEnds;
+export interface CentredOnMedianEnds {
+  readonly kind: "centredOnMedian";
+  readonly width: number;
+  /** Larger values to the left. */
+  readonly reversed: boolean;
 }
 
+/**
+ * Ends at the curve's `lo` and `hi` percentiles (0–100) over the whole well.
+ * On a log scale they are taken of log10.
+ */
+export interface PercentileEnds {
+  readonly kind: "percentile";
+  readonly lo: number;
+  readonly hi: number;
+  /** Larger values to the left. */
+  readonly reversed: boolean;
+}
+
+/**
+ * Fixed ends are written in the template; the others are computed from the
+ * matched curve, once per well log, never from the visible interval.
+ */
+export type ScaleEnds = FixedEnds | CentredOnMedianEnds | PercentileEnds;
+
+/** How a curve's values map across its track. */
+export interface CurveScale {
+  readonly type: ScaleType;
+  readonly ends: ScaleEnds;
+}
+
+/**
+ * `wrap` also draws an off-scale value shifted back by one scale width (one
+ * span on a log scale), lighter; `clip` only cuts it at the track edge.
+ */
 export type OffScale = "wrap" | "clip";
 
 export type Dash = "solid" | "dashed" | "dotted" | "dashdot";

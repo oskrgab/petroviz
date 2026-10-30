@@ -4,6 +4,8 @@
  * edits and go when the well log does.
  */
 
+import type { ScaleType } from "../template/types.ts";
+
 const cache = new WeakMap<Float32Array, Float32Array>();
 
 /** log10 of each value; NaN where the value is missing or not positive. */
@@ -18,4 +20,9 @@ export function log10Values(values: Float32Array): Float32Array {
     cache.set(values, logs);
   }
   return logs;
+}
+
+/** What a curve scale works on: the values, or their log10 on a log scale. */
+export function scaleSource(values: Float32Array, type: ScaleType): Float32Array {
+  return type === "log" ? log10Values(values) : values;
 }

@@ -3,7 +3,7 @@
  */
 
 import type { CurveFamily } from "../../core/index.ts";
-import { curveFamilyDefaults, discreteFamilyDefaults } from "./defaults.ts";
+import { curveFamilyDefaults, discreteFamilyDefaults, type ContinuousFamily } from "./defaults.ts";
 import type { Entry, Selector } from "./types.ts";
 
 /**
@@ -24,5 +24,5 @@ export function entryLabel(entry: Entry): string {
 /** A curve family's short label, or its id when it has none. */
 export function familyLabel(family: string): string {
   const name = family as CurveFamily;
-  return curveFamilyDefaults[name]?.label ?? discreteFamilyDefaults[name]?.label ?? family;
+  return curveFamilyDefaults[name as ContinuousFamily]?.label ?? discreteFamilyDefaults[name]?.label ?? family;
 }

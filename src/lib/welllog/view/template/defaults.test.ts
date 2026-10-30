@@ -41,3 +41,32 @@ test("selectors are family-only, apart from the RXO/RMIC and ROP/ROPA pairs", ()
     "mnemonic:ROPA family:rop",
   ]);
 });
+
+test("SP, mud weight and unknown-depth resistivity join their tracks, after the families before them", () => {
+  const ids = (id: string) =>
+    defaultTemplate()
+      .tracks.filter((t) => t.id === id)
+      .flatMap((t) => (t.kind === "curve" ? t.curves.map((c) => c.id) : []));
+  assert.deepEqual(ids("gr-caliper"), ["gamma-ray", "spectral-gamma-ray", "sp", "caliper", "bit-size"]);
+  assert.deepEqual(ids("resistivity").at(-1), "resistivity-unknown-depth");
+  assert.deepEqual(ids("drilling"), ["rop", "ropa", "mud-weight"]);
+});
+
+test("wrap is on for GR, SGR, caliper, bit size, DTC and DTS only", () => {
+  const wrapped = Object.entries(curveFamilyDefaults)
+    .filter(([, d]) => d.offScale === "wrap")
+    .map(([name]) => name);
+  assert.deepEqual(wrapped, ["gamma-ray", "spectral-gamma-ray", "caliper", "bit-size", "sonic-compressional", "sonic-shear"]);
+});
+
+test("unknown curves get a grey percentile [1, 99] scale and stay out of the default template", () => {
+  assert.deepEqual(curveFamilyDefaults.unknown, {
+    label: "Unknown",
+    track: null,
+    scale: { type: "linear", ends: { kind: "percentile", lo: 1, hi: 99, reversed: false } },
+    offScale: "clip",
+    style: { colour: "#808080", width: 1, dash: "solid" },
+  });
+  const families = defaultTemplate().tracks.flatMap((t) => (t.kind === "curve" ? t.curves.flatMap((c) => c.select) : []));
+  assert.ok(!families.some((s) => s.value === "unknown"));
+});

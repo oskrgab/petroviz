@@ -4,7 +4,7 @@ import { curveFamilyOf, type Curve, type WellLog, type ZoneSet } from "../core/i
 import { resolveTemplate } from "./resolve.ts";
 import { defaultTemplate } from "./template/defaults.ts";
 import { entryLabel } from "./template/label.ts";
-import type { CurveEntry, Selector, Template } from "./template/types.ts";
+import type { CurveEntry, CurveScale, Selector, Template } from "./template/types.ts";
 
 function curve(key: string, unit = "", mnemonic = key.replace(/:\d+$/, "")): Curve {
   return {
@@ -161,6 +161,135 @@ test("a curve track's gridlines follow its first entry, matched or not", () => {
   assert.deepEqual(empty.kind === "curve" && empty.grid, { left: 0.2, right: 2000, type: "log" });
 });
 
+/** A well log of one curve with these values, at 1 m steps. */
+function oneCurve(mnemonic: string, unit: string, values: number[]): WellLog {
+  return {
+    ...wellLog([{ ...curve(mnemonic, unit), values: new Float32Array(values) }]),
+    md: Float64Array.from(values, (_, i) => 1000 + i),
+  };
+}
+
+/** The resolved scale of a one-entry track with this scale against `log`. */
+function scaleOn(scale: CurveScale, log: WellLog): { left: number; right: number; type: string } {
+  const e: CurveEntry = { ...entry("e", select(["key", log.curves[0].key])), scale };
+  const [track] = resolveTemplate(template([e]), log).tracks;
+  assert.ok(track.kind === "curve" && track.entries[0].scale);
+  return track.entries[0].scale;
+}
+
+const nearScale = (actual: { left: number; right: number }, left: number, right: number) => {
+  assert.ok(Math.abs(actual.left - left) < 1e-6 * Math.max(1, Math.abs(left)), `left ${actual.left} ≉ ${left}`);
+  assert.ok(Math.abs(actual.right - right) < 1e-6 * Math.max(1, Math.abs(right)), `right ${actual.right} ≉ ${right}`);
+};
+
+/** 1 … 101: the median is 51, and percentile p sits on p + 1. */
+const ONE_TO_101 = Array.from({ length: 101 }, (_, i) => i + 1);
+
+test("centredOnMedian: a window of its width on the curve's median", () => {
+  const sp: CurveScale = { type: "linear", ends: { kind: "centredOnMedian", width: 100, reversed: false } };
+  nearScale(scaleOn(sp, oneCurve("SP", "mV", [-80, -70, -60, NaN, -20, -75])), -120, -20);
+  nearScale(scaleOn(sp, oneCurve("SP", "mV", ONE_TO_101)), 1, 101);
+});
+
+test("percentile: the curve's lo and hi percentiles, missing values left out", () => {
+  const p: CurveScale = { type: "linear", ends: { kind: "percentile", lo: 1, hi: 99, reversed: false } };
+  nearScale(scaleOn(p, oneCurve("MUDWEIGHT", "g/cm³", [...ONE_TO_101, NaN, NaN])), 2, 100);
+  const p10: CurveScale = { type: "linear", ends: { kind: "percentile", lo: 10, hi: 90, reversed: false } };
+  // Between ranks it interpolates: 10 % of the way from 1 to 11 is 2.
+  nearScale(scaleOn(p10, oneCurve("X", "", [1, 11, 21, 31, 41, 51, 61, 71, 81, 91, 101])), 11, 91);
+});
+
+test("percentile on a log scale is computed on log10", () => {
+  // log10: 0 … 4 in 401 even steps, so percentile p sits on 10^(p / 25).
+  const values = Array.from({ length: 401 }, (_, i) => 10 ** (i / 100));
+  const p: CurveScale = { type: "log", ends: { kind: "percentile", lo: 25, hi: 75, reversed: false } };
+  const scale = scaleOn(p, oneCurve("RT", "ohm·m", [...values, 0, -1]));
+  nearScale(scale, 10, 1000);
+  assert.equal(scale.type, "log");
+  // The median of log10 values (1.5), not the log10 of the values' median (log10 55 ≈ 1.74);
+  // the width is in decades.
+  const c: CurveScale = { type: "log", ends: { kind: "centredOnMedian", width: 2, reversed: false } };
+  nearScale(scaleOn(c, oneCurve("RT", "ohm·m", [1, 10, 100, 1000])), 10 ** 0.5, 10 ** 2.5);
+});
+
+test("computed ends keep the scale's direction", () => {
+  const log = oneCurve("X", "", ONE_TO_101);
+  nearScale(scaleOn({ type: "linear", ends: { kind: "percentile", lo: 1, hi: 99, reversed: true } }, log), 100, 2);
+  nearScale(scaleOn({ type: "linear", ends: { kind: "centredOnMedian", width: 10, reversed: true } }, log), 56, 46);
+  // The unit fallback follows the fixed ends' own direction (NPHI runs 0.45 → −0.15).
+  const nphi: CurveScale = { type: "linear", ends: { kind: "fixed", left: 0.45, right: -0.15, unit: "v/v" } };
+  nearScale(scaleOn(nphi, oneCurve("NPHI", "furlongs", ONE_TO_101)), 100, 2);
+});
+
+test("computed ends come from the whole well, whatever is in view", () => {
+  // The view is not an input: resolving against the whole well log is the only way to get a scale.
+  const log = oneCurve("SP", "mV", [...Array(50).fill(-100), ...Array(51).fill(20)]);
+  const sp: CurveScale = { type: "linear", ends: { kind: "centredOnMedian", width: 100, reversed: false } };
+  nearScale(scaleOn(sp, log), -30, 70);
+});
+
+test("a constant curve still gets a scale with width", () => {
+  const p: CurveScale = { type: "linear", ends: { kind: "percentile", lo: 1, hi: 99, reversed: false } };
+  const scale = scaleOn(p, oneCurve("X", "", [2, 2, 2]));
+  assert.ok(scale.left < 2 && scale.right > 2, `${scale.left}–${scale.right}`);
+});
+
+test("fixed ends convert into the curve's unit, in both directions of each pair", () => {
+  const cases: [string, number, number, string, number, number][] = [
+    ["in", 6, 16, "mm", 152.4, 406.4],
+    ["mm", 152.4, 406.4, "in", 6, 16],
+    ["g/cm³", 1.95, 2.95, "kg/m³", 1950, 2950],
+    ["kg/m3", 1950, 2950, "G/C3", 1.95, 2.95],
+    ["v/v", 0.45, -0.15, "%", 45, -15],
+    ["v/v", 0.45, -0.15, "p.u.", 45, -15],
+    ["PU", 45, -15, "V/V", 0.45, -0.15],
+    ["%", 45, -15, "dec", 0.45, -0.15],
+    ["µs/ft", 140, 40, "us/m", 140 / 0.3048, 40 / 0.3048],
+    ["us/m", 459.3, 131.2, "US/F", 459.3 * 0.3048, 131.2 * 0.3048],
+    ["m/h", 100, 0, "ft/h", 100 / 0.3048, 0],
+    ["ft/hr", 328, 0, "M/HR", 328 * 0.3048, 0],
+  ];
+  for (const [from, left, right, to, l, r] of cases) {
+    const scale: CurveScale = { type: "linear", ends: { kind: "fixed", left, right, unit: from } };
+    nearScale(scaleOn(scale, oneCurve("X", to, ONE_TO_101)), l, r);
+  }
+});
+
+test("fixed ends are taken as written when the units agree however they are spelled", () => {
+  const res: CurveScale = { type: "log", ends: { kind: "fixed", left: 0.2, right: 2000, unit: "ohm·m" } };
+  for (const unit of ["ohm·m", "OHMM", "ohm.m", "Ohm-m"]) nearScale(scaleOn(res, oneCurve("ILD", unit, [1])), 0.2, 2000);
+  const gr: CurveScale = { type: "linear", ends: { kind: "fixed", left: 0, right: 150, unit: "gAPI" } };
+  for (const unit of ["gAPI", "GAPI", "API"]) nearScale(scaleOn(gr, oneCurve("GR", unit, [1])), 0, 150);
+  const blank: CurveScale = { type: "linear", ends: { kind: "fixed", left: 0, right: 10, unit: "" } };
+  nearScale(scaleOn(blank, oneCurve("X", "", [50])), 0, 10);
+});
+
+test("fixed ends in a unit with no known factor, or against a blank unit, fall back on percentile [1, 99]", () => {
+  const rhob: CurveScale = { type: "linear", ends: { kind: "fixed", left: 1.95, right: 2.95, unit: "g/cm³" } };
+  nearScale(scaleOn(rhob, oneCurve("MUDWEIGHT", "", ONE_TO_101)), 2, 100);
+  nearScale(scaleOn(rhob, oneCurve("RHOB", "lb/ft3", ONE_TO_101)), 2, 100);
+  // A known unit of another quantity has no factor either.
+  nearScale(scaleOn(rhob, oneCurve("RHOB", "in", ONE_TO_101)), 2, 100);
+  // On a log scale the fallback is taken on log10.
+  const res: CurveScale = { type: "log", ends: { kind: "fixed", left: 0.2, right: 2000, unit: "ohm·m" } };
+  const values = Array.from({ length: 401 }, (_, i) => 10 ** (i / 100));
+  nearScale(scaleOn(res, oneCurve("RT", "mS/m", values)), 10 ** 0.04, 10 ** 3.96);
+});
+
+test("a track whose first entry has computed ends grids from its curve, or evenly when unmatched", () => {
+  const sp: CurveEntry = {
+    ...entry("sp", select(["family", "sp"])),
+    scale: { type: "linear", ends: { kind: "centredOnMedian", width: 100, reversed: false } },
+  };
+  const [track] = resolveTemplate(template([sp]), oneCurve("SP", "mV", [10, 20, 30])).tracks;
+  assert.deepEqual(track.kind === "curve" && track.grid, { left: -30, right: 70, type: "linear" });
+  const [empty] = resolveTemplate(template([sp]), wellLog([])).tracks;
+  assert.deepEqual(empty.kind === "curve" && empty.grid, { left: 0, right: 1, type: "linear" });
+  const logScale: CurveEntry = { ...sp, scale: { ...sp.scale, type: "log" } };
+  const [none] = resolveTemplate(template([logScale]), wellLog([])).tracks;
+  assert.equal(none.kind === "curve" && none.grid, null);
+});
+
 const FORCE_COLUMNS: [string, string][] = [
   ["CALI", "in"],
   ["RSHA", "ohm·m"],
@@ -199,20 +328,20 @@ function defaultMatches(log: WellLog) {
 test("the default template on a FORCE-shaped well log", () => {
   const log = wellLog([...FORCE_COLUMNS.map(([name, unit]) => curve(name, unit)), lithology]);
   assert.deepEqual(defaultMatches(log), {
-    "gr-caliper": ["GR", "SGR", "CALI", "BS"],
+    "gr-caliper": ["GR", "SGR", "SP", "CALI", "BS"],
     depth: [],
-    resistivity: ["RDEP", "RMED", "RSHA", "RXO", "RMIC"],
+    resistivity: ["RDEP", "RMED", "RSHA", "RXO", "RMIC", null],
     "density-neutron": ["RHOB", "NPHI", "PEF"],
     sonic: ["DTC", "DTS"],
-    drilling: ["ROP", "ROPA"],
+    drilling: ["ROP", "ROPA", "MUDWEIGHT"],
     lithology: ["FORCE_2020_LITHOFACIES_LITHOLOGY"],
     group: [],
     formation: [],
   });
-  // SP and mud weight join with computed scales (#43).
+  // The QC curves are left to the picker.
   assert.deepEqual(
     resolveTemplate(defaultTemplate(), log).unmatchedCurves.map((c) => c.key),
-    ["SP", "DCAL", "DRHO", "MUDWEIGHT"],
+    ["DCAL", "DRHO"],
   );
 });
 
@@ -233,6 +362,7 @@ test("a FORCE 2020 well with no drilling curves keeps its drilling track, empty"
     [
       ["ROP", null],
       ["ROPA", null],
+      ["MW", null],
     ],
   );
 });
@@ -248,23 +378,37 @@ test("the default template on a LAS-shaped well log matches by curve family", ()
     curve("NPHI", "V/V"),
     curve("DT", "US/F"),
     curve("SP", "MV"),
+    curve("RES1", "OHMM"),
     curve("TENS", "LBF"),
   ]);
   assert.deepEqual(defaultMatches(log), {
-    "gr-caliper": ["GR", null, "CALI", null],
+    "gr-caliper": ["GR", null, "SP", "CALI", null],
     depth: [],
-    resistivity: ["ILD", "ILM", "SFLU", null, null],
+    resistivity: ["ILD", "ILM", "SFLU", null, null, "RES1"],
     "density-neutron": ["RHOB", "NPHI", null],
     sonic: ["DT", null],
-    drilling: [null, null],
+    drilling: [null, null, null],
     lithology: [null],
     group: [],
     formation: [],
   });
   assert.deepEqual(
     resolveTemplate(defaultTemplate(), log).unmatchedCurves.map((c) => c.key),
-    ["SP", "TENS"],
+    ["TENS"],
   );
+});
+
+test("the default template's fixed ends take LAS spellings of FORCE 2020 units as written", () => {
+  const log = wellLog([curve("CALI", "IN"), curve("RHOB", "G/C3"), curve("NPHI", "V/V"), curve("DT", "US/F")]);
+  const scales = resolveTemplate(defaultTemplate(), log)
+    .tracks.flatMap((t) => (t.kind === "curve" ? t.entries : []))
+    .flatMap(({ curve, scale }) => (curve && scale ? [[curve.key, scale.left, scale.right]] : []));
+  assert.deepEqual(scales, [
+    ["CALI", 6, 16],
+    ["RHOB", 1.95, 2.95],
+    ["NPHI", 0.45, -0.15],
+    ["DT", 140, 40],
+  ]);
 });
 
 test("an entry's label is its key, else its mnemonic, else its family's short name", () => {

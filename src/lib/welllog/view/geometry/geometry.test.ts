@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fractionOf, mappingOf, type ResolvedScale } from "./scale.ts";
 import { log10Values } from "./log10.ts";
-import { curvePolyline, visibleRows, type Frame } from "./polyline.ts";
+import { curvePolyline, END_TOLERANCE, visibleRows, wrappedPolyline, type Frame } from "./polyline.ts";
 import { depthGridlines, depthStep, depthsEvery, scaleGridlines } from "./grid.ts";
 
 const near = (actual: number, expected: number, message?: string) =>
@@ -152,6 +152,80 @@ test("no decimation at or under 4 samples per pixel row", () => {
     height: 2,
   });
   assert.equal(line.length / 2, n);
+});
+
+/** x per point of a wrapped line, null where it breaks. */
+const wrappedXs = (values: number[], scale: ResolvedScale, width = 150, inset = 0) => {
+  const md = Float64Array.from(values, (_, i) => i);
+  const source = scale.type === "log" ? log10Values(new Float32Array(values)) : new Float32Array(values);
+  const frame: Frame = { top: 0, base: values.length - 1, width, height: 1000 };
+  return pairs(wrappedPolyline(md, source, mappingOf(scale), frame, inset)).map((p) => (p ? p[0] : null));
+};
+
+/** Float32 positions against expected ones, to a thousandth of a px. */
+const nearXs = (xs: (number | null)[], expected: (number | null)[]) => {
+  assert.equal(xs.length, expected.length, `${xs} vs ${expected}`);
+  xs.forEach((x, i) =>
+    expected[i] === null ? assert.equal(x, null) : assert.ok(Math.abs(x! - expected[i]!) < 1e-3, `${xs} vs ${expected}`),
+  );
+};
+
+test("wrap on a linear scale: a stretch past the right end comes back from the left edge", () => {
+  const gr: ResolvedScale = { left: 0, right: 150, type: "linear" };
+  // 75 in, 200 and 210 off to the right, 100 back in. Width 150: x = value.
+  nearXs(wrappedXs([75, 200, 210, 100], gr), [75 - 150, 50, 60, 100 - 150]);
+  // Off to the left of a reversed scale (DTC 140 → 40): 150 µs/ft is past the left end.
+  const dtc: ResolvedScale = { left: 140, right: 40, type: "linear" };
+  // 150 is a tenth of a width past the left end, so it wraps to 0.9 (where 50 sits).
+  nearXs(wrappedXs([90, 150], dtc), [75 + 150, 135]);
+});
+
+test("wrap on a log scale shifts by one span", () => {
+  const res: ResolvedScale = { left: 0.2, right: 2000, type: "log" };
+  // 20 000 is a quarter-span past 2000, so it wraps onto where 2 sits.
+  nearXs(wrappedXs([20, 20000], res, 100), [50 - 100, 25]);
+  // 0.02 is a quarter-span short of 0.2, so it wraps onto where 200 sits.
+  nearXs(wrappedXs([20, 0.02], res, 100), [50 + 100, 75]);
+});
+
+test("a value still off the scale after one shift runs out of the track, to be cut", () => {
+  const gr: ResolvedScale = { left: 0, right: 150, type: "linear" };
+  const xs = wrappedXs([100, 400, 100], gr);
+  assert.ok(xs[1]! > 150, `${xs[1]} is past the right edge`);
+});
+
+test("an on-scale curve has no wrapped line, and the wrapped line breaks where the curve does", () => {
+  const gr: ResolvedScale = { left: 0, right: 150, type: "linear" };
+  assert.deepEqual(wrappedXs([0, 75, 150], gr), []);
+  // Two stretches past the right end either side of a missing value.
+  nearXs(wrappedXs([160, NaN, 170], gr), [10, null, 20]);
+  // A jump from past one end to past the other leaves by one edge and comes in by the other.
+  nearXs(wrappedXs([160, -10], gr), [10, -160, null, 160 + 150, 140]);
+});
+
+test("values on a scale end, within float32 tolerance, stay on it", () => {
+  const bs: ResolvedScale = { left: 6, right: 16, type: "linear" };
+  const f32 = (v: number) => Math.fround(v);
+  assert.ok(f32(26.000002) > 26 && (f32(26.000002) - 16) / 10 - 1 < END_TOLERANCE);
+  // A 16-in bit stored as 16.000002 is on the right end, not wrapped round to the left one.
+  assert.deepEqual(wrappedXs([f32(16.000002), f32(16.000002)], bs, 100), []);
+  const md = new Float64Array([0, 1]);
+  const frame: Frame = { top: 0, base: 1, width: 100, height: 100 };
+  const xs = pairs(curvePolyline(md, new Float32Array([16.000002, 6]), mappingOf(bs), frame)).map((p) => p![0]);
+  assert.deepEqual(xs, [100, 0]);
+  // A 26-in bit stored as 26.000002 wraps onto the right end and is drawn there.
+  nearXs(wrappedXs([f32(26.000002), f32(26.000002)], bs, 100), [100, 100]);
+});
+
+test("an on-scale point keeps the inset from each edge, so a line on an end draws whole", () => {
+  const bs: ResolvedScale = { left: 6, right: 16, type: "linear" };
+  const md = new Float64Array([0, 1, 2]);
+  const frame: Frame = { top: 0, base: 2, width: 100, height: 100 };
+  const xs = pairs(curvePolyline(md, new Float32Array([6, 11, 16]), mappingOf(bs), frame, 1)).map((p) => p![0]);
+  assert.deepEqual(xs, [1, 50, 99]);
+  // Off the scale it still runs out.
+  const off = pairs(curvePolyline(md, new Float32Array([4, 11, 18]), mappingOf(bs), frame, 1)).map((p) => p![0]);
+  assert.deepEqual(off, [-20, 50, 120]);
 });
 
 test("visible rows reach one row past each edge of the frame", () => {

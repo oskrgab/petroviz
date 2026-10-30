@@ -2,13 +2,12 @@
  * Curve family display defaults, and the default template built from them
  * (#29). Values come from the curve family defaults note
  * (docs/research/curve-family-defaults.md on the research/curve-family-defaults
- * branch); colours are written for a light background (ADR-0006).
- *
- * SP, mud weight, unknown-depth resistivity and `unknown` have computed curve
- * scales and join with them (#43).
+ * branch) and #29's resolution; colours are written for a light background
+ * (ADR-0006).
  */
 
 import type { CurveFamily } from "../../core/index.ts";
+import { FALLBACK_PERCENTILES } from "../scaleEnds.ts";
 import type {
   CodeStyle,
   CurveEntry,
@@ -16,6 +15,7 @@ import type {
   CurveStyle,
   Dash,
   OffScale,
+  ScaleType,
   Selector,
   Template,
   Track,
@@ -37,40 +37,53 @@ export interface CurveFamilyDefault {
 function family(
   label: string,
   track: DefaultCurveTrack | null,
-  [left, right, unit, type]: [number, number, string, CurveScale["type"]],
+  scale: CurveScale,
   offScale: OffScale,
   colour: string,
   dash: Dash,
 ): CurveFamilyDefault {
-  return {
-    label,
-    track,
-    scale: { type, ends: { kind: "fixed", left, right, unit } },
-    offScale,
-    style: { colour, width: 1, dash },
-  };
+  return { label, track, scale, offScale, style: { colour, width: 1, dash } };
 }
 
-const RESISTIVITY: [number, number, string, "log"] = [0.2, 2000, "ohm·m", "log"];
+const fixed = (left: number, right: number, unit: string, type: ScaleType = "linear"): CurveScale => ({
+  type,
+  ends: { kind: "fixed", left, right, unit },
+});
+
+/** Where a family has no safe fixed scale: mud weight's mixed magnitudes, `unknown`. */
+const PERCENTILE_1_99: CurveScale = { type: "linear", ends: { kind: "percentile", ...FALLBACK_PERCENTILES, reversed: false } };
+
+/** SP is relative, so it gets a 100 mV window on its median, negative to the left. */
+const SP: CurveScale = { type: "linear", ends: { kind: "centredOnMedian", width: 100, reversed: false } };
+
+const RESISTIVITY = fixed(0.2, 2000, "ohm·m", "log");
+
+/** The continuous curve families; lithology is discrete (see discreteFamilyDefaults). */
+export type ContinuousFamily = Exclude<CurveFamily, "lithology">;
 
 /** Per family, in draw order within each track. */
-export const curveFamilyDefaults: Readonly<Partial<Record<CurveFamily, CurveFamilyDefault>>> = {
-  "gamma-ray": family("GR", "gr-caliper", [0, 150, "gAPI", "linear"], "wrap", "#006400", "solid"),
-  "spectral-gamma-ray": family("SGR", "gr-caliper", [0, 150, "gAPI", "linear"], "wrap", "#006400", "dashed"),
-  caliper: family("CALI", "gr-caliper", [6, 16, "in", "linear"], "wrap", "#FF0000", "dashed"),
-  "bit-size": family("BS", "gr-caliper", [6, 16, "in", "linear"], "wrap", "#000000", "dotted"),
-  "differential-caliper": family("DCAL", null, [-2, 8, "in", "linear"], "clip", "#A0522D", "solid"),
+export const curveFamilyDefaults: Readonly<Record<ContinuousFamily, CurveFamilyDefault>> = {
+  "gamma-ray": family("GR", "gr-caliper", fixed(0, 150, "gAPI"), "wrap", "#006400", "solid"),
+  "spectral-gamma-ray": family("SGR", "gr-caliper", fixed(0, 150, "gAPI"), "wrap", "#006400", "dashed"),
+  sp: family("SP", "gr-caliper", SP, "clip", "#0000FF", "solid"),
+  caliper: family("CALI", "gr-caliper", fixed(6, 16, "in"), "wrap", "#FF0000", "dashed"),
+  "bit-size": family("BS", "gr-caliper", fixed(6, 16, "in"), "wrap", "#000000", "dotted"),
+  "differential-caliper": family("DCAL", null, fixed(-2, 8, "in"), "clip", "#A0522D", "solid"),
   "resistivity-deep": family("RDEP", "resistivity", RESISTIVITY, "clip", "#330000", "solid"),
   "resistivity-medium": family("RMED", "resistivity", RESISTIVITY, "clip", "#CC0000", "dashed"),
   "resistivity-shallow": family("RSHA", "resistivity", RESISTIVITY, "clip", "#FF8C00", "dotted"),
   "resistivity-micro": family("RXO", "resistivity", RESISTIVITY, "clip", "#0000CC", "dashdot"),
-  "bulk-density": family("RHOB", "density-neutron", [1.95, 2.95, "g/cm³", "linear"], "clip", "#FF0000", "solid"),
-  "density-correction": family("DRHO", null, [-0.25, 0.25, "g/cm³", "linear"], "clip", "#808080", "dotted"),
-  "neutron-porosity": family("NPHI", "density-neutron", [0.45, -0.15, "v/v", "linear"], "clip", "#0099CC", "dashed"),
-  pef: family("PEF", "density-neutron", [0, 10, "b/e", "linear"], "clip", "#000000", "solid"),
-  "sonic-compressional": family("DTC", "sonic", [140, 40, "µs/ft", "linear"], "wrap", "#800080", "solid"),
-  "sonic-shear": family("DTS", "sonic", [440, 40, "µs/ft", "linear"], "wrap", "#FF00FF", "dashed"),
-  rop: family("ROP", "drilling", [100, 0, "m/h", "linear"], "clip", "#000000", "solid"),
+  "resistivity-unknown-depth": family("RES", "resistivity", RESISTIVITY, "clip", "#808080", "solid"),
+  "bulk-density": family("RHOB", "density-neutron", fixed(1.95, 2.95, "g/cm³"), "clip", "#FF0000", "solid"),
+  "density-correction": family("DRHO", null, fixed(-0.25, 0.25, "g/cm³"), "clip", "#808080", "dotted"),
+  "neutron-porosity": family("NPHI", "density-neutron", fixed(0.45, -0.15, "v/v"), "clip", "#0099CC", "dashed"),
+  pef: family("PEF", "density-neutron", fixed(0, 10, "b/e"), "clip", "#000000", "solid"),
+  "sonic-compressional": family("DTC", "sonic", fixed(140, 40, "µs/ft"), "wrap", "#800080", "solid"),
+  "sonic-shear": family("DTS", "sonic", fixed(440, 40, "µs/ft"), "wrap", "#FF00FF", "dashed"),
+  rop: family("ROP", "drilling", fixed(100, 0, "m/h"), "clip", "#000000", "solid"),
+  "mud-weight": family("MW", "drilling", PERCENTILE_1_99, "clip", "#8B4513", "solid"),
+  // Not in the default template, so an unknown curve counts as not shown.
+  unknown: family("Unknown", null, PERCENTILE_1_99, "clip", "#808080", "solid"),
 };
 
 export interface DiscreteFamilyDefault {
