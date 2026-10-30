@@ -5,6 +5,8 @@
 	 * The log view's host. It loads the FORCE 2020 well named by `?well=<file
 	 * stem>` (35-11-11 when there is none), shows a spinner while it loads and
 	 * a full error state if it fails, and hands the well log to the log view.
+	 * It holds the current template, the interval and the depth reference,
+	 * which outlive the well log: the template starts as the default template.
 	 *
 	 * It shares the header with the production dashboard but never imports
 	 * DuckDB, so a cold visit doesn't wait for it.
@@ -17,7 +19,7 @@
 	import { themeStore } from '$lib/stores/theme.svelte';
 	import { loadWell } from '$lib/sources/force2020';
 	import type { WellLog } from '$lib/welllog/core';
-	import { LogView } from '$lib/welllog/view';
+	import { LogView, defaultTemplate, type DepthInterval, type DepthRef } from '$lib/welllog/view';
 
 	const DEFAULT_WELL = '35-11-11';
 
@@ -29,6 +31,11 @@
 	const { dataHost, schemaHost } = getConfigSummary();
 
 	const wellId = $derived(page.url.searchParams.get('well') ?? DEFAULT_WELL);
+
+	// Raw: templates change only by replacement (#55's operations are immutable).
+	let template = $state.raw(defaultTemplate());
+	let interval = $state.raw<DepthInterval | null>(null);
+	let depthRef = $state<DepthRef>('md');
 
 	// Raw: a well log is immutable and holds large typed arrays, so it is never proxied.
 	let status = $state.raw<Status>({ kind: 'loading', id: DEFAULT_WELL });
@@ -59,7 +66,7 @@
 	<AppHeader />
 	<main class="logs-content">
 		{#if status.kind === 'ready'}
-			<LogView log={status.log} scheme={themeStore.theme} />
+			<LogView log={status.log} bind:template bind:interval bind:depthRef scheme={themeStore.theme} />
 		{:else if status.kind === 'loading'}
 			<div class="state">
 				<LoadingSpinner message={`Loading well ${status.id}…`} />

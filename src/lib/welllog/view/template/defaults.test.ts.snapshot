@@ -1,0 +1,448 @@
+exports[`the built default template matches its snapshot 1`] = `
+{
+  "name": "Default",
+  "tracks": [
+    {
+      "id": "gr-caliper",
+      "kind": "curve",
+      "width": 1,
+      "curves": [
+        {
+          "id": "gamma-ray",
+          "select": [
+            {
+              "by": "family",
+              "value": "gamma-ray"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 0,
+              "right": 150,
+              "unit": "gAPI"
+            }
+          },
+          "offScale": "wrap",
+          "style": {
+            "colour": "#006400",
+            "width": 1,
+            "dash": "solid"
+          }
+        },
+        {
+          "id": "spectral-gamma-ray",
+          "select": [
+            {
+              "by": "family",
+              "value": "spectral-gamma-ray"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 0,
+              "right": 150,
+              "unit": "gAPI"
+            }
+          },
+          "offScale": "wrap",
+          "style": {
+            "colour": "#006400",
+            "width": 1,
+            "dash": "dashed"
+          }
+        },
+        {
+          "id": "caliper",
+          "select": [
+            {
+              "by": "family",
+              "value": "caliper"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 6,
+              "right": 16,
+              "unit": "in"
+            }
+          },
+          "offScale": "wrap",
+          "style": {
+            "colour": "#FF0000",
+            "width": 1,
+            "dash": "dashed"
+          }
+        },
+        {
+          "id": "bit-size",
+          "select": [
+            {
+              "by": "family",
+              "value": "bit-size"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 6,
+              "right": 16,
+              "unit": "in"
+            }
+          },
+          "offScale": "wrap",
+          "style": {
+            "colour": "#000000",
+            "width": 1,
+            "dash": "dotted"
+          }
+        }
+      ]
+    },
+    {
+      "id": "depth",
+      "kind": "depth",
+      "width": 0.5,
+      "ref": "active"
+    },
+    {
+      "id": "resistivity",
+      "kind": "curve",
+      "width": 1,
+      "curves": [
+        {
+          "id": "resistivity-deep",
+          "select": [
+            {
+              "by": "family",
+              "value": "resistivity-deep"
+            }
+          ],
+          "scale": {
+            "type": "log",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.2,
+              "right": 2000,
+              "unit": "ohm·m"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#330000",
+            "width": 1,
+            "dash": "solid"
+          }
+        },
+        {
+          "id": "resistivity-medium",
+          "select": [
+            {
+              "by": "family",
+              "value": "resistivity-medium"
+            }
+          ],
+          "scale": {
+            "type": "log",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.2,
+              "right": 2000,
+              "unit": "ohm·m"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#CC0000",
+            "width": 1,
+            "dash": "dashed"
+          }
+        },
+        {
+          "id": "resistivity-shallow",
+          "select": [
+            {
+              "by": "family",
+              "value": "resistivity-shallow"
+            }
+          ],
+          "scale": {
+            "type": "log",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.2,
+              "right": 2000,
+              "unit": "ohm·m"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#FF8C00",
+            "width": 1,
+            "dash": "dotted"
+          }
+        },
+        {
+          "id": "rxo",
+          "select": [
+            {
+              "by": "mnemonic",
+              "value": "RXO"
+            },
+            {
+              "by": "family",
+              "value": "resistivity-micro"
+            }
+          ],
+          "scale": {
+            "type": "log",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.2,
+              "right": 2000,
+              "unit": "ohm·m"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#0000CC",
+            "width": 1,
+            "dash": "dashdot"
+          }
+        },
+        {
+          "id": "rmic",
+          "select": [
+            {
+              "by": "mnemonic",
+              "value": "RMIC"
+            },
+            {
+              "by": "family",
+              "value": "resistivity-micro"
+            }
+          ],
+          "scale": {
+            "type": "log",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.2,
+              "right": 2000,
+              "unit": "ohm·m"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#0000CC",
+            "width": 1,
+            "dash": "dotted"
+          }
+        }
+      ]
+    },
+    {
+      "id": "density-neutron",
+      "kind": "curve",
+      "width": 1,
+      "curves": [
+        {
+          "id": "bulk-density",
+          "select": [
+            {
+              "by": "family",
+              "value": "bulk-density"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 1.95,
+              "right": 2.95,
+              "unit": "g/cm³"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#FF0000",
+            "width": 1,
+            "dash": "solid"
+          }
+        },
+        {
+          "id": "neutron-porosity",
+          "select": [
+            {
+              "by": "family",
+              "value": "neutron-porosity"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 0.45,
+              "right": -0.15,
+              "unit": "v/v"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#0099CC",
+            "width": 1,
+            "dash": "dashed"
+          }
+        },
+        {
+          "id": "pef",
+          "select": [
+            {
+              "by": "family",
+              "value": "pef"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 0,
+              "right": 10,
+              "unit": "b/e"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#000000",
+            "width": 1,
+            "dash": "solid"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sonic",
+      "kind": "curve",
+      "width": 1,
+      "curves": [
+        {
+          "id": "sonic-compressional",
+          "select": [
+            {
+              "by": "family",
+              "value": "sonic-compressional"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 140,
+              "right": 40,
+              "unit": "µs/ft"
+            }
+          },
+          "offScale": "wrap",
+          "style": {
+            "colour": "#800080",
+            "width": 1,
+            "dash": "solid"
+          }
+        },
+        {
+          "id": "sonic-shear",
+          "select": [
+            {
+              "by": "family",
+              "value": "sonic-shear"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 440,
+              "right": 40,
+              "unit": "µs/ft"
+            }
+          },
+          "offScale": "wrap",
+          "style": {
+            "colour": "#FF00FF",
+            "width": 1,
+            "dash": "dashed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "drilling",
+      "kind": "curve",
+      "width": 0.75,
+      "curves": [
+        {
+          "id": "rop",
+          "select": [
+            {
+              "by": "mnemonic",
+              "value": "ROP"
+            },
+            {
+              "by": "family",
+              "value": "rop"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 100,
+              "right": 0,
+              "unit": "m/h"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#000000",
+            "width": 1,
+            "dash": "solid"
+          }
+        },
+        {
+          "id": "ropa",
+          "select": [
+            {
+              "by": "mnemonic",
+              "value": "ROPA"
+            },
+            {
+              "by": "family",
+              "value": "rop"
+            }
+          ],
+          "scale": {
+            "type": "linear",
+            "ends": {
+              "kind": "fixed",
+              "left": 100,
+              "right": 0,
+              "unit": "m/h"
+            }
+          },
+          "offScale": "clip",
+          "style": {
+            "colour": "#000000",
+            "width": 1,
+            "dash": "dashed"
+          }
+        }
+      ]
+    }
+  ]
+}
+`;

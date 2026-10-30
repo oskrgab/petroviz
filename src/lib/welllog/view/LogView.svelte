@@ -2,31 +2,65 @@
   /**
    * LogView
    *
-   * The display of one well log (ADR-0004). It accepts a WellLog and nothing
-   * else: the host does the loading and shows the loading and error states.
+   * The display of one well log (ADR-0004): a controlled component. It
+   * accepts a WellLog and nothing else, and the host does the loading and
+   * shows the loading and error states. `template`, `interval` and
+   * `depthRef` are bound, and written only on a user action; what is drawn
+   * is derived from them by resolveTemplate.
    *
-   * For now it is the shell: a top bar starting with the well panel control,
-   * which carries an amber badge counting cautions, and only when there are
-   * some. Nothing opens on load. Tracks join it next.
+   * A top bar starts with the well panel control, which carries an amber
+   * badge counting cautions, and only when there are some. Below it, the
+   * tracks side by side over the whole well, one canvas each, scrolling
+   * sideways when they can't fit.
    *
    * Colours come in as --welllog-* custom properties. Their light and dark
    * values are set here per `scheme`, and a host may override any of them.
    */
 
   import type { WellLog } from "../core/index.ts";
+  import { readTokens } from "./canvas.ts";
+  import type { DepthInterval, DepthRef } from "./interval.ts";
+  import { headerFor } from "./kinds/headers.ts";
+  import { trackColumns } from "./widths.ts";
+  import { LogViewState, setLogView } from "./logView.svelte.ts";
+  import { defaultTemplate } from "./template/defaults.ts";
+  import type { Template } from "./template/types.ts";
+  import TrackCanvas from "./TrackCanvas.svelte";
   import WellPanel from "./WellPanel.svelte";
   import { cautionCount } from "./wellPanel.ts";
 
   interface Props {
     log: WellLog;
+    template?: Template;
+    /** In MD; null shows the whole well. */
+    interval?: DepthInterval | null;
+    depthRef?: DepthRef;
     scheme?: "light" | "dark";
   }
 
-  let { log, scheme = "light" }: Props = $props();
+  let {
+    log,
+    template = $bindable(defaultTemplate()),
+    interval = $bindable(null),
+    depthRef = $bindable("md"),
+    scheme = "light",
+  }: Props = $props();
 
+  const view = setLogView(new LogViewState(() => ({ log, template, interval, depthRef })));
+
+  let root: HTMLDivElement;
   let panelOpen = $state(false);
   const cautions = $derived(cautionCount(log));
+  const columns = $derived(trackColumns(template.tracks));
   const panelId = $props.id();
+
+  // The tokens resolve per scheme, so read them again when it changes.
+  $effect(() => {
+    void scheme;
+    view.tokens = readTokens(root);
+  });
+
+  $effect(() => () => view.destroy());
 
   function onkeydown(event: KeyboardEvent) {
     if (event.key === "Escape" && panelOpen) panelOpen = false;
@@ -35,7 +69,7 @@
 
 <svelte:window {onkeydown} />
 
-<div class="log-view" data-scheme={scheme}>
+<div class="log-view" data-scheme={scheme} bind:this={root}>
   <div class="top-bar">
     <button
       type="button"
@@ -60,7 +94,19 @@
     {/if}
   </div>
 
-  <div class="body"></div>
+  <div class="tracks">
+    <div class="track-grid" style:grid-template-columns={columns}>
+      {#each view.resolved.tracks as resolved (resolved.track.id)}
+        {@const Header = headerFor(resolved)}
+        <div class="track-header" class:depth={resolved.kind === "depth"}>
+          <Header {resolved} />
+        </div>
+        <div class="track-body" class:depth={resolved.kind === "depth"}>
+          <TrackCanvas {resolved} />
+        </div>
+      {/each}
+    </div>
+  </div>
 </div>
 
 <style>
@@ -168,8 +214,42 @@
     text-align: center;
   }
 
-  .body {
+  .tracks {
     flex: 1;
     min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 0 0 6px 6px;
+  }
+
+  /* Column-major: each track is a header over a body. */
+  .track-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: auto minmax(0, 1fr);
+    width: 100%;
+    min-width: min-content;
+    height: 100%;
+  }
+
+  .track-header {
+    background: var(--welllog-header-bg);
+    border-bottom: 1px solid var(--welllog-border);
+    min-width: 0;
+  }
+
+  .track-body {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* Every track after the first. */
+  .track-header:nth-child(n + 3),
+  .track-body:nth-child(n + 3) {
+    border-left: 1px solid var(--welllog-border);
+  }
+
+  .track-body.depth {
+    background: var(--welllog-depth-bg);
   }
 </style>
