@@ -129,6 +129,15 @@ pnpm check:sources
 
 It fetches every source and prints one PASS/FAIL line each, with the reason for any failure, such as an HTML page served where a parquet file should be.
 
+### Run the LAS Adapter over Real Files
+
+```bash
+pnpm las-corpus                 # every corpus file
+pnpm las-corpus --only force    # just the FORCE 2020 exports (also: glade, forge)
+```
+
+An opt-in check of the LAS log adapter, kept out of `pnpm test`. It downloads the 118 FORCE 2020 LAS exports (~618 MB), GLADE `west_mac60.las` and the wrapped Utah FORGE `Acord 1-26` file into the git-ignored `.cache/las-corpus/`, then builds a well log from each and checks it against the well log contract. It prints one line per file and a summary of the load warnings, and exits non-zero if a file throws or breaks the contract. A second run reads the cache. Set `GITHUB_TOKEN` if GitHub's API rate limit blocks listing the FORCE 2020 files.
+
 ### Common Issues
 
 **An override has no effect?**

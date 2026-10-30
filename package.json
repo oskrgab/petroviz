@@ -10,7 +10,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "node --test \"src/**/*.test.{js,ts}\" \"scripts/**/*.test.js\"",
-    "check:sources": "node scripts/check-sources.js"
+    "check:sources": "node scripts/check-sources.js",
+    "las-corpus": "node scripts/las-corpus.js"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.0",
