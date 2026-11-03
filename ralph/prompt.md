@@ -57,6 +57,17 @@ diagram for the whole effort — it may be the only place an ordering is written
 
 ## 3. Decide
 
+0. **Skip parent issues**: An issue with sub-issues is a parent (a PRD or epic). Never
+   work on it or close it, even when it is labelled `ready-for-agent` and unblocked: its
+   sub-issues are the work, and a person closes the parent. Check before selecting:
+
+   ```bash
+   # 0 means it is not a parent.
+   gh api "repos/{owner}/{repo}/issues/<number>" -q '.sub_issues_summary.total'
+   ```
+
+   A parent's body is still useful context for its sub-issues (`parent_issue_url` on a
+   sub-issue names it).
 1. **Check if blockers are resolved**: An issue is unblocked if every blocker is already
    closed, merged, or present in git history. A `[closed]` blocker is satisfied — ignore it.
 2. **If an issue has open blockers**:
