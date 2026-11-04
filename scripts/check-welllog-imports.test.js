@@ -143,10 +143,13 @@ test("side-effect, re-export, dynamic and multi-line imports are all checked", (
     "core/c.ts": `const m = await import("../las/parse.ts");`,
     "core/d.ts": `import {\n  a,\n  b,\n} from "hyparquet";`,
     "core/e.ts": "const n = await import(`@duckdb/duckdb-wasm`);",
+    "core/f.ts": `const { goto } = await import("$app/navigation");`,
+    // An interpolated specifier can't be read, so it is left alone.
+    "core/g.ts": "const k = await import(`./kinds/${name}.ts`);",
   });
   assert.deepEqual(
     violations.map((v) => v.specifier).sort(),
-    ["../las/parse.ts", "../view/x.ts", "@duckdb/duckdb-wasm", "hyparquet", "svelte"],
+    ["$app/navigation", "../las/parse.ts", "../view/x.ts", "@duckdb/duckdb-wasm", "hyparquet", "svelte"],
   );
 });
 

@@ -6,13 +6,13 @@
  * SvelteKit. `check-welllog-imports.test.js` runs it on the real tree, which
  * puts it in `pnpm test` and so in front of every deploy.
  *
- * It reads import specifiers with regular expressions over comment-free code
- * rather than a parser, which is enough for the module's own code and keeps it
- * dependency-free.
+ * Specifiers are read by `imports.js`, shared with the welcome page's scanner.
  */
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
+
+import { importSpecifiers, isPackage, SOURCE_FILE } from "./imports.js";
 
 /**
  * @typedef {object} Violation
@@ -47,71 +47,11 @@ const FORBIDDEN = [
   [(s) => isPackage(s, "hyparquet"), "hyparquet belongs to the FORCE 2020 log adapter, outside welllog/"],
 ];
 
-const SOURCE_FILE = /\.(?:[cm]?[jt]s|svelte)$/;
 const TEST_FILE = /\.test\.[cm]?[jt]s$/;
-const SVELTE_SCRIPT = /<script\b[^>]*>([\s\S]*?)<\/script>/g;
-
-// `from "x"` covers static imports and re-exports, however many lines they span.
-const IMPORT_PATTERNS = [
-  /\bfrom\s*(["'])([^"'\n]+)\1/g,
-  /\bimport\s*(["'])([^"'\n]+)\1/g,
-  /\bimport\s*\(\s*(["'`])([^"'`$\n]+)\1\s*\)/g,
-];
-
-/**
- * @param {string} specifier
- * @param {string} name
- */
-function isPackage(specifier, name) {
-  return specifier === name || specifier.startsWith(`${name}/`);
-}
 
 /** @param {string} key */
 function isLayer(key) {
   return Object.hasOwn(LAYERS, key);
-}
-
-/**
- * Drop comments, keeping strings whole, so neither a commented-out import nor
- * a `/*` inside a string can change what is read.
- * @param {string} source
- */
-function stripComments(source) {
-  let code = "";
-  let i = 0;
-  while (i < source.length) {
-    const char = source[i];
-    if (char === '"' || char === "'" || char === "`") {
-      let end = i + 1;
-      while (end < source.length && source[end] !== char) end += source[end] === "\\" ? 2 : 1;
-      code += source.slice(i, end + 1);
-      i = end + 1;
-    } else if (source.startsWith("//", i)) {
-      const end = source.indexOf("\n", i);
-      i = end === -1 ? source.length : end;
-    } else if (source.startsWith("/*", i)) {
-      const end = source.indexOf("*/", i + 2);
-      i = end === -1 ? source.length : end + 2;
-      code += " ";
-    } else {
-      code += char;
-      i++;
-    }
-  }
-  return code;
-}
-
-/**
- * @param {string} file
- * @param {string} source
- */
-function importSpecifiers(file, source) {
-  // Only a component's <script> blocks import anything; its markup is text.
-  const script = file.endsWith(".svelte")
-    ? [...source.matchAll(SVELTE_SCRIPT)].map((m) => m[1]).join("\n")
-    : source;
-  const code = stripComments(script);
-  return IMPORT_PATTERNS.flatMap((pattern) => [...code.matchAll(pattern)].map((m) => m[2]));
 }
 
 /** @param {string} dir */
