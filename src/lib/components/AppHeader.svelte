@@ -14,7 +14,8 @@
   import { resolve } from "$app/paths";
   import { CATALOG } from "$lib/config/data-sources";
   import ThemeToggle from "./ThemeToggle.svelte";
-  import DatasetLine, { type OnScreen } from "./DatasetLine.svelte";
+  import type { OnScreen } from "$lib/config/catalog.js";
+  import DatasetLine from "./DatasetLine.svelte";
 
   interface Props {
     /** What the visualization has on screen. The welcome page passes none. */
@@ -74,7 +75,7 @@
       {/each}
     </nav>
     {#if onScreen}
-      <div class="on-screen">
+      <div class="on-screen" class:file={"file" in onScreen}>
         <DatasetLine {onScreen} />
       </div>
     {/if}
@@ -239,11 +240,17 @@
     border-radius: 1px;
   }
 
-  /* Shrinks before the nav does: a long file name is cut, not the links */
+  /*
+   * Shrinks before the nav does: a long file name is cut, not the links. A
+   * dataset's line stops at its name over its links, as narrow as it reads.
+   */
   .on-screen {
     display: flex;
-    min-width: 0;
     flex: 0 100 auto;
+  }
+
+  .on-screen.file {
+    min-width: 0;
   }
 
   .header-controls {
@@ -349,8 +356,12 @@
       margin-right: auto;
     }
 
-    /* The dataset line sits beside the title, so the space falls after it */
-    .logo-section:has(+ .nav-section + .on-screen) {
+    /*
+     * The dataset line sits beside the title, so the space falls after it.
+     * Not with the page's controls on that row: they hold the title's place.
+     */
+    .app-header:not(:has(.header-controls))
+      .logo-section:has(+ .nav-section + .on-screen) {
       margin-right: 0;
     }
 
@@ -389,24 +400,136 @@
    * wordmark stays as the link's accessible name.
    */
   @media (max-width: 359px) {
-    .app-header:has(.on-screen) .logo-icon {
+    .app-header:has(.on-screen):not(:has(.header-controls)) .logo-icon {
       display: flex;
       width: 28px;
       height: 28px;
       border-radius: var(--radius-md);
     }
 
-    .app-header:has(.on-screen) .logo-icon svg {
+    .app-header:has(.on-screen):not(:has(.header-controls)) .logo-icon svg {
       width: 18px;
       height: 18px;
     }
 
+    .app-header:has(.on-screen):not(:has(.header-controls)) .title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+
+  /* ==================== WITH THE PAGE'S CONTROLS ==================== */
+  /*
+   * The well logs' header also holds the page's controls, so the dataset
+   * line has no row of its own to take, and the log view needs every pixel
+   * of depth below it. The line finds room in the rows already there.
+   */
+
+  /*
+   * Tablets: the oil drop stands in for the wordmark, as on the narrowest
+   * phones. Below 720px the production dashboard's line needs the room too.
+   */
+  @media (min-width: 481px) and (max-width: 880px) {
+    .app-header:has(.header-controls):has(.on-screen) .title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+
+  @media (min-width: 481px) and (max-width: 720px) {
     .app-header:has(.on-screen) .title {
       position: absolute;
       width: 1px;
       height: 1px;
+      padding: 0;
+      margin: -1px;
       overflow: hidden;
       clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+
+  /* Phones: the controls fill the title's row, so the line follows the nav on its row */
+  @media (max-width: 480px) {
+    .app-header:has(.header-controls) .nav-section {
+      flex-basis: auto;
+    }
+
+    .app-header:has(.header-controls) .on-screen {
+      order: 11;
+    }
+
+    /*
+     * A file name joins a row by a few characters and takes what room is
+     * left there: at its full width it would wrap to a row of its own.
+     */
+    .app-header:has(.header-controls) .on-screen.file {
+      flex: 1 1 6rem;
+    }
+  }
+
+  /*
+   * Too narrow for the nav and the line on one row, where the GitHub link
+   * and the theme toggle already take a row of their own: the line goes
+   * there, before them, and the nav keeps the last row to itself. With a
+   * well's name in the picker, they leave the title's row below 365px.
+   */
+  @media (max-width: 364px) {
+    .app-header:has(.header-controls) .on-screen {
+      order: 5;
+    }
+
+    .app-header:has(.header-controls) .header-right {
+      order: 6;
+    }
+
+    .app-header:has(.header-controls) .nav-section {
+      flex-basis: 100%;
+    }
+
+    /* It starts its row, so there is nothing for its rule to set it apart from */
+    .app-header:has(.header-controls) .on-screen :global(.dataset-line) {
+      padding-left: 0;
+      border-left: none;
+    }
+  }
+
+  /*
+   * The same from 405px with a file open: the picker names the file too and
+   * fills its 9rem, so the GitHub link and the theme toggle leave the
+   * title's row sooner.
+   */
+  @media (max-width: 405px) {
+    .app-header:has(.header-controls):has(.on-screen.file) .on-screen {
+      order: 5;
+    }
+
+    .app-header:has(.header-controls):has(.on-screen.file) .header-right {
+      order: 6;
+    }
+
+    .app-header:has(.header-controls):has(.on-screen.file) .nav-section {
+      flex-basis: 100%;
+    }
+
+    .app-header:has(.header-controls):has(.on-screen.file) .on-screen :global(.dataset-line) {
+      padding-left: 0;
+      border-left: none;
     }
   }
 </style>

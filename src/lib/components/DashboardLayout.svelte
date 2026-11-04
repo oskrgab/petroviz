@@ -12,7 +12,7 @@
   import { cubicOut } from "svelte/easing";
   import { MediaQuery } from "svelte/reactivity";
   import AppHeader from "./AppHeader.svelte";
-  import type { OnScreen } from "./DatasetLine.svelte";
+  import type { OnScreen } from "$lib/config/catalog.js";
 
   interface Props {
     /** What the dashboard shows, named in the header. */

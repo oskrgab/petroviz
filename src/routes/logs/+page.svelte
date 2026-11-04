@@ -37,6 +37,10 @@
 	 * that isn't a template is refused whole, with every problem listed, and
 	 * the template on screen stays.
 	 *
+	 * The header's dataset line and the tab title follow the well log on
+	 * screen (onScreen.ts): FORCE 2020 and its links for a petrodb well, the
+	 * file's name for a LAS file.
+	 *
 	 * It shares the header with the production dashboard but never imports
 	 * DuckDB, so a cold visit doesn't wait for it.
 	 */
@@ -46,7 +50,8 @@
 	import { page } from '$app/state';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import { getConfigSummary } from '$lib/config/data-sources';
+	import { visualizationById } from '$lib/config/catalog.js';
+	import { CATALOG, getConfigSummary } from '$lib/config/data-sources';
 	import { themeStore } from '$lib/stores/theme.svelte';
 	import { ForceLoadError, listWells, loadWell, unknownWellError, wellName } from '$lib/sources/force2020';
 	import type { WellLog } from '$lib/welllog/core';
@@ -64,6 +69,7 @@
 	import OpenLasButton from './OpenLasButton.svelte';
 	import TemplateMenu from './TemplateMenu.svelte';
 	import WellPicker from './WellPicker.svelte';
+	import { onScreenOf, tabTitle, wellDataset } from './onScreen.ts';
 	import { DEFAULT_WELL, parseLink, sourceKey, writeLink, type LinkSource, type LogLink } from './link.ts';
 	import { browserStorage, isTemplateFile, restoreTemplate, storeTemplate } from './templates.ts';
 	import { entryName, isUnlisted, lasEntry, skippedNote, sortWells, type PickerCurrent, type WellList } from './wells.ts';
@@ -119,6 +125,9 @@
 
 	const { dataHost, schemaHost } = getConfigSummary();
 	const hosts = { dataHost, schemaHost };
+	const logs = visualizationById(CATALOG, 'logs');
+	/** FORCE 2020, the dataset every petrodb well comes from. */
+	const dataset = wellDataset(logs);
 
 	const link = $derived(parseLink(page.url.searchParams));
 	/** What the URL names, as a string, so only a change of well or file reruns the load. */
@@ -347,7 +356,16 @@
 		if (shown) return shown.entry;
 		return failure || wellId === null ? null : { id: wellId, name: wellName(wellId) };
 	});
-	const title = $derived(shown ? `${entryName(shown.entry)} · Well logs` : 'Well logs · petroviz');
+	/**
+	 * The header's dataset line follows the well log on screen. Before one
+	 * is, it names what the link opens, unless that is a LAS file: one that
+	 * isn't on screen isn't open, so there is no file to name.
+	 */
+	const onScreen = $derived.by(() => {
+		if (shown) return onScreenOf(shown.source, dataset);
+		return link.source.kind === 'las' ? undefined : onScreenOf(link.source, dataset);
+	});
+	const title = $derived(tabTitle(shown && entryName(shown.entry), onScreen, logs));
 
 	async function openWell(id: string) {
 		// A change still settling belongs to the entry being left.
@@ -569,7 +587,7 @@
 </svelte:head>
 
 <div class="logs-page">
-	<AppHeader>
+	<AppHeader {onScreen}>
 		{#snippet controls()}
 			<WellPicker
 				list={wells}

@@ -1,10 +1,3 @@
-<script lang="ts" module>
-  import type { Dataset } from "$lib/config/catalog.js";
-
-  /** What a visualization has on screen: a catalog dataset, or a file the user opened. */
-  export type OnScreen = { dataset: Dataset } | { file: string };
-</script>
-
 <script lang="ts">
   /**
    * DatasetLine Component
@@ -15,6 +8,8 @@
    * petrodb's, so there is nothing to link to. A long file name is cut to
    * fit, with the whole name on hover and in its accessible name.
    */
+
+  import type { OnScreen } from "$lib/config/catalog.js";
 
   let { onScreen }: { onScreen: OnScreen } = $props();
 </script>
@@ -47,12 +42,14 @@
   /*
    * A rule on the left, like the nav's: brand | visualizations | what's on
    * screen. The name is what the line is about; the links come second, in
-   * the welcome page's link style so the two read as the same thing.
+   * the welcome page's link style so the two read as the same thing. Short
+   * of room, the links wrap under the name: two lines fit the header.
    */
   .dataset-line {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--spacing-xs) var(--spacing-md);
+    gap: 0 var(--spacing-md);
     min-width: 0;
     margin: 0;
     padding-left: var(--spacing-md);

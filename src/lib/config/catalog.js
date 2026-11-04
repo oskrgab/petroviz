@@ -23,6 +23,12 @@ import { resolveHosts } from "./sources.js";
  */
 
 /**
+ * What a visualization has on screen, as its header's dataset line names it:
+ * a dataset from the catalog, or a file the user opened.
+ * @typedef {{ dataset: Dataset } | { file: string }} OnScreen
+ */
+
+/**
  * @typedef {object} Visualization
  * @property {string} id
  * @property {string} name - Display name

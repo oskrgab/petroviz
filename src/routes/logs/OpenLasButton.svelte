@@ -73,7 +73,8 @@
     color: var(--color-text-muted);
   }
 
-  @media (max-width: 1024px) {
+  /* Up to 1120px the header also names FORCE 2020 or the file on screen */
+  @media (max-width: 1120px) {
     .label {
       position: absolute;
       width: 1px;
