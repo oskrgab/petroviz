@@ -2,14 +2,16 @@
   /**
    * AppHeader Component
    *
-   * The header shared by every page: the petroviz title, links to each page
-   * with the current one highlighted, a slot for the page's own controls,
-   * then the GitHub link and the theme toggle.
+   * The header shared by every page: the petroviz title (a link to the
+   * welcome page), a link to each visualization in the catalog with the
+   * current one highlighted, a slot for the page's own controls, then the
+   * GitHub link and the theme toggle.
    */
 
   import type { Snippet } from "svelte";
   import { page } from "$app/state";
   import { resolve } from "$app/paths";
+  import { CATALOG } from "$lib/config/data-sources";
   import ThemeToggle from "./ThemeToggle.svelte";
 
   interface Props {
@@ -19,10 +21,13 @@
 
   let { controls }: Props = $props();
 
-  const links = [
-    { href: resolve("/"), label: "Production" },
-    { href: resolve("/logs"), label: "Well logs" },
-  ];
+  type Path = Parameters<typeof resolve>[0];
+
+  const welcomePage = resolve("/");
+  const links = CATALOG.visualizations.map((v) => ({
+    href: resolve(v.route as Path),
+    label: v.name,
+  }));
 
   // Compare without a trailing slash, so /logs and /logs/ both match
   function isCurrent(href: string): boolean {
@@ -33,10 +38,10 @@
 
 <header class="app-header">
   <div class="header-left">
-    <div class="logo-section">
+    <a href={welcomePage} class="logo-section">
       <!-- Oil drop icon -->
       <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="currentColor">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path
             d="M12 2C12 2 5 10 5 15C5 18.866 8.134 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2ZM12 20C9.239 20 7 17.761 7 15C7 11.512 11 5.695 12 4.357C13 5.695 17 11.512 17 15C17 17.761 14.761 20 12 20Z"
           />
@@ -51,8 +56,8 @@
         </svg>
       </div>
       <h1 class="title">petroviz</h1>
-    </div>
-    <nav class="nav-section" aria-label="Pages">
+    </a>
+    <nav class="nav-section" aria-label="Visualizations">
       {#each links as link (link.href)}
         <a
           href={link.href}
@@ -120,6 +125,13 @@
     align-items: center;
     gap: var(--spacing-md);
     flex-shrink: 0;
+    color: inherit;
+    border-radius: var(--radius-lg);
+  }
+
+  .logo-section:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
   }
 
   .logo-icon {
@@ -182,9 +194,8 @@
     font-family: var(--font-mono);
     font-size: var(--font-size-xs);
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--color-text-muted);
+    letter-spacing: 0.01em;
+    color: var(--color-text-secondary);
     text-decoration: none;
     border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
@@ -192,7 +203,7 @@
   }
 
   .nav-link:hover {
-    color: var(--color-text-secondary);
+    color: var(--color-text);
     background: var(--color-accent-soft);
   }
 
@@ -201,8 +212,9 @@
     outline-offset: 2px;
   }
 
+  /* Text colour, not the accent, so the label meets AA on the light surface */
   .nav-link.active {
-    color: var(--color-accent);
+    color: var(--color-text);
     font-weight: 600;
   }
 
@@ -288,6 +300,22 @@
 
   /* ==================== RESPONSIVE: SMALL MOBILE ==================== */
   @media (max-width: 480px) {
+    /* The visualization links take a row of their own below the title */
+    .app-header {
+      flex-wrap: wrap;
+      row-gap: 0;
+    }
+
+    .header-left {
+      display: contents;
+    }
+
+    .nav-section {
+      order: 10;
+      flex-basis: 100%;
+      padding-bottom: var(--spacing-xs);
+    }
+
     .title {
       font-size: var(--font-size-md);
     }
@@ -297,13 +325,17 @@
     }
 
     .nav-section {
-      padding-left: var(--spacing-xs);
+      padding-left: 0;
       border-left: none;
+    }
+
+    .logo-section {
+      margin-right: auto;
     }
 
     .nav-link {
       padding: var(--spacing-xs);
-      letter-spacing: 0.02em;
+      letter-spacing: 0;
     }
 
     /* Make room for both page links on a phone */

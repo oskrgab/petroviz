@@ -1,241 +1,236 @@
 <script lang="ts">
 	/**
-	 * Main Dashboard Page
+	 * Welcome Page
 	 *
-	 * Integrates all components: WellSelector, DashboardLayout, and all charts.
-	 * Handles initialization, state management, and data refresh on filter changes.
+	 * The page petroviz opens on. It lists the visualizations from the
+	 * catalog, each with what it shows and the datasets it shows, linked to
+	 * their docs, data and licence. It loads no data: nothing is fetched from
+	 * the Data host or the Schema host and DuckDB never starts, so only the
+	 * visualization the visitor picks pays for its data.
 	 */
 
-	import { onMount } from 'svelte';
-	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
-	import WellSelector from '$lib/components/WellSelector.svelte';
-	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
-	import DailyProductionChart from '$lib/charts/DailyProductionChart.svelte';
-	import DateRangeSelector from '$lib/charts/DateRangeSelector.svelte';
-	import CumulativePieChart from '$lib/charts/CumulativePieChart.svelte';
-	import TopWellsBarChart from '$lib/charts/TopWellsBarChart.svelte';
-	import { dashboardState, setDateRange } from '$lib/stores/dashboard.svelte';
-	import {
-		dataState,
-		initializeApp,
-		refreshProductionData
-	} from '$lib/stores/data.svelte';
-	import type { DateRange } from '$lib/types';
+	import { resolve } from '$app/paths';
+	import AppHeader from '$lib/components/AppHeader.svelte';
+	import SiteFooter from '$lib/components/SiteFooter.svelte';
+	import { CATALOG } from '$lib/config/data-sources';
+	import PlotSketch from './PlotSketch.svelte';
 
-	// Handle date range change from brush selection
-	function handleDateRangeChange(range: DateRange | null) {
-		setDateRange(range);
-		// Trigger data refresh when date range changes
-		if (dataState.initialized) {
-			refreshProductionData().catch((err) => {
-				console.error('Failed to refresh data:', err);
-			});
-		}
-	}
-
-	// Handle well selection change - trigger data refresh
-	function handleWellSelectionChange(selectedIds?: number[]) {
-		// Use passed IDs or read from state
-		const wellIds = selectedIds ?? dashboardState.selectedWellIds;
-		console.log('[handleWellSelectionChange] called, initialized:', dataState.initialized, 'selectedWells:', wellIds.length);
-		if (dataState.initialized) {
-			console.log('[handleWellSelectionChange] triggering refreshProductionData with', wellIds.length, 'wells');
-			// Pass wellIds explicitly to avoid stale state
-			refreshProductionData([...wellIds]).catch((err) => {
-				console.error('Failed to refresh data:', err);
-			});
-		}
-	}
-
-	// Initialize on mount
-	onMount(() => {
-		initializeApp().catch((err) => {
-			console.error('Failed to initialize:', err);
-		});
-	});
-
-	// Derived state for bar chart - use all well cumulatives (already sorted by production)
-	const wellCumulatives = $derived(dataState.wellCumulatives);
+	type Path = Parameters<typeof resolve>[0];
 </script>
 
+{#snippet external(label: string, href: string, dataset: string)}
+	<a {href} target="_blank" rel="noopener"
+		>{label}<span class="sr-only"> for {dataset} (opens in a new tab)</span></a
+	>
+{/snippet}
+
 <svelte:head>
-	<title>Volve Field Production Analysis</title>
+	<title>petroviz</title>
 </svelte:head>
 
-{#if dashboardState.error && !dataState.initialized}
-	<!-- Fatal error during initialization -->
-	<ErrorMessage
-		variant="page"
-		title="Unable to Load Dashboard"
-		message={dashboardState.error}
-		onRetry={() => location.reload()}
-	/>
-{:else if !dataState.initialized}
-	<!-- Loading state -->
-	<div class="loading-page">
-		<div class="loading-brand">
-			<div class="loading-logo">
-				<svg viewBox="0 0 24 24" fill="currentColor">
-					<path d="M12 2C12 2 5 10 5 15C5 18.866 8.134 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2ZM12 20C9.239 20 7 17.761 7 15C7 11.512 11 5.695 12 4.357C13 5.695 17 11.512 17 15C17 17.761 14.761 20 12 20Z"/>
-					<ellipse cx="12" cy="15" rx="4" ry="5" fill="currentColor" opacity="0.3"/>
-				</svg>
-			</div>
-			<h1 class="loading-title">Volve Field</h1>
-			<span class="loading-subtitle">Production Analysis</span>
-		</div>
-		<LoadingSpinner
-			size="medium"
-			message="Initializing dashboard..."
-			detail="Connecting to data source..."
-		/>
-	</div>
-{:else}
-	<!-- Main dashboard -->
-	<DashboardLayout>
-		{#snippet sidebar()}
-			<WellSelector
-				wells={dataState.wells}
-				onSelectionChange={handleWellSelectionChange}
-			/>
+<div class="welcome">
+	<AppHeader />
 
-			{#if dashboardState.error}
-				<ErrorMessage
-					variant="banner"
-					message={dashboardState.error}
-					onRetry={() => refreshProductionData()}
-				/>
-			{/if}
-		{/snippet}
+	<main class="content">
+		<p class="lede">
+			Open petroleum data from petrodb, drawn in your browser. Choose a visualization: nothing
+			downloads until you do.
+		</p>
 
-		{#snippet mainChart()}
-			{#if dashboardState.isLoading}
-				<div class="chart-loading">
-					<LoadingSpinner size="small" />
-					<span>Updating...</span>
-				</div>
-			{/if}
-			<DailyProductionChart data={dataState.dailyProduction} />
-		{/snippet}
+		<ul class="choices">
+			{#each CATALOG.visualizations as vis (vis.id)}
+				<li class="choice {vis.runsAlong}">
+					<div class="sketch-slot">
+						<PlotSketch axis={vis.runsAlong} />
+					</div>
+					<div class="body">
+						<h2 class="name">
+							<a href={resolve(vis.route as Path)}>{vis.name}</a>
+						</h2>
+						<p class="summary">{vis.summary}</p>
+						{#if vis.takesFile}
+							<p class="summary">It can also open a LAS file from your computer.</p>
+						{/if}
+						{#each vis.datasets as dataset (dataset.id)}
+							<p class="dataset">
+								<span class="dataset-name">{dataset.name}</span>
+								<span class="dataset-links">
+									{@render external('Docs', dataset.docs, dataset.name)}
+									{@render external('Data', dataset.data, dataset.name)}
+									{@render external('License', dataset.license, dataset.name)}
+								</span>
+							</p>
+						{/each}
+					</div>
+				</li>
+			{/each}
+		</ul>
+	</main>
 
-		{#snippet rangeSelector()}
-			<DateRangeSelector
-				data={dataState.dailyProduction}
-				selectedRange={dashboardState.dateRange}
-				onDateRangeChange={handleDateRangeChange}
-			/>
-		{/snippet}
-
-		{#snippet pieChart()}
-			{#if dataState.fieldTotals}
-				<CumulativePieChart
-					oilTotal={dataState.fieldTotals.oil}
-					waterTotal={dataState.fieldTotals.water}
-				/>
-			{/if}
-		{/snippet}
-
-		{#snippet barChart()}
-			<TopWellsBarChart data={wellCumulatives} />
-		{/snippet}
-	</DashboardLayout>
-{/if}
+	<SiteFooter />
+</div>
 
 <style>
-	/* Loading page wrapper */
-	.loading-page {
+	.welcome {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		justify-content: center;
 		min-height: 100vh;
-		gap: var(--spacing-2xl);
-		background: var(--color-background);
+		max-width: 1680px;
+		margin: 0 auto;
+		padding: 0 var(--spacing-xl);
 	}
 
-	.loading-brand {
+	.content {
+		flex: 1;
+		width: 100%;
+		max-width: 46rem;
+		padding: var(--spacing-2xl) 0;
+	}
+
+	/* Wide screens: the intro beside the choices, not above them */
+	@media (min-width: 1100px) {
+		.content {
+			max-width: 72rem;
+			display: grid;
+			grid-template-columns: minmax(16rem, 22rem) minmax(0, 44rem);
+			gap: var(--spacing-2xl);
+			align-items: start;
+		}
+
+		.lede {
+			margin-bottom: 0;
+		}
+	}
+
+	.lede {
+		font-size: var(--font-size-2xl);
+		line-height: 1.4;
+		letter-spacing: -0.015em;
+		color: var(--color-text);
+		max-width: 32ch;
+		text-wrap: pretty;
+		margin-bottom: var(--spacing-2xl);
+	}
+
+	.choices {
+		list-style: none;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: var(--spacing-sm);
-		animation: fadeIn 0.5s ease-out;
+		gap: var(--spacing-xl);
 	}
 
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(-10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
+	.choice {
+		border-top: 1px solid var(--color-border-strong);
+		padding-top: var(--spacing-lg);
 	}
 
-	.loading-logo {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 72px;
-		height: 72px;
-		background: linear-gradient(135deg, var(--color-oil) 0%, var(--color-oil-soft) 100%);
-		border-radius: var(--radius-xl);
-		color: white;
-		box-shadow: var(--shadow-lg);
-		animation: pulse 2s ease-in-out infinite;
+	/* Production runs across time: its sketch spans the choice, above the name */
+	.choice.time .sketch-slot {
+		height: 64px;
+		margin-bottom: var(--spacing-md);
 	}
 
-	@keyframes pulse {
-		0%, 100% {
-			transform: scale(1);
-			box-shadow: var(--shadow-lg);
-		}
-		50% {
-			transform: scale(1.02);
-			box-shadow: var(--shadow-glow);
-		}
+	/* Well logs run down depth: the sketch is a track beside the text */
+	.choice.depth {
+		display: grid;
+		grid-template-columns: 48px 1fr;
+		gap: var(--spacing-lg);
 	}
 
-	.loading-logo svg {
-		width: 40px;
-		height: 40px;
+	/* The track is as tall as the text beside it, not its drawing's own height */
+	.choice.depth .sketch-slot {
+		position: relative;
 	}
 
-	.loading-title {
-		font-size: var(--font-size-2xl);
-		font-weight: 700;
-		letter-spacing: -0.03em;
-		margin: 0;
-		background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-secondary) 100%);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
-
-	.loading-subtitle {
-		font-size: var(--font-size-sm);
-		font-weight: 500;
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-	}
-
-	/* Chart loading overlay */
-	.chart-loading {
+	.choice.depth .sketch-slot :global(svg) {
 		position: absolute;
-		top: var(--spacing-sm);
-		right: var(--spacing-sm);
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-xs);
-		padding: var(--spacing-xs) var(--spacing-sm);
-		background: var(--glass-bg);
-		backdrop-filter: var(--backdrop-blur);
-		border: 1px solid var(--glass-border);
-		border-radius: var(--radius-md);
-		font-size: var(--font-size-sm);
+		inset: 0;
+	}
+
+	.sketch-slot :global(svg) {
+		width: 100%;
+		height: 100%;
+	}
+
+	.name {
+		font-size: var(--font-size-2xl);
+		font-weight: 600;
+		line-height: 1.25;
+		margin-bottom: var(--spacing-sm);
+	}
+
+	.name a {
+		color: var(--color-text);
+		text-decoration: underline;
+		text-decoration-color: var(--color-accent);
+		text-decoration-thickness: 2px;
+		text-underline-offset: 5px;
+	}
+
+	.name a:hover {
+		text-decoration-thickness: 3px;
+	}
+
+	.summary {
 		color: var(--color-text-secondary);
-		z-index: 10;
-		box-shadow: var(--shadow-sm);
+		max-width: 60ch;
+		text-wrap: pretty;
+	}
+
+	.dataset {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: var(--spacing-xs) var(--spacing-md);
+		margin-top: var(--spacing-md);
+		font-size: var(--font-size-sm);
+	}
+
+	.dataset-name {
+		font-weight: 600;
+		color: var(--color-text);
+	}
+
+	.dataset-links {
+		display: flex;
+		gap: var(--spacing-md);
+	}
+
+	.dataset-links a {
+		color: var(--color-text-secondary);
+		text-decoration: underline;
+		text-decoration-color: var(--color-border-strong);
+		text-underline-offset: 3px;
+	}
+
+	.dataset-links a:hover {
+		color: var(--color-text);
+		text-decoration-color: var(--color-accent);
+	}
+
+	@media (max-width: 1024px) {
+		.welcome {
+			padding: 0 var(--spacing-md);
+		}
+	}
+
+	/* Phones: a fixed 16px gutter (the spacing tokens shrink at this width) */
+	@media (max-width: 768px) {
+		.welcome {
+			padding: 0 16px;
+		}
+
+		.content {
+			padding: var(--spacing-xl) 0;
+		}
+
+		.lede {
+			margin-bottom: var(--spacing-xl);
+		}
+
+		.choice.depth {
+			grid-template-columns: 36px 1fr;
+			gap: var(--spacing-md);
+		}
 	}
 </style>

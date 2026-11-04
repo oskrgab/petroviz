@@ -1,6 +1,16 @@
-# Volve Explorer
+# petroviz
 
-A high-performance static dashboard for exploring the Volve dataset production information. Built with SvelteKit and DuckDB-WASM for client-side data analysis.
+A static site for exploring the petroleum datasets petrodb publishes, entirely in the browser. Built with SvelteKit, with DuckDB-WASM for client-side queries.
+
+## Pages
+
+| Route | What it shows |
+|---|---|
+| `/` | The **welcome page**: each visualization, what it shows, and its datasets' docs, data and licence. It loads no data. |
+| `/production` | The **production dashboard**: the Volve wells and what they produced over time. |
+| `/logs` | The **well logs**: a FORCE 2020 well's curves, or a LAS file you open. |
+
+The visualizations and their datasets are defined once, in `src/lib/config/catalog.js`; the welcome page and the header both read them from there.
 
 ## Features
 
@@ -33,7 +43,7 @@ A high-performance static dashboard for exploring the Volve dataset production i
    ```
 
 4. **Open browser**
-   Navigate to `http://localhost:5173`
+   Navigate to `http://localhost:5173` for the welcome page, or straight to `/production` or `/logs`
 
 ### Build for Production
 

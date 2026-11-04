@@ -18,6 +18,7 @@ import {
   type Source,
   type SourceSettings,
 } from "./sources.js";
+import { resolveCatalog, type Catalog } from "./catalog.js";
 
 // Only variables set at build time exist on the module, so read it as a loose
 // record instead of importing each name (a missing named import fails the build).
@@ -34,6 +35,9 @@ const SETTINGS: SourceSettings = {
 
 const HOSTS = resolveHosts(SETTINGS);
 const SOURCES: Source[] = resolveSources(SETTINGS);
+
+/** The visualizations and datasets, with links built from the same hosts. */
+export const CATALOG: Catalog = resolveCatalog(SETTINGS);
 
 function sourceUrl(name: string): string {
   const source = SOURCES.find((s) => s.name === name);

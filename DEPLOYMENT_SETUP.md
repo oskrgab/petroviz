@@ -4,7 +4,7 @@ This guide explains how petroviz is deployed to Cloudflare Pages, and how it gua
 
 ## Where the Data Comes From
 
-The site reads the Volve **Dataset**'s parquet tables from the **Data host** (Hugging Face) and its schema from the **Schema host** (the petrodb site). The defaults are in `src/lib/config/sources.js`, which is the one place they are defined; the app and the data-source check both resolve them from there. The README's [Configuration](README.md#configuration) section lists the URLs; [petrodb ADR-0005](https://github.com/oskrgab/petrodb/blob/main/docs/adr/0005-host-parquet-on-huggingface.md) explains why the tables moved off the petrodb site.
+The site reads each **Dataset**'s parquet tables from the **Data host** (Hugging Face) and its schema from the **Schema host** (the petrodb site). The defaults are in `src/lib/config/sources.js`, which is the one place they are defined; the app and the data-source check both resolve them from there. The README's [Configuration](README.md#configuration) section lists the URLs; [petrodb ADR-0005](https://github.com/oskrgab/petrodb/blob/main/docs/adr/0005-host-parquet-on-huggingface.md) explains why the tables moved off the petrodb site.
 
 ## Required Secrets and Variable
 
@@ -54,7 +54,7 @@ When you push to `main` or `dev` (or run the workflow by hand):
 
 ### The Post-Deploy Check
 
-Cloudflare can accept a deployment that then serves the wrong thing. The last step fetches the reported URL (retrying for a few seconds while it becomes reachable) and requires HTTP `200` and the SvelteKit bootstrap in the body. The app is client-rendered, so its HTML has no `<title>`; the bootstrap is what tells the app apart from an error page.
+Cloudflare can accept a deployment that then serves the wrong thing. The last step fetches the reported URL (retrying for a few seconds while it becomes reachable) and requires HTTP `200` and the SvelteKit bootstrap in the body. The app is client-rendered, so its HTML has no `<title>`; the bootstrap is what tells the app apart from an error page. The URL it fetches is `/`, the welcome page, which loads no data: a passing check says the site is served, not that the visualizations can read their data (the data-source check covers that).
 
 ### The Data-Source Check
 
@@ -146,5 +146,5 @@ To test data changes before petrodb publishes them, point both hosts at the home
 ## After Deploying
 
 1. Monitor the GitHub Actions workflow run
-2. Visit the deployed site (`petroviz.pages.dev` for `main`, `dev.petroviz.pages.dev` for `dev`)
-3. Verify data loads correctly
+2. Visit the deployed site (`petroviz.pages.dev` for `main`, `dev.petroviz.pages.dev` for `dev`). It opens on the welcome page at `/`, which fetches no parquet or schema file.
+3. Open each visualization from it: the production dashboard at `/production` and the well logs at `/logs`. Verify their data loads correctly

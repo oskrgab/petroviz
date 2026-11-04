@@ -178,26 +178,6 @@
     </main>
   </div>
 
-  <footer class="dashboard-footer">
-    <div class="footer-left">
-      <span class="footer-text">
-        Data from <a
-          href="https://petrodb.ocortez.com"
-          target="_blank"
-          rel="noopener">petrodb</a
-        >
-      </span>
-    </div>
-    <div class="footer-right">
-      <span class="author-credit">
-        Made with ❤️ by <a
-          href="https://ocortez.com"
-          target="_blank"
-          rel="noopener">Oscar Cortez</a
-        >
-      </span>
-    </div>
-  </footer>
 </div>
 
 <style>
@@ -303,22 +283,6 @@
     border-radius: var(--radius-lg);
   }
 
-  .author-credit {
-    font-size: var(--font-size-xs);
-    color: var(--color-text-muted);
-    letter-spacing: 0.02em;
-  }
-
-  .author-credit a {
-    color: var(--color-text-secondary);
-    text-decoration: none;
-    transition: color var(--transition-base);
-  }
-
-  .author-credit a:hover {
-    color: var(--color-accent);
-  }
-
   /* ==================== CONTENT LAYOUT ==================== */
   .dashboard-content {
     display: grid;
@@ -326,7 +290,7 @@
     gap: var(--spacing-xl);
     flex: 1;
     overflow: hidden;
-    padding-top: var(--spacing-lg);
+    padding: var(--spacing-lg) 0 var(--spacing-md);
   }
 
   /* Compact mode: single column layout */
@@ -388,47 +352,6 @@
     contain: layout style;
   }
 
-  /* ==================== FOOTER ==================== */
-  .dashboard-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--spacing-sm) 0;
-    border-top: 1px solid var(--color-border);
-    gap: var(--spacing-md);
-    flex-shrink: 0;
-    background: var(--color-background);
-    min-height: 48px;
-  }
-
-  .footer-left {
-    display: flex;
-    align-items: center;
-    flex-shrink: 1;
-    min-width: 0;
-  }
-
-  .footer-right {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    flex-shrink: 1;
-    min-width: 0;
-  }
-
-  .footer-text {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .footer-text a {
-    color: var(--color-accent);
-    font-weight: 500;
-  }
-
   /* ==================== RESPONSIVE: TABLET ==================== */
   @media (max-width: 1024px) {
     .dashboard {
@@ -466,11 +389,6 @@
     .pie-chart,
     .bar-chart {
       min-height: 300px;
-    }
-
-    .footer-text,
-    .author-credit {
-      font-size: var(--font-size-xs);
     }
 
     /* Smaller side tabs on mobile */
