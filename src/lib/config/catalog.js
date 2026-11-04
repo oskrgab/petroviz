@@ -18,6 +18,7 @@ import { resolveHosts } from "./sources.js";
  * @property {string} name - Display name
  * @property {string} docs - Its page on the Schema host
  * @property {string} data - Its folder on the Data host
+ * @property {string} dataOn - Where that folder is, for the reader: "Hugging Face", or the Data host's name
  * @property {string} license - Its upstream terms
  */
 
@@ -89,6 +90,16 @@ function dataFolder(dataHost, id) {
 }
 
 /**
+ * Where a Data host is, in words a reader knows.
+ * @param {string} dataHost
+ * @returns {string}
+ */
+function dataHostName(dataHost) {
+  const { hostname } = new URL(dataHost);
+  return hostname === "huggingface.co" ? "Hugging Face" : hostname;
+}
+
+/**
  * Resolve the catalog against the hosts, plus any overrides.
  * @param {import("./sources.js").SourceSettings} [overrides]
  * @returns {Catalog}
@@ -101,6 +112,7 @@ export function resolveCatalog(overrides = {}) {
     ...d,
     docs: `${schemaHost}/${d.id}/`,
     data: dataFolder(dataHost, d.id),
+    dataOn: dataHostName(dataHost),
   }));
 
   /** @param {string} id */
@@ -117,4 +129,16 @@ export function resolveCatalog(overrides = {}) {
       datasets: v.datasets.map(byId),
     })),
   };
+}
+
+/**
+ * The visualization with this id.
+ * @param {Catalog} catalog
+ * @param {string} id
+ * @returns {Visualization}
+ */
+export function visualizationById(catalog, id) {
+  const found = catalog.visualizations.find((v) => v.id === id);
+  if (!found) throw new Error(`Unknown visualization: ${id}`);
+  return found;
 }

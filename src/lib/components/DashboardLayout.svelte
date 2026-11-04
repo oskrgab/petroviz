@@ -12,8 +12,11 @@
   import { cubicOut } from "svelte/easing";
   import { MediaQuery } from "svelte/reactivity";
   import AppHeader from "./AppHeader.svelte";
+  import type { OnScreen } from "./DatasetLine.svelte";
 
   interface Props {
+    /** What the dashboard shows, named in the header. */
+    onScreen?: OnScreen;
     sidebar?: Snippet;
     mainChart?: Snippet;
     rangeSelector?: Snippet;
@@ -22,6 +25,7 @@
   }
 
   let {
+    onScreen,
     sidebar,
     mainChart,
     rangeSelector,
@@ -130,7 +134,7 @@
     {/if}
   {/if}
 
-  <AppHeader />
+  <AppHeader {onScreen} />
 
   <div class="dashboard-content">
     <!-- Traditional sidebar (desktop only) -->
@@ -369,9 +373,10 @@
   }
 
   /* ==================== RESPONSIVE: MOBILE ==================== */
+  /* Phones: a 16px gutter on the right; on the left the side tabs make one */
   @media (max-width: 768px) {
     .dashboard {
-      padding: 0 var(--spacing-sm);
+      padding: 0 16px 0 var(--spacing-sm);
     }
 
     .dashboard.compact-mode {

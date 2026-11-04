@@ -7,6 +7,8 @@
 	 */
 
 	import { onMount } from 'svelte';
+	import { CATALOG } from '$lib/config/data-sources';
+	import { visualizationById } from '$lib/config/catalog.js';
 	import DashboardLayout from '$lib/components/DashboardLayout.svelte';
 	import WellSelector from '$lib/components/WellSelector.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -22,6 +24,10 @@
 		refreshProductionData
 	} from '$lib/stores/data.svelte';
 	import type { DateRange } from '$lib/types';
+
+	// Everything the dashboard says about its dataset comes from the catalog
+	const visualization = visualizationById(CATALOG, 'production');
+	const [dataset] = visualization.datasets;
 
 	// Handle date range change from brush selection
 	function handleDateRangeChange(range: DateRange | null) {
@@ -60,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>Volve Field Production Analysis</title>
+	<title>{dataset.name} · {visualization.name}</title>
 </svelte:head>
 
 {#if dashboardState.error && !dataState.initialized}
@@ -76,23 +82,23 @@
 	<div class="loading-page">
 		<div class="loading-brand">
 			<div class="loading-logo">
-				<svg viewBox="0 0 24 24" fill="currentColor">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 					<path d="M12 2C12 2 5 10 5 15C5 18.866 8.134 22 12 22C15.866 22 19 18.866 19 15C19 10 12 2 12 2ZM12 20C9.239 20 7 17.761 7 15C7 11.512 11 5.695 12 4.357C13 5.695 17 11.512 17 15C17 17.761 14.761 20 12 20Z"/>
 					<ellipse cx="12" cy="15" rx="4" ry="5" fill="currentColor" opacity="0.3"/>
 				</svg>
 			</div>
-			<h1 class="loading-title">Volve Field</h1>
-			<span class="loading-subtitle">Production Analysis</span>
+			<h1 class="loading-title">{dataset.name}</h1>
+			<span class="loading-subtitle">{visualization.name}</span>
 		</div>
 		<LoadingSpinner
 			size="medium"
-			message="Initializing dashboard..."
-			detail="Connecting to data source..."
+			message={`Loading ${dataset.name}…`}
+			detail={`Reading its wells and production from ${dataset.dataOn}`}
 		/>
 	</div>
 {:else}
 	<!-- Main dashboard -->
-	<DashboardLayout>
+	<DashboardLayout onScreen={{ dataset }}>
 		{#snippet sidebar()}
 			<WellSelector
 				wells={dataState.wells}
@@ -215,9 +221,14 @@
 	.loading-subtitle {
 		font-size: var(--font-size-sm);
 		font-weight: 500;
-		color: var(--color-text-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
+		color: var(--color-text-secondary);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.loading-brand,
+		.loading-logo {
+			animation: none;
+		}
 	}
 
 	/* Chart loading overlay */

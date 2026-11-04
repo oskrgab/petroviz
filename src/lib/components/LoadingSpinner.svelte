@@ -169,10 +169,11 @@
     font-size: var(--font-size-sm);
   }
 
+  /* Secondary, not muted: muted text misses AA on the light background */
   .detail {
     margin: 0;
     font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
     text-align: center;
   }
 

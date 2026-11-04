@@ -4,8 +4,9 @@
    *
    * The header shared by every page: the petroviz title (a link to the
    * welcome page), a link to each visualization in the catalog with the
-   * current one highlighted, a slot for the page's own controls, then the
-   * GitHub link and the theme toggle.
+   * current one highlighted, the dataset line naming what is on screen
+   * (inside a visualization only), a slot for the page's own controls, then
+   * the GitHub link and the theme toggle.
    */
 
   import type { Snippet } from "svelte";
@@ -13,13 +14,16 @@
   import { resolve } from "$app/paths";
   import { CATALOG } from "$lib/config/data-sources";
   import ThemeToggle from "./ThemeToggle.svelte";
+  import DatasetLine, { type OnScreen } from "./DatasetLine.svelte";
 
   interface Props {
+    /** What the visualization has on screen. The welcome page passes none. */
+    onScreen?: OnScreen;
     /** The page's own controls, placed between the nav and the GitHub link. */
     controls?: Snippet;
   }
 
-  let { controls }: Props = $props();
+  let { onScreen, controls }: Props = $props();
 
   type Path = Parameters<typeof resolve>[0];
 
@@ -69,6 +73,11 @@
         </a>
       {/each}
     </nav>
+    {#if onScreen}
+      <div class="on-screen">
+        <DatasetLine {onScreen} />
+      </div>
+    {/if}
   </div>
 
   {#if controls}
@@ -180,7 +189,7 @@
     /* Room for the active underline, which overflow-x: auto would clip */
     padding: 4px 0 4px var(--spacing-md);
     border-left: 1px solid var(--color-border);
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     overflow-x: auto;
     scrollbar-width: none;
@@ -228,6 +237,13 @@
     height: 2px;
     background: var(--color-accent);
     border-radius: 1px;
+  }
+
+  /* Shrinks before the nav does: a long file name is cut, not the links */
+  .on-screen {
+    display: flex;
+    min-width: 0;
+    flex: 0 100 auto;
   }
 
   .header-controls {
@@ -333,6 +349,15 @@
       margin-right: auto;
     }
 
+    /* The dataset line sits beside the title, so the space falls after it */
+    .logo-section:has(+ .nav-section + .on-screen) {
+      margin-right: 0;
+    }
+
+    .on-screen {
+      margin-right: auto;
+    }
+
     .nav-link {
       padding: var(--spacing-xs);
       letter-spacing: 0;
@@ -355,6 +380,33 @@
     .github-link svg {
       width: 16px;
       height: 16px;
+    }
+  }
+
+  /*
+   * The narrowest phones, inside a visualization: the oil drop stands in for
+   * the wordmark, so the dataset line still fits beside it on one row. The
+   * wordmark stays as the link's accessible name.
+   */
+  @media (max-width: 359px) {
+    .app-header:has(.on-screen) .logo-icon {
+      display: flex;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+    }
+
+    .app-header:has(.on-screen) .logo-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .app-header:has(.on-screen) .title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
     }
   }
 </style>

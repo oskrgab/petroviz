@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveCatalog } from "./catalog.js";
+import { readFile } from "node:fs/promises";
+
+import { resolveCatalog, visualizationById } from "./catalog.js";
 
 const HF_TREE = "https://huggingface.co/datasets/sumpalabs/petrodb/tree/main";
 
@@ -118,4 +120,44 @@ test("License links are the agreed upstream terms", () => {
     dataset(catalog, "force_2020").license,
     "https://creativecommons.org/licenses/by/4.0/",
   );
+});
+
+test("by default, each dataset's Data link is said to be on Hugging Face", () => {
+  const { datasets } = resolveCatalog();
+  assert.deepEqual(
+    datasets.map((d) => [d.id, d.dataOn]),
+    [
+      ["volve", "Hugging Face"],
+      ["force_2020", "Hugging Face"],
+    ],
+  );
+});
+
+test("a Data host that isn't Hugging Face is named by its host name", () => {
+  const catalog = resolveCatalog({
+    PUBLIC_DATA_BASE_URL: "https://mirror.example.org/petrodb/",
+  });
+  assert.equal(dataset(catalog, "volve").dataOn, "mirror.example.org");
+});
+
+test("a visualization is found by its id, and an unknown id is refused", () => {
+  const catalog = resolveCatalog();
+  const production = visualizationById(catalog, "production");
+  assert.equal(production.name, "Production dashboard");
+  assert.deepEqual(
+    production.datasets.map((d) => d.name),
+    ["Volve"],
+  );
+  assert.throws(() => visualizationById(catalog, "maps"), /Unknown visualization: maps/);
+});
+
+test("LICENSE-VOLVE-DATA.md links the same Equinor licence as the catalog", async () => {
+  const text = await readFile(
+    new URL("../../../LICENSE-VOLVE-DATA.md", import.meta.url),
+    "utf8",
+  );
+  const pdfs = [...text.matchAll(/https:\/\/[^\s)]+\.pdf/g)].map((m) => m[0]);
+  assert.ok(pdfs.length > 0, "no licence PDF linked");
+  const { license } = dataset(resolveCatalog(), "volve");
+  assert.deepEqual([...new Set(pdfs)], [license]);
 });
