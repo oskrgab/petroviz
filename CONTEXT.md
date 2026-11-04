@@ -22,6 +22,20 @@ _Avoid_: base URL, data source, CDN
 Where petrodb publishes a dataset's schema and docs — the petrodb site. It does not serve parquet tables.
 _Avoid_: docs site, landing
 
+### Visualizations
+
+**Visualization**:
+One way of looking at the data that a user picks from the welcome page, such as the production dashboard or the well logs. A visualization is not tied to one dataset: it can show any dataset in the right shape, and the well logs can also show a file the user opens.
+_Avoid_: view (that is the log view), page, tool, explorer
+
+**Welcome page**:
+The page petroviz opens on. It lists the visualizations, each with the datasets it shows, and loads no data.
+_Avoid_: home, landing, index
+
+**Production dashboard**:
+The visualization of a dataset's wells and how much they produced over time.
+_Avoid_: production view, Volve dashboard, home page
+
 ### Well logs
 
 **Well log**:
