@@ -15,14 +15,17 @@ Set these in the GitHub repository (**Settings → Secrets and variables → Act
 | `CLOUDFLARE_API_TOKEN` | secret | A token scoped to **Account → Cloudflare Pages → Edit** only, used by petroviz alone |
 | `CLOUDFLARE_ACCOUNT_ID` | secret | The Cloudflare account ID |
 | `CLOUDFLARE_PAGES_PROJECT` | variable | `petroviz` |
+| `UMAMI_WEBSITE_ID` | variable | petroviz's website id in Umami at `analytics.ocortez.com`. Optional: unset, the site loads no tracker |
 
 The Cloudflare Pages project (`petroviz`, production branch `main`) must already exist: Wrangler cannot create it from CI.
+
+The deploy passes `UMAMI_WEBSITE_ID` to the build as `PUBLIC_UMAMI_WEBSITE_ID`, for every branch. Previews still send nothing, because the tracker counts the production hostnames only.
 
 No other variables are needed; the build uses the data-source defaults above. Every `PUBLIC_*` variable is still an optional override, inlined at build time. If you ever need a deployed build to use another host, set the override in a **job-level** `env:` block in `.github/workflows/deploy.yml`. Setting it only on the Build step would leave the data-source check testing the defaults while the site ships something else:
 
 ```yaml
 jobs:
-  build:
+  deploy:
     env:
       PUBLIC_DATA_BASE_URL: https://example.com/data
 ```

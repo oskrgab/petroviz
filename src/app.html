@@ -11,6 +11,32 @@
       name="description"
       content="petroviz: explore petrodb's open petroleum datasets, production and well logs, in your browser"
     />
+    <!--
+      Umami. The website id is the build's PUBLIC_UMAMI_WEBSITE_ID (the deploy
+      sets it from a GitHub variable); without one, no tracker loads. Page views
+      count on the production hostnames only (data-domains). An opened LAS file
+      puts its file name in the query and its well and file names in the title,
+      so the query is never sent (data-exclude-search) and the title is dropped
+      before sending (data-before-send). src/app.test.js holds all of this.
+    -->
+    <script data-website-id="%sveltekit.env.PUBLIC_UMAMI_WEBSITE_ID%">
+      (function (loader) {
+        var id = loader.getAttribute('data-website-id');
+        if (!id) return;
+        window.petrovizUmamiBeforeSend = function (type, payload) {
+          var sent = Object.assign({}, payload);
+          delete sent.title;
+          return sent;
+        };
+        var tracker = document.createElement('script');
+        tracker.setAttribute('src', 'https://analytics.ocortez.com/script.js');
+        tracker.setAttribute('data-website-id', id);
+        tracker.setAttribute('data-domains', 'petroviz.ocortez.com,petroviz.pages.dev');
+        tracker.setAttribute('data-exclude-search', 'true');
+        tracker.setAttribute('data-before-send', 'petrovizUmamiBeforeSend');
+        document.head.appendChild(tracker);
+      })(document.currentScript);
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

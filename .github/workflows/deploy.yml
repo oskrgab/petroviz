@@ -20,6 +20,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Umami's website id, inlined into the build; unset, no tracker loads
+    env:
+      PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.UMAMI_WEBSITE_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
