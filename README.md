@@ -88,6 +88,8 @@ Pushing to `main` deploys production to Cloudflare Pages and pushing to `dev` de
 
 Page views go to a self-hosted Umami instance at `analytics.ocortez.com`, through a loader in `src/app.html`. It adds the Umami tracker only when the build has a website id in `PUBLIC_UMAMI_WEBSITE_ID`. The deploy sets that from the `UMAMI_WEBSITE_ID` GitHub variable, so local dev and forks load no tracker. The tracker's `data-domains` attribute limits counting to the production hostnames (`petroviz.ocortez.com`, `petroviz.pages.dev`), so a preview loads it but sends nothing. Umami sets no cookies. Opening a LAS file puts its file name in the URL's query and its well and file names in the page title, so the tag sends neither: `data-exclude-search` drops the query, and a `data-before-send` hook drops the title. The file itself is read in the browser and never uploaded. `src/app.test.js` fails if any of this is removed.
 
+The log view also sends a `well-opened` event, with the well's FORCE 2020 id as `well`, each time it loads a well from the Data host. Those ids are public, and a LAS file sends no event. Events go through `track()` in `src/lib/analytics.ts`.
+
 ## Project Structure
 
 ```

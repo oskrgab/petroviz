@@ -48,6 +48,7 @@
 	import { onDestroy, untrack } from 'svelte';
 	import { afterNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { track } from '$lib/analytics';
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { visualizationById } from '$lib/config/catalog.js';
@@ -252,6 +253,9 @@
 				// A newly opened well starts at the link's interval; the template and depth reference carry over.
 				interval = link.interval;
 				shown = { source: { kind: 'well', id }, key: current, log, entry };
+				// Fetched from the Data host, so `id` is a FORCE 2020 well and public.
+				// A LAS file never gets here: its names may not be public.
+				track('well-opened', { well: id });
 			},
 			(error: unknown) => {
 				if (!signal.aborted) fail(id, error);
