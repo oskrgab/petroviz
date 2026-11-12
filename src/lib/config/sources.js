@@ -34,7 +34,7 @@
 
 export const DEFAULTS = Object.freeze({
   PUBLIC_DATA_BASE_URL:
-    "https://huggingface.co/datasets/sumpalabs/petrodb/resolve/main",
+    "https://huggingface.co/datasets/oskrgab/petrodb/resolve/main",
   PUBLIC_SCHEMA_BASE_URL: "https://petrodb.ocortez.com",
   PUBLIC_WELLS_PARQUET: "volve/wells.parquet",
   PUBLIC_DAILY_PRODUCTION_PARQUET: "volve/daily_production.parquet",

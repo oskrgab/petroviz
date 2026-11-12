@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 
 import { resolveCatalog, visualizationById } from "./catalog.js";
 
-const HF_TREE = "https://huggingface.co/datasets/sumpalabs/petrodb/tree/main";
+const HF_TREE = "https://huggingface.co/datasets/oskrgab/petrodb/tree/main";
 
 /** @param {import("./catalog.js").Catalog} catalog @param {string} id */
 const dataset = (catalog, id) => {

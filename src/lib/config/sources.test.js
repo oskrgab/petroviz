@@ -5,7 +5,7 @@ import { parseEnv } from "node:util";
 
 import { DEFAULTS, resolveHosts, resolveSources } from "./sources.js";
 
-const HF = "https://huggingface.co/datasets/sumpalabs/petrodb/resolve/main";
+const HF = "https://huggingface.co/datasets/oskrgab/petrodb/resolve/main";
 
 test("defaults read tables from the Data host and the schema from the Schema host", () => {
   assert.deepEqual(resolveSources(), [

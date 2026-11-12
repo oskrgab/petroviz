@@ -58,7 +58,7 @@ pnpm run preview  # Test production build locally
 
 petroviz reads the Volve **Dataset** straight from where **petrodb** publishes it, using two hosts:
 
-- **Data host** (Hugging Face): the parquet tables, at `https://huggingface.co/datasets/sumpalabs/petrodb/resolve/main/volve/*.parquet`. It supports byte-range reads, so DuckDB can fetch only the parts of a table a query needs.
+- **Data host** (Hugging Face): the parquet tables, at `https://huggingface.co/datasets/oskrgab/petrodb/resolve/main/volve/*.parquet`. It supports byte-range reads, so DuckDB can fetch only the parts of a table a query needs.
 - **Schema host** (the petrodb site): the schema, at `https://petrodb.ocortez.com/volve/schema.json`.
 
 The petrodb site doesn't serve parquet, because Cloudflare Pages only answers byte-range requests reliably from its edge cache. [petrodb ADR-0005](https://github.com/oskrgab/petrodb/blob/main/docs/adr/0005-host-parquet-on-huggingface.md) explains why the tables moved to Hugging Face.
@@ -69,14 +69,14 @@ These URLs are defined once, in `src/lib/config/sources.js`. The app and the dat
 
 Every variable is an optional override. It's inlined at build time, and a missing or empty value falls back to the default.
 
-| Variable                            | Description                          | Default                                                          |
-| ----------------------------------- | ------------------------------------ | ---------------------------------------------------------------- |
-| `PUBLIC_DATA_BASE_URL`              | Data host                            | `https://huggingface.co/datasets/sumpalabs/petrodb/resolve/main` |
-| `PUBLIC_SCHEMA_BASE_URL`            | Schema host                          | `https://petrodb.ocortez.com`                                    |
-| `PUBLIC_WELLS_PARQUET`              | Wells table, on the Data host        | `volve/wells.parquet`                                            |
-| `PUBLIC_DAILY_PRODUCTION_PARQUET`   | Daily production, on the Data host   | `volve/daily_production.parquet`                                 |
-| `PUBLIC_MONTHLY_PRODUCTION_PARQUET` | Monthly production, on the Data host | `volve/monthly_production.parquet`                               |
-| `PUBLIC_SCHEMA_JSON`                | Schema, on the Schema host           | `volve/schema.json`                                              |
+| Variable                            | Description                          | Default                                                        |
+| ----------------------------------- | ------------------------------------ | -------------------------------------------------------------- |
+| `PUBLIC_DATA_BASE_URL`              | Data host                            | `https://huggingface.co/datasets/oskrgab/petrodb/resolve/main` |
+| `PUBLIC_SCHEMA_BASE_URL`            | Schema host                          | `https://petrodb.ocortez.com`                                  |
+| `PUBLIC_WELLS_PARQUET`              | Wells table, on the Data host        | `volve/wells.parquet`                                          |
+| `PUBLIC_DAILY_PRODUCTION_PARQUET`   | Daily production, on the Data host   | `volve/daily_production.parquet`                               |
+| `PUBLIC_MONTHLY_PRODUCTION_PARQUET` | Monthly production, on the Data host | `volve/monthly_production.parquet`                             |
+| `PUBLIC_SCHEMA_JSON`                | Schema, on the Schema host           | `volve/schema.json`                                            |
 
 A path can also be an absolute URL, which replaces its host. `.env.example` shows how to point local dev at the homelab `dev-petrodb.ocortez.com`.
 
