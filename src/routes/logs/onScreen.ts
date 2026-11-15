@@ -22,8 +22,8 @@ export function onScreenOf(source: LinkSource, dataset: Dataset): OnScreen {
 }
 
 /**
- * `<well> · <dataset or file> · Well logs`, like the production dashboard's
- * `Volve · Production dashboard`. Before a well is on screen it names what
+ * `<well> · <dataset or file> · Logs`, like the production dashboard's
+ * `Volve · Production`. Before a well is on screen it names what
  * the dataset line does; a file with no WELL item is named once.
  * @param well - The well on screen, as the picker names it; null before one is
  * @param line - What the dataset line shows; none for a file that isn't open

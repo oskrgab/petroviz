@@ -19,8 +19,8 @@ test("the visualizations are the production dashboard and the well logs, at thei
   assert.deepEqual(
     visualizations.map((v) => [v.name, v.route]),
     [
-      ["Production dashboard", "/production"],
-      ["Well logs", "/logs"],
+      ["Production", "/production"],
+      ["Logs", "/logs"],
     ],
   );
 });
@@ -155,7 +155,7 @@ test("a Data host that isn't Hugging Face is named by its host name", () => {
 test("a visualization is found by its id, and an unknown id is refused", () => {
   const catalog = resolveCatalog();
   const production = visualizationById(catalog, "production");
-  assert.equal(production.name, "Production dashboard");
+  assert.equal(production.name, "Production");
   assert.deepEqual(
     production.datasets.map((d) => d.name),
     ["Volve"],

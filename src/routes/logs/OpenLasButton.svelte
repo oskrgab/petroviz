@@ -73,11 +73,8 @@
     color: var(--color-text-muted);
   }
 
-  /*
-   * Up to 1240px the header also names FORCE 2020 or the file on screen and
-   * links to petrodb, so the label makes way (to 1120px the nav takes its own row)
-   */
-  @media (max-width: 1240px) {
+  /* Up to 1120px the header also names FORCE 2020 or the file on screen */
+  @media (max-width: 1120px) {
     .label {
       position: absolute;
       width: 1px;

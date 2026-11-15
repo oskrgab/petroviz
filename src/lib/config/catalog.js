@@ -63,7 +63,7 @@ const DATASETS = [
 const VISUALIZATIONS = [
   {
     id: "production",
-    name: "Production dashboard",
+    name: "Production",
     route: "/production",
     summary:
       "Oil, water and gas produced by each well, day by day, with totals for the dates you pick.",
@@ -73,7 +73,7 @@ const VISUALIZATIONS = [
   },
   {
     id: "logs",
-    name: "Well logs",
+    name: "Logs",
     route: "/logs",
     summary:
       "The curves recorded down a well, side by side in tracks, against measured or vertical depth.",

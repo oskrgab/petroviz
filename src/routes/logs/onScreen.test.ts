@@ -32,25 +32,25 @@ test("an opened LAS file puts its file name on the line, and no dataset", () => 
   });
 });
 
-test("the tab title names the well, the dataset and Well logs", () => {
-  assert.equal(tabTitle("35/11-11", { dataset: force2020 }, logs), "35/11-11 · FORCE 2020 · Well logs");
+test("the tab title names the well, the dataset and Logs", () => {
+  assert.equal(tabTitle("35/11-11", { dataset: force2020 }, logs), "35/11-11 · FORCE 2020 · Logs");
 });
 
 test("the tab title names an opened file's well and the file", () => {
-  assert.equal(tabTitle("WELL-A", { file: "well_a.las" }, logs), "WELL-A · well_a.las · Well logs");
+  assert.equal(tabTitle("WELL-A", { file: "well_a.las" }, logs), "WELL-A · well_a.las · Logs");
 });
 
 test("a file with no WELL item is named by the file alone", () => {
   // The picker names such a file's well by the file name
-  assert.equal(tabTitle("well_a.las", { file: "well_a.las" }, logs), "well_a.las · Well logs");
+  assert.equal(tabTitle("well_a.las", { file: "well_a.las" }, logs), "well_a.las · Logs");
 });
 
 test("while the first well loads, the title names the dataset the line does", () => {
-  assert.equal(tabTitle(null, { dataset: force2020 }, logs), "FORCE 2020 · Well logs");
+  assert.equal(tabTitle(null, { dataset: force2020 }, logs), "FORCE 2020 · Logs");
 });
 
-test("with no line, the title names Well logs and petroviz", () => {
-  assert.equal(tabTitle(null, undefined, logs), "Well logs · petroviz");
+test("with no line, the title names Logs and petroviz", () => {
+  assert.equal(tabTitle(null, undefined, logs), "Logs · petroviz");
 });
 
 test("the title takes the visualization's name from the catalog", () => {

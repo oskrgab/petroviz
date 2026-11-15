@@ -352,14 +352,14 @@
 
   /* ==================== TABLETS AND PHONES: THE NAV'S OWN ROW ==================== */
   /*
-   * Up to 1120px the title, the nav, the dataset line, the page's controls
-   * and the GitHub link don't all fit on one row, and the nav would scroll
-   * its links out of sight. So the nav takes a row of its own below, and a
-   * link that still doesn't fit there wraps (the narrowest phones), never
-   * scrolls. Every page switches at the same width (the well logs' controls
-   * drop their labels there too), so the header keeps its shape between pages.
+   * Below 900px the title, the nav, the dataset line, the page's controls
+   * and the GitHub link don't all fit on one row (the well logs' header is
+   * the widest), and the nav would scroll its links out of sight. So the nav
+   * takes a row of its own below, and a link that still doesn't fit there
+   * wraps, never scrolls. Every page switches at the same width, so the
+   * header keeps its shape between pages.
    */
-  @media (max-width: 1120px) {
+  @media (max-width: 899px) {
     .app-header {
       flex-wrap: wrap;
       row-gap: 0;
@@ -466,7 +466,7 @@
 
   /* ==================== TABLETS ==================== */
   /* The title's row, above the nav's (see TABLETS AND PHONES above) */
-  @media (min-width: 481px) and (max-width: 1120px) {
+  @media (min-width: 481px) and (max-width: 899px) {
     /*
      * A wrapping row doesn't shrink its items, it moves them down: the line
      * starts at its narrowest (links under the name) so it keeps the title's
@@ -484,7 +484,7 @@
   }
 
   /* One row: the nav keeps all its links in view, and the dataset line gives way */
-  @media (min-width: 1121px) {
+  @media (min-width: 900px) {
     .nav-section {
       flex-shrink: 0;
     }
