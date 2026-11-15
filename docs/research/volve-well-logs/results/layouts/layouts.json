@@ -1,0 +1,217 @@
+{
+ "rows": 483450,
+ "runs": [
+  {
+   "wellbore": "15/9-19 SR",
+   "rowStart": 0,
+   "rowEnd": 7013
+  },
+  {
+   "wellbore": "15/9-19 A",
+   "rowStart": 7013,
+   "rowEnd": 10021
+  },
+  {
+   "wellbore": "15/9-19 BT2",
+   "rowStart": 10021,
+   "rowEnd": 13183
+  },
+  {
+   "wellbore": "15/9-F-14",
+   "rowStart": 13183,
+   "rowEnd": 36593
+  },
+  {
+   "wellbore": "15/9-F-12",
+   "rowStart": 36593,
+   "rowEnd": 62492
+  },
+  {
+   "wellbore": "15/9-F-4",
+   "rowStart": 62492,
+   "rowEnd": 84315
+  },
+  {
+   "wellbore": "15/9-F-5",
+   "rowStart": 84315,
+   "rowEnd": 106435
+  },
+  {
+   "wellbore": "15/9-F-15 A",
+   "rowStart": 106435,
+   "rowEnd": 131788
+  },
+  {
+   "wellbore": "15/9-F-15 C",
+   "rowStart": 131788,
+   "rowEnd": 136134
+  },
+  {
+   "wellbore": "15/9-F-15 B",
+   "rowStart": 136134,
+   "rowEnd": 138370
+  },
+  {
+   "wellbore": "15/9-F-10",
+   "rowStart": 138370,
+   "rowEnd": 141458
+  },
+  {
+   "wellbore": "15/9-F-15",
+   "rowStart": 141458,
+   "rowEnd": 168296
+  },
+  {
+   "wellbore": "15/9-F-11",
+   "rowStart": 168296,
+   "rowEnd": 169879
+  },
+  {
+   "wellbore": "15/9-F-11 T2",
+   "rowStart": 169879,
+   "rowEnd": 213612
+  },
+  {
+   "wellbore": "15/9-F-11 A",
+   "rowStart": 213612,
+   "rowEnd": 249347
+  },
+  {
+   "wellbore": "15/9-F-11 B",
+   "rowStart": 249347,
+   "rowEnd": 295165
+  },
+  {
+   "wellbore": "15/9-F-1",
+   "rowStart": 295165,
+   "rowEnd": 330026
+  },
+  {
+   "wellbore": "15/9-F-1 A",
+   "rowStart": 330026,
+   "rowEnd": 365387
+  },
+  {
+   "wellbore": "15/9-F-1 B",
+   "rowStart": 365387,
+   "rowEnd": 398578
+  },
+  {
+   "wellbore": "15/9-F-15 D",
+   "rowStart": 398578,
+   "rowEnd": 443969
+  },
+  {
+   "wellbore": "15/9-F-1 C",
+   "rowStart": 443969,
+   "rowEnd": 483450
+  }
+ ],
+ "l4": [
+  {
+   "wellbore": "15/9-19 SR",
+   "file": "L4/15_9_19_SR.parquet",
+   "bytes": 265736
+  },
+  {
+   "wellbore": "15/9-19 A",
+   "file": "L4/15_9_19_A.parquet",
+   "bytes": 236461
+  },
+  {
+   "wellbore": "15/9-19 BT2",
+   "file": "L4/15_9_19_BT2.parquet",
+   "bytes": 193831
+  },
+  {
+   "wellbore": "15/9-F-14",
+   "file": "L4/15_9_F_14.parquet",
+   "bytes": 949160
+  },
+  {
+   "wellbore": "15/9-F-12",
+   "file": "L4/15_9_F_12.parquet",
+   "bytes": 1195177
+  },
+  {
+   "wellbore": "15/9-F-4",
+   "file": "L4/15_9_F_4.parquet",
+   "bytes": 651206
+  },
+  {
+   "wellbore": "15/9-F-5",
+   "file": "L4/15_9_F_5.parquet",
+   "bytes": 610597
+  },
+  {
+   "wellbore": "15/9-F-15 A",
+   "file": "L4/15_9_F_15_A.parquet",
+   "bytes": 1169315
+  },
+  {
+   "wellbore": "15/9-F-15 C",
+   "file": "L4/15_9_F_15_C.parquet",
+   "bytes": 299990
+  },
+  {
+   "wellbore": "15/9-F-15 B",
+   "file": "L4/15_9_F_15_B.parquet",
+   "bytes": 188870
+  },
+  {
+   "wellbore": "15/9-F-10",
+   "file": "L4/15_9_F_10.parquet",
+   "bytes": 236258
+  },
+  {
+   "wellbore": "15/9-F-15",
+   "file": "L4/15_9_F_15.parquet",
+   "bytes": 1335099
+  },
+  {
+   "wellbore": "15/9-F-11",
+   "file": "L4/15_9_F_11.parquet",
+   "bytes": 68294
+  },
+  {
+   "wellbore": "15/9-F-11 T2",
+   "file": "L4/15_9_F_11_T2.parquet",
+   "bytes": 1873051
+  },
+  {
+   "wellbore": "15/9-F-11 A",
+   "file": "L4/15_9_F_11_A.parquet",
+   "bytes": 1337062
+  },
+  {
+   "wellbore": "15/9-F-11 B",
+   "file": "L4/15_9_F_11_B.parquet",
+   "bytes": 1846887
+  },
+  {
+   "wellbore": "15/9-F-1",
+   "file": "L4/15_9_F_1.parquet",
+   "bytes": 2268594
+  },
+  {
+   "wellbore": "15/9-F-1 A",
+   "file": "L4/15_9_F_1_A.parquet",
+   "bytes": 2134988
+  },
+  {
+   "wellbore": "15/9-F-1 B",
+   "file": "L4/15_9_F_1_B.parquet",
+   "bytes": 1638967
+  },
+  {
+   "wellbore": "15/9-F-15 D",
+   "file": "L4/15_9_F_15_D.parquet",
+   "bytes": 3152399
+  },
+  {
+   "wellbore": "15/9-F-1 C",
+   "file": "L4/15_9_F_1_C.parquet",
+   "bytes": 2575932
+  }
+ ]
+}

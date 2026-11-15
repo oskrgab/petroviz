@@ -1,0 +1,174 @@
+{
+ "result": {
+  "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36",
+  "origin": "http://127.0.0.1:40237",
+  "crossOriginIsolated": false,
+  "range": [
+   {
+    "wallMs": 2246,
+    "headMs": 236,
+    "footerMs": 328,
+    "dataMs": 1682,
+    "requests": 15,
+    "bytes": 17934125,
+    "rows": 33191,
+    "statuses": [
+     200,
+     206
+    ],
+    "types": [
+     "cors"
+    ],
+    "sample": [
+     {
+      "m": "HEAD",
+      "range": null,
+      "status": 200,
+      "type": "cors",
+      "redirected": true,
+      "finalHost": "us.aws.cdn.hf.co",
+      "xRepoCommit": null,
+      "contentRange": null,
+      "contentLength": "20269028",
+      "acceptRanges": "bytes",
+      "etag": "\"608f60a69f6d8ee78c77043e86f15a02650555f17c7d56857da9de620390718f\""
+     },
+     {
+      "m": "GET",
+      "range": "bytes=19744740-20269027",
+      "status": 206,
+      "type": "cors",
+      "redirected": true,
+      "finalHost": "us.aws.cdn.hf.co",
+      "xRepoCommit": null,
+      "contentRange": "bytes 19744740-20269027/20269028",
+      "contentLength": "524288",
+      "acceptRanges": "bytes",
+      "etag": "\"608f60a69f6d8ee78c77043e86f15a02650555f17c7d56857da9de620390718f\"",
+      "bytes": 524288
+     },
+     {
+      "m": "GET",
+      "range": "bytes=4-1955077",
+      "status": 206,
+      "type": "cors",
+      "redirected": true,
+      "finalHost": "us.aws.cdn.hf.co",
+      "xRepoCommit": null,
+      "contentRange": "bytes 4-1955077/20269028",
+      "contentLength": "1955074",
+      "acceptRanges": "bytes",
+      "etag": "\"608f60a69f6d8ee78c77043e86f15a02650555f17c7d56857da9de620390718f\"",
+      "bytes": 1955074
+     }
+    ]
+   },
+   {
+    "wallMs": 2036,
+    "headMs": 110,
+    "footerMs": 168,
+    "dataMs": 1758,
+    "requests": 15,
+    "bytes": 17934125,
+    "rows": 33191,
+    "statuses": [
+     200,
+     206
+    ],
+    "types": [
+     "cors"
+    ]
+   },
+   {
+    "wallMs": 2301,
+    "headMs": 113,
+    "footerMs": 161,
+    "dataMs": 2027,
+    "requests": 15,
+    "bytes": 17934125,
+    "rows": 33191,
+    "statuses": [
+     200,
+     206
+    ],
+    "types": [
+     "cors"
+    ]
+   }
+  ],
+  "whole": [
+   {
+    "wallMs": 2636,
+    "downloadMs": 1846,
+    "decodeMs": 789,
+    "requests": 1,
+    "bytes": 20269028,
+    "sample": {
+     "m": "GET",
+     "range": null,
+     "status": 200,
+     "type": "cors",
+     "redirected": true,
+     "finalHost": "us.aws.cdn.hf.co",
+     "xRepoCommit": null,
+     "contentRange": null,
+     "contentLength": "20269028",
+     "acceptRanges": "bytes",
+     "etag": "\"608f60a69f6d8ee78c77043e86f15a02650555f17c7d56857da9de620390718f\"",
+     "bytes": 20269028
+    }
+   },
+   {
+    "wallMs": 2709,
+    "downloadMs": 1858,
+    "decodeMs": 850,
+    "requests": 1,
+    "bytes": 20269028
+   },
+   {
+    "wallMs": 2728,
+    "downloadMs": 1862,
+    "decodeMs": 866,
+    "requests": 1,
+    "bytes": 20269028
+   }
+  ],
+  "protocols": [
+   "huggingface.co (hidden)"
+  ],
+  "decode": {
+   "sw_only": {
+    "coldMs": 46,
+    "warmMedianMs": 18
+   },
+   "wb_big_ownCols": {
+    "coldMs": 784,
+    "warmMedianMs": 826
+   },
+   "wb_small_ownCols": {
+    "coldMs": 516,
+    "warmMedianMs": 493
+   },
+   "wb_big_allCols": {
+    "coldMs": 1124,
+    "warmMedianMs": 1203
+   },
+   "all_onChunk": {
+    "coldMs": 1215,
+    "warmMedianMs": 1168
+   }
+  },
+  "jsHeap": {
+   "usedMB": 561,
+   "totalMB": 631,
+   "limitMB": 3586
+  }
+ },
+ "networkRequestsByKind": {
+  "HEAD huggingface.co": 3,
+  "HEAD us.aws.cdn.hf.co (redirect hop)": 3,
+  "GET huggingface.co": 45,
+  "GET us.aws.cdn.hf.co (redirect hop)": 45
+ },
+ "consoleMsgs": []
+}

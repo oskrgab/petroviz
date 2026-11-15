@@ -50,6 +50,14 @@ _Avoid_: loader, parser, importer
 One measured or interpreted quantity sampled along the wellbore (GR, RHOB, lithology), with a mnemonic and a unit. Continuous curves hold numbers; discrete curves hold codes such as lithology.
 _Avoid_: log (when meaning a single quantity), channel, trace
 
+**Input curve**:
+A curve holding a measurement as the interpreter curated it for a petrophysical interpretation: renamed to a standard mnemonic and sometimes edited. It is not the log as it was recorded.
+_Avoid_: raw curve, raw log
+
+**Interpreted curve**:
+A curve a petrophysical interpretation computed from input curves, such as porosity, water saturation or shale volume.
+_Avoid_: computed curve, output curve
+
 **Zone**:
 A named depth interval of the wellbore, such as a formation or group.
 _Avoid_: top (a top is a zone's upper boundary, not the zone), marker
@@ -119,5 +127,5 @@ The kind of quantity a curve measures (gamma ray, resistivity, bulk density, neu
 _Avoid_: curve type, log type, class
 
 **Template**:
-A log view layout — its tracks, the curves in each with their curve scales and styling, and its fills — that can be applied to any well log. The layout being edited is the **current template**, and the **default template** is the one a well opens with.
+A log view layout — its tracks, the curves in each with their curve scales and styling, and its fills — that can be applied to any well log. The layout being edited is the **current template**, and the **default template** is the one a well opens with. Each dataset names its own default template and keeps its own current template. Files the user opens share one of each, tied to no dataset.
 _Avoid_: layout (as a separate thing), layout file, preset, format
