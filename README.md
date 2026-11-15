@@ -12,6 +12,8 @@ A static site for exploring the petroleum datasets petrodb publishes, entirely i
 
 The visualizations and their datasets are defined once, in `src/lib/config/catalog.js`; the welcome page and the header both read them from there.
 
+petroviz and the petrodb site share a look (typefaces, header, footer, fluid colours and chart headers), and each links to the other from its header. The shared rules, and what each site keeps its own, are in [docs/design-guidelines.md](docs/design-guidelines.md).
+
 ## Features
 
 - **Interactive Data Exploration**: Visualize oil, water, and gas production data
