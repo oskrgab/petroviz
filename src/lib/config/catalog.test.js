@@ -99,6 +99,18 @@ test("overridden hosts move the Docs and Data links, trailing slashes and all", 
   assert.equal(force.data, "https://mirror.example.org/petrodb/force_2020/");
 });
 
+test("petrodb's site is the Schema host's home page, by default and when overridden", () => {
+  assert.equal(resolveCatalog().petrodb, "https://petrodb.ocortez.com/");
+  assert.equal(
+    resolveCatalog({ PUBLIC_SCHEMA_BASE_URL: "https://dev-petrodb.ocortez.com/" }).petrodb,
+    "https://dev-petrodb.ocortez.com/",
+  );
+  assert.equal(
+    resolveCatalog({ PUBLIC_SCHEMA_BASE_URL: "https://dev-petrodb.ocortez.com" }).petrodb,
+    "https://dev-petrodb.ocortez.com/",
+  );
+});
+
 test("a Hugging Face Data host on another revision browses that revision", () => {
   const catalog = resolveCatalog({
     PUBLIC_DATA_BASE_URL:

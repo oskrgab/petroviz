@@ -4,9 +4,10 @@
    *
    * The header shared by every page: the petroviz title (a link to the
    * welcome page), a link to each visualization in the catalog with the
-   * current one highlighted, the dataset line naming what is on screen
-   * (inside a visualization only), a slot for the page's own controls, then
-   * the GitHub link and the theme toggle.
+   * current one highlighted, a link to petrodb (petrodb's header links back:
+   * see docs/design-guidelines.md), the dataset line naming what is on
+   * screen (inside a visualization only), a slot for the page's own
+   * controls, then the GitHub link and the theme toggle.
    */
 
   import type { Snippet } from "svelte";
@@ -62,7 +63,7 @@
       </div>
       <h1 class="title">petroviz</h1>
     </a>
-    <nav class="nav-section" aria-label="Visualizations">
+    <nav class="nav-section" aria-label="Site">
       {#each links as link (link.href)}
         <a
           href={link.href}
@@ -73,6 +74,18 @@
           {link.label}
         </a>
       {/each}
+      <!-- A new tab: leaving would lose the visualization's state, such as an opened LAS file -->
+      <a
+        href={CATALOG.petrodb}
+        class="nav-link petrodb-link"
+        target="_blank"
+        rel="noopener"
+        title="Where the data comes from"
+      >
+        petrodb<span class="new-tab-arrow" aria-hidden="true">↗</span><span class="sr-only">
+          (opens in a new tab)</span
+        >
+      </a>
     </nav>
     {#if onScreen}
       <div class="on-screen" class:file={"file" in onScreen}>
@@ -228,6 +241,22 @@
     font-weight: 600;
   }
 
+  /* Set apart from the visualizations: it leaves petroviz */
+  .petrodb-link {
+    margin-left: var(--spacing-xs);
+    border-left: 1px solid var(--color-border);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  .petrodb-link .new-tab-arrow {
+    margin-left: 0.15em;
+    color: var(--color-text-muted);
+  }
+
+  .petrodb-link:hover .new-tab-arrow {
+    color: inherit;
+  }
+
   /* Active indicator line */
   .nav-link.active::after {
     content: "";
@@ -321,9 +350,16 @@
     }
   }
 
-  /* ==================== RESPONSIVE: SMALL MOBILE ==================== */
-  @media (max-width: 480px) {
-    /* The visualization links take a row of their own below the title */
+  /* ==================== TABLETS AND PHONES: THE NAV'S OWN ROW ==================== */
+  /*
+   * Up to 1120px the title, the nav, the dataset line, the page's controls
+   * and the GitHub link don't all fit on one row, and the nav would scroll
+   * its links out of sight. So the nav takes a row of its own below, and a
+   * link that still doesn't fit there wraps (the narrowest phones), never
+   * scrolls. Every page switches at the same width (the well logs' controls
+   * drop their labels there too), so the header keeps its shape between pages.
+   */
+  @media (max-width: 1120px) {
     .app-header {
       flex-wrap: wrap;
       row-gap: 0;
@@ -336,20 +372,17 @@
     .nav-section {
       order: 10;
       flex-basis: 100%;
+      flex-wrap: wrap;
+      padding-left: 0;
       padding-bottom: var(--spacing-xs);
+      border-left: none;
     }
+  }
 
+  /* ==================== RESPONSIVE: SMALL MOBILE ==================== */
+  @media (max-width: 480px) {
     .title {
       font-size: var(--font-size-md);
-    }
-
-    .header-left {
-      gap: var(--spacing-xs);
-    }
-
-    .nav-section {
-      padding-left: 0;
-      border-left: none;
     }
 
     .logo-section {
@@ -372,6 +405,12 @@
     .nav-link {
       padding: var(--spacing-xs);
       letter-spacing: 0;
+    }
+
+    /* The arrow alone sets it apart: a rule would be left dangling if it wraps */
+    .petrodb-link {
+      margin-left: 0;
+      border-left: none;
     }
 
     /* Make room for both page links on a phone */
@@ -425,6 +464,32 @@
     }
   }
 
+  /* ==================== TABLETS ==================== */
+  /* The title's row, above the nav's (see TABLETS AND PHONES above) */
+  @media (min-width: 481px) and (max-width: 1120px) {
+    /*
+     * A wrapping row doesn't shrink its items, it moves them down: the line
+     * starts at its narrowest (links under the name) so it keeps the title's
+     * row, then takes the free space, which falls after it.
+     */
+    .on-screen {
+      flex: 1 1 0%;
+      min-width: min-content;
+    }
+
+    /* Just past phone width, if the GitHub link and the theme toggle wrap, they keep to the right */
+    .header-right {
+      margin-left: auto;
+    }
+  }
+
+  /* One row: the nav keeps all its links in view, and the dataset line gives way */
+  @media (min-width: 1121px) {
+    .nav-section {
+      flex-shrink: 0;
+    }
+  }
+
   /* ==================== WITH THE PAGE'S CONTROLS ==================== */
   /*
    * The well logs' header also holds the page's controls, so the dataset
@@ -432,26 +497,9 @@
    * of depth below it. The line finds room in the rows already there.
    */
 
-  /*
-   * Tablets: the oil drop stands in for the wordmark, as on the narrowest
-   * phones. Below 720px the production dashboard's line needs the room too.
-   */
-  @media (min-width: 481px) and (max-width: 880px) {
+  /* Small tablets: the oil drop stands in for the wordmark, as on the narrowest phones */
+  @media (min-width: 481px) and (max-width: 639px) {
     .app-header:has(.header-controls):has(.on-screen) .title {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-  }
-
-  @media (min-width: 481px) and (max-width: 720px) {
-    .app-header:has(.on-screen) .title {
       position: absolute;
       width: 1px;
       height: 1px;

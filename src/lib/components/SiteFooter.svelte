@@ -5,11 +5,13 @@
    * Credits petrodb for the data and the author for petroviz. Shown on the
    * welcome page only: the visualizations give their full height to the data.
    */
+
+  import { CATALOG } from "$lib/config/data-sources";
 </script>
 
 <footer class="site-footer">
   <span class="footer-text">
-    Data from <a href="https://petrodb.ocortez.com" target="_blank" rel="noopener"
+    Data from <a href={CATALOG.petrodb} target="_blank" rel="noopener"
       >petrodb</a
     >
   </span>

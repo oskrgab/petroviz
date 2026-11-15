@@ -43,6 +43,7 @@ import { resolveHosts } from "./sources.js";
  * @typedef {object} Catalog
  * @property {Dataset[]} datasets
  * @property {Visualization[]} visualizations
+ * @property {string} petrodb - petrodb's own site: the Schema host's home page
  */
 
 const DATASETS = [
@@ -134,6 +135,7 @@ export function resolveCatalog(overrides = {}) {
       ...v,
       datasets: v.datasets.map(byId),
     })),
+    petrodb: `${schemaHost}/`,
   };
 }
 
